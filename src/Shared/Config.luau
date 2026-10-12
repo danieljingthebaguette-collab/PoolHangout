@@ -29,6 +29,7 @@ local Config = {
 		ClockSeconds = 45,
 		ClockWarningSeconds = 10,
 		MinPull = 0.05, -- shortest pull (share of the meter) that shoots, so twitches don't fire
+		MeterSpringSeconds = 0.15, -- how long the power icon takes to spring back from a full pull when let go
 		TimeoutsToRemove = 2, -- timeouts in a row that remove a player
 		ServerStepsPerFrame = 480, -- physics steps the server runs per frame: far ahead of the replay, about 1 ms of work
 		ResolveBufferSeconds = 0.25, -- extra wait after a shot's replay ends before the result is sent
@@ -45,6 +46,7 @@ local Config = {
 		CueLength = 0.6, -- share of the table length
 		CueThickness = 0.5, -- share of a ball's width
 		CueTipGap = 1, -- ball radii between the cue ball and the cue's tip
+		CuePullBack = 6, -- ball radii the cue slides back at a full pull
 		CueHeight = 4, -- ball radii above the felt, clear of the rails; from straight above it looks the same as ball height
 	},
 
@@ -65,7 +67,7 @@ local Config = {
 	Debug = {
 		SoloTables = true,
 		LogShots = true,
-		PhysicsTest = true, -- R racks Table1, clicking the felt shoots, sliders tune the physics live
+		PhysicsTest = true, -- R racks Table1, the shot controls work on it, sliders tune the physics live
 		-- The physics test mode's live sliders: the Config value each one sets, its range and its step
 		TestSliders = {
 			{ group = "Physics", name = "RollingSlowdown", min = 1, max = 15, step = 0.1 },

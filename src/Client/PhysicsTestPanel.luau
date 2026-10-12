@@ -1,7 +1,6 @@
 --!strict
--- Physics test mode (Studio only, see Config.Debug.PhysicsTest): R or the Rack button racks Table1,
--- clicking or tapping the felt shoots the cue ball toward that spot with the Power slider's power, and the
--- other sliders tune the physics live for everyone.
+-- Physics test mode (Studio only, see Config.Debug.PhysicsTest): R or the Rack button racks Table1, and the
+-- sliders tune the physics live for everyone. Shots use the real controls (ShotController).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,11 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
-local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
-
--- How far from the camera a click can find the felt
-local CLICK_REACH = 1000
 
 local PhysicsTestPanel = {}
 
@@ -44,29 +39,6 @@ local function button(text: string, order: number, onPress: () -> ()): TextButto
 end
 
 function PhysicsTestPanel.start()
-	local tableModel = workspace:WaitForChild("Tables"):WaitForChild("Table1")
-	local felt = tableModel:WaitForChild("Felt") :: BasePart
-	local feltOnly = RaycastParams.new()
-	feltOnly.FilterType = Enum.RaycastFilterType.Include
-	feltOnly.FilterDescendantsInstances = { felt }
-	local power = 1
-
-	local function shootAt(viewportPoint: Vector2)
-		-- In the top-down view (the only scriptable camera) clicks and drags turn the cue instead
-		if workspace.CurrentCamera.CameraType == Enum.CameraType.Scriptable then
-			return
-		end
-		local cue = tableModel:FindFirstChild("Ball0", true) :: BasePart?
-		local ray = workspace.CurrentCamera:ViewportPointToRay(viewportPoint.X, viewportPoint.Y)
-		local hit = workspace:Raycast(ray.Origin, ray.Direction * CLICK_REACH, feltOnly)
-		if not (cue and hit) then
-			return
-		end
-		local x, y = TableSpace.toTable(felt, hit.Position)
-		local cueX, cueY = TableSpace.toTable(felt, cue.Position)
-		Remotes.TestShoot:FireServer(x - cueX, y - cueY, power)
-	end
-
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "PhysicsTest"
 	gui.ResetOnSpawn = false
@@ -157,15 +129,12 @@ function PhysicsTestPanel.start()
 		return show
 	end
 
-	slider("Power", { min = Config.Shot.MinPull, max = 1, step = 0.01 }, power, 1, function(value: number)
-		power = value
-	end)
 	for i, range in Config.Debug.TestSliders do
 		local show = slider(
 			range.name,
 			range,
 			Remotes.TestTune:GetAttribute(range.name) or (Config :: any)[range.group][range.name],
-			i + 1,
+			i,
 			function(value: number)
 				Remotes.TestTune:FireServer(range.name, value)
 			end
@@ -175,7 +144,7 @@ function PhysicsTestPanel.start()
 		end)
 	end
 
-	local printButton = button("Print values", #Config.Debug.TestSliders + 2, function()
+	local printButton = button("Print values", #Config.Debug.TestSliders + 1, function()
 		local lines = { "Physics test values, as the server has them:" }
 		for _, range in Config.Debug.TestSliders do
 			local value = string.format("%g", Remotes.TestTune:GetAttribute(range.name))
@@ -190,13 +159,6 @@ function PhysicsTestPanel.start()
 			return
 		elseif input.KeyCode == Enum.KeyCode.R then
 			Remotes.TestRack:FireServer()
-		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
-			shootAt(UserInputService:GetMouseLocation())
-		end
-	end)
-	UserInputService.TouchTapInWorld:Connect(function(position: Vector2, processedByUI: boolean)
-		if not processedByUI then
-			shootAt(position)
 		end
 	end)
 	UserInputService.InputChanged:Connect(function(input: InputObject)

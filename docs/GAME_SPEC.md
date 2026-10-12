@@ -60,6 +60,7 @@ A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat 
 9. The shot fires when the icon reaches the end, and everyone sees the balls roll.
 10. The shooter stays in the top-down view while it's still their turn. The camera goes back to normal when their turn ends *(default)*.
 
+- **Top-down only:** you can only aim and shoot from the top-down view. The cue and the power meter only show there, and leaving the view in the middle of a pull cancels it with no shot.
 - **Shot clock:** 45 seconds per shot (I said 30–60). It covers placing and aiming, shows a countdown for the last 10 seconds, and stops when the shot fires. The next shot gets a fresh 45. Running out is a foul, and 2 timeouts in a row remove the player, the same as leaving.
 - **Between turns:** players can walk around, sit or grab a drink.
 - **No spin** in the base build. Leave room on the screen for a spin control later.
@@ -84,6 +85,7 @@ A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat 
 
 ## Watching and hanging out
 
+- In a real game, the other players and anyone watching see the shooter's cue move live while they aim (Phase 3).
 - Anyone can watch a game in 3D from where they stand, or switch to the same top-down view *(default: a "Watch from above" button when you're near a table with a game on)*.
 - When a shot fires, the shooter's avatar is placed at the rail behind the cue ball and leans over with the cue, so 3D watchers see it (Phase 4) *(default)*.
 - Emotes, quick phrases (like "Nice shot!" and "GG"), text chat and voice chat.
@@ -131,6 +133,7 @@ Leaving means leaving the server, disconnecting, pressing a Leave button in the 
 - Where you stand changing your aim, or walking to a spot to shoot or to place the cue ball.
 - W/S controls, or holding Space to shoot.
 - Alcohol.
+- Shooting from the normal view.
 - An economy, cosmetics or ranked mode before the mechanics are done.
 
 ## Raised but not decided (don't build)

@@ -1,7 +1,8 @@
 --!strict
 -- The shooter's controls. F (phones: an on-screen button) switches to a top-down view of the table and back.
--- In the view, walking is off, a cue stick lies behind the cue ball, and A/D, the arrow keys or dragging
--- around the cue ball turn it.
+-- You can only aim and shoot from the view: walking is off, a cue stick lies behind the cue ball, and A/D,
+-- the arrow keys or dragging around the cue ball turn it. Dragging the power meter's ball icon back loads
+-- power and pushing it all the way forward shoots. Letting go early, or leaving the view, cancels.
 
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
@@ -26,6 +27,28 @@ local TURN_KEYS: { [Enum.KeyCode]: number } = {
 }
 
 local ShotController = {}
+
+-- Whether `input` moves the mouse button or finger that `started` pressed
+local function movesPointer(input: InputObject, started: InputObject): boolean
+	return input == started
+		or (
+			input.UserInputType == Enum.UserInputType.MouseMovement
+			and started.UserInputType == Enum.UserInputType.MouseButton1
+		)
+end
+
+-- False once a mouse button that `started` pressed is up. The game can miss its release, for example when it's
+-- let go outside the window, and plain mouse movement would then keep dragging.
+local function stillHeld(started: InputObject): boolean
+	return started.UserInputType ~= Enum.UserInputType.MouseButton1
+		or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+end
+
+local function roundCorners(item: GuiObject)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = item
+end
 
 -- `leftReserve` is screen width, in pixels, that the view keeps clear on the left for other UI
 function ShotController.start(tableModel: Model, leftReserve: number)
@@ -58,12 +81,50 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 	cue.Transparency = 1
 	cue.Parent = tableModel
 
+	local meterGui = Instance.new("ScreenGui")
+	meterGui.Name = "PowerMeter"
+	meterGui.ResetOnSpawn = false
+	meterGui.Enabled = false
+	-- Centered in the space the view keeps clear on the right. Active, so pressing it doesn't turn the aim.
+	local track = Instance.new("Frame")
+	track.AnchorPoint = Vector2.new(0.5, 1)
+	track.Position = UDim2.new(1, -Theme.Ui.MeterReserve / 2, 1, -Theme.Ui.Padding)
+	track.Size = UDim2.new(0, Theme.Ui.MeterTrack, Theme.Ui.MeterHeight, 0)
+	track.BackgroundColor3 = Theme.Colors.Track
+	track.BorderSizePixel = 0
+	track.Active = true
+	track.Parent = meterGui
+	roundCorners(track)
+	-- Shows how far back the icon is
+	local fill = Instance.new("Frame")
+	fill.BackgroundColor3 = Theme.Colors.Fill
+	fill.BorderSizePixel = 0
+	fill.Parent = track
+	roundCorners(fill)
+	local icon = Instance.new("TextButton")
+	icon.Text = ""
+	icon.AutoButtonColor = false
+	icon.AnchorPoint = Vector2.new(0.5, 0.5)
+	icon.Size = UDim2.fromOffset(Theme.Ui.MeterIcon, Theme.Ui.MeterIcon)
+	icon.BackgroundColor3 = Theme.BallColors[0]
+	icon.Parent = track
+	roundCorners(icon)
+	local outline = Instance.new("UIStroke")
+	outline.Color = Theme.Colors.Panel
+	outline.Thickness = 2
+	outline.Parent = icon
+	meterGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+
 	-- Radians in table space: 0 aims along +x, at the rack
 	local aim = 0
 	-- The key turning the aim, which way, and when it went down
 	local turning: { key: Enum.KeyCode, sign: number, since: number }? = nil
 	-- The mouse button or finger dragging the aim, and its last angle around the cue ball
 	local drag: { input: InputObject, angle: number? }? = nil
+	-- How far back the power icon is, 0 to 1
+	local pull = 0
+	-- The mouse button or finger holding the icon, where on the icon it grabbed, and the power loaded so far
+	local grab: { input: InputObject, offset: number, power: number }? = nil
 	local rolling = false
 
 	-- The camera's settings from before the view, and everything the view connected, while it's on
@@ -105,7 +166,18 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		return math.atan2(dy, dx)
 	end
 
+	-- How far back the icon would be with the pointer at `screenY`
+	local function pullAt(screenY: number, offset: number): number
+		local travel = track.AbsoluteSize.Y - Theme.Ui.MeterIcon
+		return math.clamp((screenY - offset - track.AbsolutePosition.Y - Theme.Ui.MeterIcon / 2) / travel, 0, 1)
+	end
+
 	local function render(dt: number)
+		if not grab and pull > 0 then
+			pull = math.max(pull - dt / Config.Shot.MeterSpringSeconds, 0)
+		end
+		icon.Position = UDim2.new(0.5, 0, pull, Theme.Ui.MeterIcon * (0.5 - pull))
+		fill.Size = UDim2.new(1, 0, pull, Theme.Ui.MeterIcon * (0.5 - pull))
 		if turning then
 			local heldFor = os.clock() - turning.since - Config.Aim.HoldDelaySeconds
 			if heldFor > 0 then
@@ -116,12 +188,14 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		end
 		local hidden = rolling or cueBall.Transparency == 1
 		cue.Transparency = if hidden then 1 else 0
+		meterGui.Enabled = not hidden
 		if not hidden then
 			local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
+			local back = cueBack + pull * radius * Config.Aim.CuePullBack
 			cue.CFrame = TableSpace.toWorld(
 				felt,
-				cueX - math.cos(aim) * cueBack,
-				cueY - math.sin(aim) * cueBack,
+				cueX - math.cos(aim) * back,
+				cueY - math.sin(aim) * back,
 				cueHeight
 			) * CFrame.Angles(0, -aim, 0)
 		end
@@ -151,16 +225,9 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 	end
 
 	local function dragMoved(input: InputObject)
-		if
-			drag
-			and (
-				input == drag.input
-				or (
-					input.UserInputType == Enum.UserInputType.MouseMovement
-					and drag.input.UserInputType == Enum.UserInputType.MouseButton1
-				)
-			)
-		then
+		if drag and not stillHeld(drag.input) then
+			drag = nil
+		elseif drag and movesPointer(input, drag.input) then
 			local angle = pointerAngle(input.Position)
 			if angle and drag.angle then
 				-- The aim turns as far as the pointer swept around the cue ball, the short way round
@@ -176,6 +243,44 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		end
 	end
 
+	local function pullMoved(input: InputObject)
+		if grab and not stillHeld(grab.input) then
+			grab = nil
+		end
+		if not (grab and movesPointer(input, grab.input)) then
+			return
+		end
+		local newPull = pullAt(input.Position.Y, grab.offset)
+		-- Moving back loads power; the push forward keeps what the backswing reached
+		if newPull > pull then
+			grab.power = newPull
+		end
+		pull = newPull
+		if pull == 0 and grab.power >= Config.Shot.MinPull then
+			-- ponytail: the test mode's remote, until Match (Phase 2) brings RequestShot and turns
+			Remotes.TestShoot:FireServer(math.cos(aim), math.sin(aim), grab.power)
+			grab = nil
+		end
+	end
+
+	local function pullEnded(input: InputObject)
+		-- Let go before the end: the icon springs back and nothing fires
+		if grab and input == grab.input then
+			grab = nil
+		end
+	end
+
+	icon.InputBegan:Connect(function(input: InputObject)
+		if
+			saved
+			and not grab
+			and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch)
+		then
+			local iconCenter = icon.AbsolutePosition.Y + Theme.Ui.MeterIcon / 2
+			grab = { input = input, offset = input.Position.Y - iconCenter, power = 0 }
+		end
+	end)
+
 	local function leaveView()
 		if not saved then
 			return
@@ -185,8 +290,10 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 			connection:Disconnect()
 		end
 		ContextActionService:UnbindAction(AIM_ACTION)
-		turning, drag = nil, nil
+		-- Leaving mid-pull cancels the shot
+		turning, drag, grab, pull = nil, nil, nil, 0
 		cue.Transparency = 1
+		meterGui.Enabled = false
 		camera.CameraType = saved.cameraType
 		camera.CFrame = saved.cframe
 		camera.FieldOfView = saved.fieldOfView
@@ -207,6 +314,8 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 				UserInputService.InputBegan:Connect(dragBegan),
 				UserInputService.InputChanged:Connect(dragMoved),
 				UserInputService.InputEnded:Connect(dragEnded),
+				UserInputService.InputChanged:Connect(pullMoved),
+				UserInputService.InputEnded:Connect(pullEnded),
 			},
 		}
 		camera.CameraType = Enum.CameraType.Scriptable
