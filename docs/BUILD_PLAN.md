@@ -7,11 +7,10 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
-- **In progress:** ball physics. Step 1 (the physics in `src/Shared/Physics/` and its tests) is done and waiting for my review. Step 2: ball parts on Table1 replaying a test shot, plus the greybox corner rail fix.
-- **Last session:** 2026-10-12. Renamed the game to Pool!, ticked the setup task, wrote Config.luau and its tests, built the greybox Table1 in the place (balls come from code with the physics task).
-- **Next up:** ball physics step 2
+- **In progress:** ball physics, step 2 (the physics test mode, Studio only). 2a is done and waiting for my review: ball parts on Table1, R or the Rack button racks, clicking the felt shoots at full power, and every screen replays the shot from the server's numbers. The greybox corner rails now match the physics. 2b is next: a power slider, live sliders for rolling slowdown, full-power speed (up to 40, with `TimeStep` halved to 1/960), rail bounce, ball bounce, Follow and rack gap (0.001-stud steps), a Print values button, and C for a camera looking straight down at Table1.
+- **Last session:** 2026-10-12. Built physics step 2a and checked in a playtest that the client's replay matches the server's result exactly.
+- **Next up:** physics step 2b, once I've tried 2a
 - **Known issues:**
-  - Greybox Table1's rails stop 0.75 studs from each corner, but the physics stops them at 0.53 (`CornerPocketMouth / √2`). Fix in step 2.
   - A full-power break moves rack balls only about 1.5 studs each and rarely pockets one. Look at it when tuning the feel.
 
 ## Rules that protect quality

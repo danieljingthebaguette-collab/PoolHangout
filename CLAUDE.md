@@ -30,6 +30,7 @@ Studio's Script Sync mirrors these folders both ways.
 - File names set the script type: `Name.server.luau` = server Script, `Name.local.luau` = LocalScript, `Name.luau` = ModuleScript, a folder = Folder. Don't use `init.luau` files; use plain folders of modules.
 - Only scripts and folders sync. Parts, models and lighting live only in the place file, which isn't in git. After you build or change anything in the place, remind me to save it (Cmd+S).
 - Never put attributes or tags on scripts: Script Sync skips those scripts. Attributes on parts and models are fine.
+- Script Sync's "Sync to…" copies Studio's version onto disk, so never link a Studio folder that's empty while its folder on disk has files. If sync breaks, commit first and ask me.
 
 ## Code rules
 

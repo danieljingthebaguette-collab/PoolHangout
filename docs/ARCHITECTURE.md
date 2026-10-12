@@ -17,6 +17,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Shared/Config.luau` | Every tuning number |
 | `Shared/Theme.luau` | Colors, fonts, UI sizes |
 | `Shared/Remotes.luau` | Creates (server) or finds (client) every remote. Remote names appear nowhere else |
+| `Shared/TableSpace.luau` | World ↔ table space, from a table's `Felt` |
 | `Shared/Physics/Geometry.luau` | Rails, pockets, head line, foot spot and rack positions, from Config |
 | `Shared/Physics/Simulate.luau` | A stepper: start it from balls, a shot and params (Config by default), advance it N steps at a time, read the `ShotResult` when done. `run()` does it all at once for tests |
 | `Shared/Rules/EightBall.luau` | New game, resolve a shot, timeouts, forfeits, per-player game stats |
@@ -24,11 +25,13 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Server/TableService.luau` | Finds tables, watches platforms, runs countdowns and signs, starts and resets games |
 | `Server/Match.luau` | One game: seats, turn order, shot clock, ball in hand, takeovers, end-screen data |
 | `Server/StatsService.luau` | Lifetime stats. The only module that touches DataStores |
+| `Server/PhysicsTest.luau` | Physics test mode on Table1 (Studio only): ball parts, rack, test shots |
 | `Client/Main.local.luau` | Starts the controllers |
 | `Client/TableView.luau` | Replays shots on the ball parts and plays their sounds |
 | `Client/ShotController.luau` | F and the top-down camera, placing the cue ball, aim, pocket call, power meter |
 | `Client/Hud.luau` | Shot clock, end screen, Leave button |
 | `Client/Spectate.luau` | "Watch from above" |
+| `Client/PhysicsTestPanel.luau` | Physics test mode controls (Studio only) |
 
 Pure modules require each other only by relative string path, like `require("./Geometry")` or `require("../Config")`. That form works in both Roblox and Lune.
 
@@ -86,7 +89,7 @@ Starting values for Config (tune by feel):
 - Every state change goes through one function that updates the sign and fires `TableChanged`.
 - Timers (countdown, shot clock, takeover window, end screen) carry the game id and the step they were made for, and do nothing if that step is over. This is what keeps tables from getting stuck.
 - One `Match` object holds everything about a game. Resetting the table destroys it and disconnects everything it made.
-- **Debug, Studio only:** with `Config.Debug.SoloTables` on and one player in the server, standing on one platform starts the table and that player takes every turn. `Config.Debug.LogShots` prints each shot's input and outcome. Both check `RunService:IsStudio()`, so they can never run in a live server.
+- **Debug, Studio only:** with `Config.Debug.SoloTables` on and one player in the server, standing on one platform starts the table and that player takes every turn. `Config.Debug.LogShots` prints each shot's input and outcome. `Config.Debug.PhysicsTest` turns on the physics test mode on Table1: R or the Rack button racks, and clicking or tapping the felt shoots the cue ball toward that spot. All of them check `RunService:IsStudio()`, so they can never run in a live server.
 
 ## Place contract
 
@@ -119,6 +122,8 @@ Workspace
 | `ShotResolved` | server → clients | Final balls and the outcome |
 | `GameOver` | server → clients | Winner and each player's stats |
 | `AimRelay` | server → clients, unreliable | Live aim for watchers |
+| `TestRack` | client → server | Physics test mode: rack Table1 |
+| `TestShoot` | client → server | Physics test mode: direction and power |
 
 ## Saving and analytics
 

@@ -28,6 +28,8 @@ local Config = {
 		ClockWarningSeconds = 10,
 		MinPull = 0.05, -- shortest pull (share of the meter) that shoots, so twitches don't fire
 		TimeoutsToRemove = 2, -- timeouts in a row that remove a player
+		ServerStepsPerFrame = 480, -- physics steps the server runs per frame: far ahead of the replay, about 1 ms of work
+		ResolveBufferSeconds = 0.25, -- extra wait after a shot's replay ends before the result is sent
 	},
 
 	Aim = {
@@ -49,6 +51,7 @@ local Config = {
 	Debug = {
 		SoloTables = true,
 		LogShots = true,
+		PhysicsTest = true, -- R racks Table1, clicking the felt shoots
 	},
 }
 
