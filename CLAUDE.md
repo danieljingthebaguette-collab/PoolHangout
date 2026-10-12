@@ -1,0 +1,67 @@
+# Pool Hangout
+
+A cozy Roblox bar where players hang out, talk on voice chat and play 8-ball pool, 1v1 or 2v2. It's my first Roblox game. You write most of the code; I design, build in Studio, review your changes and playtest. Launch target: Friday, Dec 11, 2026.
+
+The three documents imported at the bottom are the source of truth: what the game is (GAME_SPEC), how the code is built (ARCHITECTURE), and what to build when, plus where we are now (BUILD_PLAN).
+
+## Working with me
+
+- I'm new to Roblox scripting. After each change, explain what it does in a sentence or two of plain English. When I need to do something in Studio, give me the exact clicks.
+- Work on the current phase in BUILD_PLAN.md, one task at a time. Don't build anything from a later phase or the Later list early, even if it's quick.
+- For anything bigger than a small fix, plan first and wait for my OK before writing code.
+- Keep changes small. Don't rename, restructure or refactor code the task doesn't need.
+- If a request conflicts with GAME_SPEC.md, point it out and ask. When I change a decision, update the spec in the same session.
+- Spec items marked *(default)* are your proposals I haven't confirmed. Build them as written unless I say otherwise. Ask before deciding anything players would notice that the spec doesn't cover.
+- Don't re-propose anything on the spec's "Decided against" list unless I bring it up.
+- Ask before you publish, change game settings, upload assets, insert Creator Store models, add third-party code, change how data is saved, or delete anything from the place.
+- Don't commit or push unless I ask. `/wrap-up` proposes a commit at the end of a session.
+
+## Where code lives
+
+Studio's Script Sync mirrors these folders both ways.
+
+| On disk | In Studio | Runs on |
+| --- | --- | --- |
+| `src/Server` | ServerScriptService/Server | Server |
+| `src/Client` | StarterPlayer/StarterPlayerScripts/Client | Each player |
+| `src/Shared` | ReplicatedStorage/Shared | Both |
+| `tests/`, `docs/` | Not synced | Lune tests, docs |
+
+- File names set the script type: `Name.server.luau` = server Script, `Name.local.luau` = LocalScript, `Name.luau` = ModuleScript, a folder = Folder. Don't use `init.luau` files; use plain folders of modules.
+- Only scripts and folders sync. Parts, models and lighting live only in the place file, which isn't in git. After you build or change anything in the place, remind me to save it (Cmd+S).
+- Never put attributes or tags on scripts: Script Sync skips those scripts. Attributes on parts and models are fine.
+
+## Code rules
+
+- `--!strict` at the top of every file. Type function parameters and return values.
+- Two entry scripts only: `src/Server/Main.server.luau` and `src/Client/Main.local.luau`. Everything else is a ModuleScript they start.
+- The server decides everything that matters: seats, turns, the shot clock, ball physics and rule outcomes. Clients send requests through `src/Shared/Remotes.luau`, and the server validates every argument.
+- Every tuning number lives in `src/Shared/Config.luau`. No magic numbers in systems.
+- Ball physics and 8-ball rules are pure Luau with no Roblox APIs, covered by Lune tests (see ARCHITECTURE.md).
+- Build UI (screens, signs, the Turn arrow) in code, with colors and fonts from `src/Shared/Theme.luau`, so it lives in git.
+- Use `task.wait`, `task.spawn` and `task.delay`, never the deprecated `wait`, `spawn` and `delay`.
+- Every connection and timer belongs to a table, a game or a player, and is cleaned up when that ends.
+- Names: PascalCase for modules and types, camelCase for functions and variables, UPPER_SNAKE_CASE for constants.
+- Comments explain why, not what.
+
+## Tools and testing
+
+- Studio is connected through the `Roblox_Studio` MCP server. Call `list_roblox_studios` first and pass its `studio_id` on every call. Studio must be open with the place loaded; if it isn't connected, stop and tell me.
+- Edit code as files on disk, never with Studio's script tools, so formatting and git see every change.
+- Use the MCP tools to inspect the place, build greybox parts, playtest, read the console and take screenshots.
+- A hook runs StyLua on every `.luau` file you edit. Before calling code done, run `selene src` and fix what it reports.
+- `lune run tests/run` runs every `tests/**/*.spec.luau` (add a word to filter, like `lune run tests/run physics`). Run it after any change to physics, rules or Config. Every bug fixed there gets a test.
+- `/playtest` checks gameplay in Studio. The MCP tools control one player, so solo playtests rely on `Config.Debug.SoloTables`. For real multiplayer checks, ask me to run Test → Clients and Servers.
+- Nothing is done until lint, tests and a playtest pass, or I've tested it myself.
+
+## Sessions
+
+- Start with `/next-task`, or with whatever I ask for.
+- When a task is done, tick its box in BUILD_PLAN.md and update the Status section there.
+- End with `/wrap-up`. It updates the status, notes known issues and proposes a commit.
+
+## Project documents (loaded every session)
+
+- Game spec: @docs/GAME_SPEC.md
+- Architecture: @docs/ARCHITECTURE.md
+- Build plan and status: @docs/BUILD_PLAN.md
