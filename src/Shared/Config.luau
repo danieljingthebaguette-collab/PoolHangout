@@ -1,5 +1,5 @@
 --!strict
--- Every tuning number lives here. Plain numbers, strings and booleans only, so Lune can load it too.
+-- Every tuning number lives here. Plain numbers, strings, booleans and lists of them, so Lune can load it too.
 -- Distances are in studs, times in seconds, speeds in studs/s.
 -- The 30-player server size is set in Studio's Game Settings, not by this file.
 
@@ -10,6 +10,7 @@ local Config = {
 		BallRadius = 0.15,
 		CornerPocketMouth = 0.75,
 		SidePocketMouth = 0.8,
+		RackGap = 0, -- space between neighboring balls in the rack: 0 is a tight rack
 	},
 
 	Physics = {
@@ -19,7 +20,7 @@ local Config = {
 		BallBounce = 0.95,
 		Follow = 0.29, -- forward roll a ball keeps after running into another: 0 stops it dead, 0.29 is natural roll
 		StopSpeed = 0.02,
-		TimeStep = 1 / 480,
+		TimeStep = 1 / 960,
 		TimeCap = 20,
 	},
 
@@ -51,7 +52,17 @@ local Config = {
 	Debug = {
 		SoloTables = true,
 		LogShots = true,
-		PhysicsTest = true, -- R racks Table1, clicking the felt shoots
+		PhysicsTest = true, -- R racks Table1, clicking the felt shoots, C looks straight down
+		TopDownMargin = 1.15, -- the C camera shows the table plus this share of room around it
+		-- The physics test mode's live sliders: the Config value each one sets, its range and its step
+		TestSliders = {
+			{ group = "Physics", name = "RollingSlowdown", min = 1, max = 15, step = 0.1 },
+			{ group = "Physics", name = "FullPowerSpeed", min = 5, max = 40, step = 0.5 },
+			{ group = "Physics", name = "RailBounce", min = 0.3, max = 1, step = 0.01 },
+			{ group = "Physics", name = "BallBounce", min = 0.5, max = 1, step = 0.01 },
+			{ group = "Physics", name = "Follow", min = 0, max = 0.6, step = 0.01 },
+			{ group = "Table", name = "RackGap", min = 0, max = 0.05, step = 0.001 },
+		},
 	},
 }
 

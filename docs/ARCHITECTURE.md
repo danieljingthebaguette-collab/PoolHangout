@@ -63,7 +63,8 @@ Starting values for Config (tune by feel):
 | Rail bounce | 0.8 | Keeps about 80% of the speed |
 | Ball bounce | 0.95 | |
 | Follow | 0.29 | Natural roll in real pool is 2/7 |
-| Stop speed / time step / time cap | 0.02 studs/s / 1/480 s / 20 s | |
+| Rack gap | 0 studs | A tight rack |
+| Stop speed / time step / time cap | 0.02 studs/s / 1/960 s / 20 s | 1/960 keeps the test mode's top speed of 40 under a third of a radius per step |
 | Shot clock / warning | 45 s / last 10 s | |
 | Countdown / takeover / open-spot wait / end screen | 5 / 5 / 15 / 10 s | |
 | Aim nudge / hold speed | 0.25° / 15°/s rising to 120°/s over 1 s | |
@@ -89,7 +90,7 @@ Starting values for Config (tune by feel):
 - Every state change goes through one function that updates the sign and fires `TableChanged`.
 - Timers (countdown, shot clock, takeover window, end screen) carry the game id and the step they were made for, and do nothing if that step is over. This is what keeps tables from getting stuck.
 - One `Match` object holds everything about a game. Resetting the table destroys it and disconnects everything it made.
-- **Debug, Studio only:** with `Config.Debug.SoloTables` on and one player in the server, standing on one platform starts the table and that player takes every turn. `Config.Debug.LogShots` prints each shot's input and outcome. `Config.Debug.PhysicsTest` turns on the physics test mode on Table1: R or the Rack button racks, and clicking or tapping the felt shoots the cue ball toward that spot. All of them check `RunService:IsStudio()`, so they can never run in a live server.
+- **Debug, Studio only:** with `Config.Debug.SoloTables` on and one player in the server, standing on one platform starts the table and that player takes every turn. `Config.Debug.LogShots` prints each shot's input and outcome. `Config.Debug.PhysicsTest` turns on the physics test mode on Table1: R or the Rack button racks, and clicking or tapping the felt shoots the cue ball toward that spot with the Power slider's power, C or the Top view button looks straight down at the table, and sliders tune the settings in `Config.Debug.TestSliders` live for everyone. The server keeps the slider values and sends them with each shot; Print values prints them to Output. All of them check `RunService:IsStudio()`, so they can never run in a live server.
 
 ## Place contract
 
@@ -124,6 +125,7 @@ Workspace
 | `AimRelay` | server → clients, unreliable | Live aim for watchers |
 | `TestRack` | client → server | Physics test mode: rack Table1 |
 | `TestShoot` | client → server | Physics test mode: direction and power |
+| `TestTune` | client → server | Physics test mode: a slider's name and value. Its attributes hold every slider's current value |
 
 ## Saving and analytics
 

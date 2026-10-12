@@ -1,6 +1,7 @@
 --!strict
--- Physics test mode (Studio only, see Config.Debug.PhysicsTest): racks Table1 when a player asks and
--- shoots the cue ball the way they clicked. Any player may do either while the balls are still.
+-- Physics test mode (Studio only, see Config.Debug.PhysicsTest): racks Table1 when a player asks, shoots
+-- the cue ball the way they clicked, and keeps the sliders' values. Any player may rack or shoot while the
+-- balls are still, and move a slider any time.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -20,8 +21,7 @@ end
 function PhysicsTest.start()
 	local tableModel = workspace:WaitForChild("Tables"):WaitForChild("Table1") :: Model
 	local felt = tableModel:WaitForChild("Felt") :: BasePart
-	local params: Simulate.Params = { Table = Config.Table, Physics = Config.Physics }
-	local radius = params.Table.BallRadius
+	local radius = Config.Table.BallRadius
 	local balls: { Simulate.Ball } = {}
 	local parts: { [number]: BasePart } = {}
 	-- True from a shot's start until its result is sent, so the balls can't be racked or shot mid-roll
@@ -51,8 +51,21 @@ function PhysicsTest.start()
 		end
 	end
 
+	for _, slider in Config.Debug.TestSliders do
+		Remotes.TestTune:SetAttribute(slider.name, (Config :: any)[slider.group][slider.name])
+	end
+
+	-- A fresh copy of Config with the sliders' values, so moving a slider mid-shot can't change that shot
+	local function currentParams(): Simulate.Params
+		local params = { Table = table.clone(Config.Table), Physics = table.clone(Config.Physics) }
+		for _, slider in Config.Debug.TestSliders do
+			(params :: any)[slider.group][slider.name] = Remotes.TestTune:GetAttribute(slider.name)
+		end
+		return params
+	end
+
 	local function rack()
-		local layout = Geometry.build(params.Table)
+		local layout = Geometry.build(currentParams().Table)
 		balls = { { id = 0, x = layout.headLineX, y = 0, vx = 0, vy = 0 } }
 		for id, spot in layout.rack do
 			table.insert(balls, { id = id, x = spot.x, y = spot.y, vx = 0, vy = 0 })
@@ -67,6 +80,18 @@ function PhysicsTest.start()
 		end
 	end)
 
+	Remotes.TestTune.OnServerEvent:Connect(function(_player: Player, name: unknown, value: unknown)
+		if typeof(value) ~= "number" then
+			return
+		end
+		for _, slider in Config.Debug.TestSliders do
+			-- NaN fails both comparisons
+			if slider.name == name and value >= slider.min and value <= slider.max then
+				Remotes.TestTune:SetAttribute(slider.name, value)
+			end
+		end
+	end)
+
 	Remotes.TestShoot.OnServerEvent:Connect(function(_player: Player, dirX: unknown, dirY: unknown, power: unknown)
 		if rolling or typeof(dirX) ~= "number" or typeof(dirY) ~= "number" or typeof(power) ~= "number" then
 			return
@@ -77,6 +102,7 @@ function PhysicsTest.start()
 		end
 
 		rolling = true
+		local params = currentParams()
 		local shot: Simulate.Shot = { dirX = dirX / length, dirY = dirY / length, power = power }
 		local sim = Simulate.start(balls, shot, params)
 		Remotes.ShotStarted:FireAllClients(tableModel, balls, shot, params)

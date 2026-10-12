@@ -8,6 +8,7 @@ export type TableParams = {
 	BallRadius: number,
 	CornerPocketMouth: number,
 	SidePocketMouth: number,
+	RackGap: number,
 }
 export type Rail = { ax: number, ay: number, bx: number, by: number }
 export type Pocket = { x: number, y: number, radius: number }
@@ -45,14 +46,14 @@ function Geometry.build(tableParams: TableParams): Layout
 		table.insert(pockets, { x = halfLength, y = y, radius = tableParams.CornerPocketMouth / 2 })
 	end
 
-	-- 15 touching balls in a triangle: the first on the foot spot, the rows behind it toward the foot rail
-	local radius = tableParams.BallRadius
+	-- 15 balls in a triangle, RackGap apart: the first on the foot spot, the rows behind it toward the foot rail
+	local spacing = 2 * tableParams.BallRadius + tableParams.RackGap
 	local rack: { { x: number, y: number } } = {}
 	for row = 0, 4 do
 		for i = 0, row do
 			table.insert(
 				rack,
-				{ x = tableParams.Length / 4 + row * math.sqrt(3) * radius, y = (i - row / 2) * 2 * radius }
+				{ x = tableParams.Length / 4 + row * math.sqrt(3) / 2 * spacing, y = (i - row / 2) * spacing }
 			)
 		end
 	end

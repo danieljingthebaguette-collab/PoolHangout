@@ -17,6 +17,8 @@ local Theme = {
 		Panel = Color3.fromRGB(43, 32, 26), -- dark warm wood
 		Button = Color3.fromRGB(122, 84, 52),
 		Text = Color3.fromRGB(248, 236, 218),
+		Track = Color3.fromRGB(84, 62, 48),
+		Fill = Color3.fromRGB(236, 168, 72), -- warm lamp glow
 	},
 
 	Ui = {
@@ -24,6 +26,7 @@ local Theme = {
 		Corner = 8,
 		ButtonHeight = 44, -- big enough for a thumb
 		PanelWidth = 240,
+		SliderBar = 6,
 	},
 
 	-- By ball id. In the greybox each stripe shares its solid's color.

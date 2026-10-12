@@ -154,6 +154,19 @@ return function(test, check)
 		check.truthy(sim.balls[1].y < WIDTH / 2 - RADIUS, "bounced back onto the table")
 	end)
 
+	test("rack balls sit two radii plus RackGap apart", function()
+		local tableParams = table.clone(Config.Table)
+		tableParams.RackGap = RADIUS / 10
+		local spots = Geometry.build(tableParams).rack
+		-- The apex, the two balls behind it, and the pair next to each other in that row
+		for _, pair in { { 1, 2 }, { 1, 3 }, { 2, 3 } } do
+			local a, b = spots[pair[1]], spots[pair[2]]
+			local distance = math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2)
+			check.near(distance, 2 * RADIUS + tableParams.RackGap, 1e-9, `balls {pair[1]} and {pair[2]}`)
+		end
+		check.equal(spots[1].x, LENGTH / 4, "apex on the foot spot")
+	end)
+
 	test("over 100 breaks, no ball leaves the table and none end up overlapping", function()
 		local apex = layout.rack[1]
 		for i = 0, 99 do

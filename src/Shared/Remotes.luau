@@ -33,4 +33,7 @@ return {
 	TestRack = remote("TestRack"),
 	-- client → server: (dirX, dirY, power), a direction in table space and power 0–1
 	TestShoot = remote("TestShoot"),
+	-- client → server: (slider name, value). The server keeps each slider's current value as an attribute on
+	-- this remote, so every screen shows the same numbers, including players who join later.
+	TestTune = remote("TestTune"),
 }
