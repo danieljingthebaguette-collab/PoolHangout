@@ -7,10 +7,12 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
-- **In progress:** nothing yet
+- **In progress:** ball physics. Step 1 (the physics in `src/Shared/Physics/` and its tests) is done and waiting for my review. Step 2: ball parts on Table1 replaying a test shot, plus the greybox corner rail fix.
 - **Last session:** 2026-10-12. Renamed the game to Pool!, ticked the setup task, wrote Config.luau and its tests, built the greybox Table1 in the place (balls come from code with the physics task).
-- **Next up:** ball physics
-- **Known issues:** none
+- **Next up:** ball physics step 2
+- **Known issues:**
+  - Greybox Table1's rails stop 0.75 studs from each corner, but the physics stops them at 0.53 (`CornerPocketMouth / √2`). Fix in step 2.
+  - A full-power break moves rack balls only about 1.5 studs each and rarely pockets one. Look at it when tuning the feel.
 
 ## Rules that protect quality
 

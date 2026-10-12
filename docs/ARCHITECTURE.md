@@ -18,7 +18,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Shared/Theme.luau` | Colors, fonts, UI sizes |
 | `Shared/Remotes.luau` | Creates (server) or finds (client) every remote. Remote names appear nowhere else |
 | `Shared/Physics/Geometry.luau` | Rails, pockets, head line, foot spot and rack positions, from Config |
-| `Shared/Physics/Simulate.luau` | A stepper: start it from balls, a shot and params, advance it N steps at a time, read the `ShotResult` when done. `run()` does it all at once for tests |
+| `Shared/Physics/Simulate.luau` | A stepper: start it from balls, a shot and params (Config by default), advance it N steps at a time, read the `ShotResult` when done. `run()` does it all at once for tests |
 | `Shared/Rules/EightBall.luau` | New game, resolve a shot, timeouts, forfeits, per-player game stats |
 | `Server/Main.server.luau` | Starts the services |
 | `Server/TableService.luau` | Finds tables, watches platforms, runs countdowns and signs, starts and resets games |
@@ -42,7 +42,8 @@ Pure modules require each other only by relative string path, like `require("./G
 ## Physics
 
 - **Deterministic:** the same balls and shot give the same result on every machine. Fixed time step, balls processed in id order, no `math.random`, no clock reads, no `--!native`.
-- **Model:** balls travel in straight lines and slow at a constant rate. Ball-to-ball hits are equal-mass collisions with a restitution value. Rails reflect a ball and cut its speed. A ball whose center reaches a pocket's capture zone drops. The shot ends when every ball is below the stop speed, or at a safety time cap.
+- **Model:** balls travel in straight lines and slow at a constant rate. Ball-to-ball hits are equal-mass collisions with a restitution value, resolved at the exact moment the balls touch. A ball that rolls into a hit keeps `Follow` of the speed the hit takes away, like natural roll. Rails reflect a ball at the angle it came in and cut its speed. The shot ends when every ball is below the stop speed, or at a safety time cap.
+- **Pockets:** one at each corner of the felt and one in the middle of each long side. A ball drops when its center comes within half the pocket's mouth of that point. A corner mouth is measured across its diagonal opening, so the rails stop `CornerPocketMouth / √2` from each corner, and the rails' ends act as the pockets' jaws. Only a pocket's opening lets a ball's center past the edge of the felt, so that drops it too.
 - **Accurate:** the step is small enough that the fastest ball moves less than a third of its radius per step (a test checks this against Config).
 - **Fast:** skip pairs where neither ball moves. Time a full break in Lune; if it takes more than about 50 ms, speed it up before building on it. Nobody runs a whole shot in one frame in the game: the server and clients both advance the stepper a slice at a time.
 - **`ShotResult`** holds the final balls, timestamped events (ball hit, rail hit, pocketed) for sounds and rules, the first ball the cue ball touched, pocketed balls in order with their pockets, and the duration.
@@ -58,6 +59,7 @@ Starting values for Config (tune by feel):
 | Rolling slowdown | 5 studs/s² | Full power rolls 40 studs, about 4 table lengths |
 | Rail bounce | 0.8 | Keeps about 80% of the speed |
 | Ball bounce | 0.95 | |
+| Follow | 0.29 | Natural roll in real pool is 2/7 |
 | Stop speed / time step / time cap | 0.02 studs/s / 1/480 s / 20 s | |
 | Shot clock / warning | 45 s / last 10 s | |
 | Countdown / takeover / open-spot wait / end screen | 5 / 5 / 15 / 10 s | |
@@ -69,7 +71,7 @@ Starting values for Config (tune by feel):
 1. `Match` starts a turn: it sets the shooter, `clockEndsAt` from `workspace:GetServerTimeNow()`, the ball-in-hand area and whether a pocket must be called, then fires `TurnStarted` to everyone.
 2. The shooter's `ShotController` runs the camera, placement, aim, pocket call and power meter locally, then fires `RequestShot` with the aim direction, power (0–1), cue ball placement and called pocket.
 3. The server validates the request (see `.claude/rules/server.md`) and normalizes the direction.
-4. It fires `ShotStarted` with the exact start balls and shot, then simulates the shot in slices of a couple of milliseconds per frame, so even a break never stalls the server. It finishes long before the replay does.
+4. It fires `ShotStarted` with the exact start balls, the shot and the physics params it used, so every client simulates with the server's numbers even while test mode changes them live. Then it simulates the shot in slices of a couple of milliseconds per frame, so even a break never stalls the server. It finishes long before the replay does.
 5. Each client steps the same simulation as it plays the shot back in real time, so every client sees the same shot and no frame does much work.
 6. Once the server's simulation is done and the shot's duration plus a short buffer has passed, the server runs `EightBall.resolveShot`, moves the ball parts to their final positions and fires `ShotResolved` with the final balls and the outcome. Clients snap to those positions, which also corrects any drift.
 7. Then the next turn, or the end of the game.
@@ -113,7 +115,7 @@ Workspace
 | `SayPhrase` | client → server | A quick phrase, by index |
 | `TableChanged` | server → clients | Sign text, state, seats |
 | `TurnStarted` | server → clients | Shooter, clock end time, ball in hand, pocket call needed |
-| `ShotStarted` | server → clients | Start balls and shot to replay |
+| `ShotStarted` | server → clients | Start balls, shot and physics params to replay |
 | `ShotResolved` | server → clients | Final balls and the outcome |
 | `GameOver` | server → clients | Winner and each player's stats |
 | `AimRelay` | server → clients, unreliable | Live aim for watchers |
