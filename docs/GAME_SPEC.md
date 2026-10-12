@@ -26,7 +26,7 @@ A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat 
 - Playing surface 10 × 5 studs, about 1.5× a real bar table *(default)*.
 - 16 balls: the cue ball, solids 1–7, the 8, stripes 9–15.
 - 6 pockets about 20% wider than real ones, so it's forgiving.
-- A full-power shot rolls about 4 table lengths if nothing stops it.
+- A full-power shot rolls about 13 table lengths if nothing stops it.
 - A ball loses about 20% of its speed when it bounces off a rail, and comes off at the same angle it hit.
 - A rolling ball that hits another keeps some forward roll, like natural roll in real pool: about 29% of its speed on a straight hit, and it bends slightly forward after a cut.
 - Feel: between GamePigeon's lively rolls and a heavy, controlled table *(default)*.

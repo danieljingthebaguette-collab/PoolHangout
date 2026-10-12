@@ -15,10 +15,10 @@ local Config = {
 
 	Physics = {
 		FullPowerSpeed = 20,
-		RollingSlowdown = 5, -- studs/s², so full power rolls 40 studs, about 4 table lengths
+		RollingSlowdown = 1.5, -- studs/s², so full power rolls about 133 studs, about 13 table lengths
 		RailBounce = 0.8, -- fraction of speed kept after a rail hit
-		BallBounce = 0.95,
-		Follow = 0.29, -- forward roll a ball keeps after running into another: 0 stops it dead, 0.29 is natural roll
+		BallBounce = 0.9,
+		Follow = 0.25, -- forward roll a ball keeps after running into another: 0 stops it dead, 0.29 is natural roll
 		StopSpeed = 0.02,
 		TimeStep = 1 / 960,
 		TimeCap = 20,
