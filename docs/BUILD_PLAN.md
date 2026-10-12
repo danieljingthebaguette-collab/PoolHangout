@@ -2,14 +2,14 @@
 
 Launch Friday, Dec 11, 2026 with 1v1 and 2v2 pool in a 30-player bar. The shot gets built first, features freeze Dec 4, and the last week is only for fixing. This assumes about 10 hours a week from me, with Claude writing most of the code.
 
-This file started as a copy of my "Pool Hangout Build Plan" doc and is now the working copy: Claude ticks tasks and keeps Status current here. The label after each task says who does it. A phase ends only when I say its "Done when" test passed.
+This file started as a copy of my "Pool! Build Plan" doc and is now the working copy: Claude ticks tasks and keeps Status current here. The label after each task says who does it. A phase ends only when I say its "Done when" test passed.
 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
 - **In progress:** nothing yet
 - **Last session:** 2026-10-11. Set up this Claude Code kit. No game code yet.
-- **Next up:** my setup task, then the config file
+- **Next up:** the config file
 - **Known issues:** none
 
 ## Rules that protect quality
@@ -27,7 +27,7 @@ This file started as a copy of my "Pool Hangout Build Plan" doc and is now the w
 
 **Goal:** one table where sinking a ball feels great on PC and on my phone.
 
-- [ ] Set up Studio's MCP connection, Script Sync, git and this kit (Me)
+- [x] Set up Studio's MCP connection, Script Sync, git and this kit (Me)
 - [ ] One config file for every tuning number: table size, pocket size, friction, rail bounce, max power, shot clock (Claude)
 - [ ] Greybox table: 10 × 5 studs of playing surface, 16 balls, and 6 pockets about 20% wider than real (Claude builds it, I adjust)
 - [ ] Ball physics: our own simulation on the server for rolling, ball-to-ball hits, rail bounces and pockets, played back smoothly on every screen (Claude)

@@ -1,4 +1,4 @@
-# Pool Hangout
+# Pool!
 
 A cozy Roblox bar where players hang out, talk on voice chat and play 8-ball pool, 1v1 or 2v2. It's my first Roblox game. You write most of the code; I design, build in Studio, review your changes and playtest. Launch target: Friday, Dec 11, 2026.
 

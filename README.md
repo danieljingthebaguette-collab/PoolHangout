@@ -1,4 +1,4 @@
-# Pool Hangout: Claude Code kit
+# Pool!: Claude Code kit
 
 Unzip this into your project folder (the one with `src/`), replacing the starter kit's files. From then on, every new Claude Code chat in that folder starts out knowing the whole game: what it is, how the code is built, what to build next, and where you left off.
 
