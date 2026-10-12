@@ -37,6 +37,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] Power meter: drag the ball icon back, then push it to the end to shoot. Same on PC and phones (Claude)
 - [ ] Plain aim line to the first ball, switchable in the config file (Claude)
 - [ ] Tune the feel together: friction, power, rail bounce, pocket size (Me + Claude)
+- [ ] Decide the final table size, since the modeler's brief (`docs/MODELS.md`) needs it (Me)
 - [ ] Complete the age check and the Maturity & Compliance Questionnaire, so friends can test from Phase 2 (Me)
 
 **Done when:** I take 30 shots in a row on PC and on my phone with no bugs, and sinking a ball feels satisfying. If it doesn't, keep tuning before Phase 2.
@@ -53,6 +54,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] "Turn" arrow over the shooter, and a 45-second shot clock that stops while balls roll. Running out counts as a foul (Claude)
 - [ ] Automatic rule tests: 25+ scenarios, like sinking the cue ball on the 8, that rerun after every change (Claude)
 - [ ] Block out the bar in plain parts: walls, 8 table spots, the counter (Me)
+- [ ] Find a modeler and send them `docs/MODELS.md` and my bar blockout by Nov 8, with everything due Nov 22 (Me)
 - [ ] Playtest with 2 friends on a friends-only test version (Me)
 
 **Done when:** every rule test passes, and 2 friends finish 3 full games without me explaining anything.
@@ -68,7 +70,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] End screen with the winner, shot accuracy, balls sunk, best run and fouls. Then everyone is removed and the table resets (Claude)
 - [ ] Save each player's lifetime stats, so ranked and levels have history later (Claude)
 - [ ] Leaving: the empty platform lights up, and anyone who stands on it for 5 seconds takes over. After 15 seconds with nobody, the other player wins a 1v1, or the teammate plays on alone in 2v2. Disconnects count as leaving, and 2 timeouts in a row removes a player (Claude)
-- [ ] Build the final table and platform models in the blocky, cozy style (Me)
+- [ ] Swap in the commissioned table, platforms and cue (Claude)
 - [ ] Playtest with 4 friends: 1v1 and 2v2, with people leaving mid-game on purpose (Me)
 
 **Done when:** 4 friends play for 30 minutes straight, including leaving mid-game, and no table ever gets stuck.
@@ -77,7 +79,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 **Goal:** it looks, sounds and feels like a cozy bar people want to stay in.
 
-- [ ] Finish the bar: 8 tables (4 for 1v1, 4 for 2v2), a counter serving sodas, milkshakes and coffee, seating, and warm lighting (Me; Claude can generate props)
+- [ ] Swap in the commissioned bar: 8 tables (4 for 1v1, 4 for 2v2), a counter serving sodas, milkshakes and coffee, seating, and warm lighting (Claude)
 - [ ] Server size 30 and voice chat turned on (Me)
 - [ ] Lo-fi music and sounds: ball clicks, rail thuds, pocket drops (I pick them, Claude wires them in)
 - [ ] Emotes and quick phrases (Claude)

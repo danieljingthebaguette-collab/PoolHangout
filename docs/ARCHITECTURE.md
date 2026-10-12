@@ -94,7 +94,7 @@ Starting values for Config (tune by feel):
 
 ## Place contract
 
-What the code expects in the place. Claude builds greybox versions through MCP; I build the final art later with the same names.
+What the code expects in the place. Claude builds greybox versions through MCP. Every model is a placeholder until the commissioned art arrives, built to `docs/MODELS.md` with the same names, so it swaps in without code changes.
 
 ```text
 Workspace

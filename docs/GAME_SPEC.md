@@ -20,6 +20,7 @@ A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat 
 - 30 players per server and 8 tables: 4 for 1v1 and 4 for 2v2. Both kinds are the same size.
 - A counter serving sodas, milkshakes and coffee, places to sit, warm lamps over each table, and lo-fi music.
 - Style: blocky Roblox look with a cozy, warm feel. Tables in classic green felt and warm wood *(default)*.
+- Every model is a placeholder: the table, platforms, cue, balls, the bar and the rest of the map. Nothing visual is final until a modeler I commission delivers it, built to the brief in `docs/MODELS.md`.
 
 ## Table and balls
 

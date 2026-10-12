@@ -44,6 +44,7 @@ Studio's Script Sync mirrors these folders both ways.
 - Every connection and timer belongs to a table, a game or a player, and is cleaned up when that ends.
 - Names: PascalCase for modules and types, camelCase for functions and variables, UPPER_SNAKE_CASE for constants.
 - Comments explain why, not what.
+- Every model is a placeholder until the art I commission arrives: the table, platforms, cue, balls, the bar and the rest of the map. Keep code independent of models, so a commissioned model drops in with no code changes: Config is the source of truth for sizes and pocket positions, the physics never reads a model's shape, and scripts find parts by name. `docs/MODELS.md` is the modeler's brief; when Config's table, ball, pocket or cue numbers change, update it in the same change.
 
 ## Tools and testing
 
