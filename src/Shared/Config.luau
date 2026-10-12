@@ -41,6 +41,12 @@ local Config = {
 		HoldRampSeconds = 1,
 	},
 
+	Camera = {
+		-- Degrees, top to bottom. Narrow and high above, so balls near the table's edges don't look stretched.
+		TopDownFieldOfView = 20,
+		TopDownMargin = 1.15, -- the top-down view shows the table plus this share of room around it
+	},
+
 	Timers = {
 		CountdownSeconds = 5,
 		TakeoverSeconds = 5,
@@ -52,8 +58,7 @@ local Config = {
 	Debug = {
 		SoloTables = true,
 		LogShots = true,
-		PhysicsTest = true, -- R racks Table1, clicking the felt shoots, C looks straight down
-		TopDownMargin = 1.15, -- the C camera shows the table plus this share of room around it
+		PhysicsTest = true, -- R racks Table1, clicking the felt shoots, sliders tune the physics live
 		-- The physics test mode's live sliders: the Config value each one sets, its range and its step
 		TestSliders = {
 			{ group = "Physics", name = "RollingSlowdown", min = 1, max = 15, step = 0.1 },

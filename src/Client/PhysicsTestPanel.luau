@@ -1,7 +1,7 @@
 --!strict
 -- Physics test mode (Studio only, see Config.Debug.PhysicsTest): R or the Rack button racks Table1,
--- clicking or tapping the felt shoots the cue ball toward that spot with the Power slider's power, C or the
--- Top view button looks straight down at the table, and the other sliders tune the physics live for everyone.
+-- clicking or tapping the felt shoots the cue ball toward that spot with the Power slider's power, and the
+-- other sliders tune the physics live for everyone.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -63,36 +63,6 @@ function PhysicsTestPanel.start()
 		Remotes.TestShoot:FireServer(x - cueX, y - cueY, power)
 	end
 
-	-- The camera's settings from before the top view, while it's on
-	local savedCamera: { cameraType: Enum.CameraType, subject: Instance? }? = nil
-	local function toggleTopView()
-		local camera = workspace.CurrentCamera
-		if savedCamera then
-			camera.CameraType = savedCamera.cameraType
-			camera.CameraSubject = savedCamera.subject
-			savedCamera = nil
-			return
-		end
-		savedCamera = { cameraType = camera.CameraType, subject = camera.CameraSubject }
-		-- High enough that the whole table fits beside the panel, with its length across the screen
-		local panelShare = (Theme.Ui.PanelWidth + 2 * Theme.Ui.Padding) / camera.ViewportSize.X
-		local tanHalfHeight = math.tan(math.rad(camera.FieldOfView / 2))
-		local tanHalfWidth = tanHalfHeight * camera.ViewportSize.X / camera.ViewportSize.Y
-		local height = Config.Debug.TopDownMargin
-			* math.max(
-				Config.Table.Length / 2 / (tanHalfWidth * (1 - panelShare)),
-				Config.Table.Width / 2 / tanHalfHeight
-			)
-		-- Slide the view left so the table sits in the middle of the space the panel leaves
-		local shift = panelShare * height * tanHalfWidth
-		camera.CameraType = Enum.CameraType.Scriptable
-		camera.CFrame = CFrame.fromMatrix(
-			felt.Position + felt.CFrame.UpVector * height - felt.CFrame.RightVector * shift,
-			felt.CFrame.RightVector,
-			felt.CFrame.LookVector
-		)
-	end
-
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "PhysicsTest"
 	gui.ResetOnSpawn = false
@@ -117,21 +87,9 @@ function PhysicsTestPanel.start()
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Parent = panel
 
-	-- Rack and Top view side by side, to keep the panel short enough for small screens
-	local buttonRow = Instance.new("Frame")
-	buttonRow.Size = UDim2.new(1, 0, 0, Theme.Ui.ButtonHeight)
-	buttonRow.BackgroundTransparency = 1
-	buttonRow.Parent = panel
-	local rackButton = button("Rack (R)", 0, function()
+	button("Rack (R)", 0, function()
 		Remotes.TestRack:FireServer()
-	end)
-	local topButton = button("Top view (C)", 0, toggleTopView)
-	for i, item in { rackButton, topButton } do
-		item.Size = UDim2.new(0.5, -Theme.Ui.Padding / 4, 1, 0)
-		item.Position = UDim2.fromScale(i - 1, 0)
-		item.AnchorPoint = Vector2.new(i - 1, 0)
-		item.Parent = buttonRow
-	end
+	end).Parent = panel
 
 	-- The slider being dragged, if any: where to move it, and what to do when it's let go
 	local dragging: { moveTo: (number) -> (), release: () -> () }? = nil
@@ -228,8 +186,6 @@ function PhysicsTestPanel.start()
 			return
 		elseif input.KeyCode == Enum.KeyCode.R then
 			Remotes.TestRack:FireServer()
-		elseif input.KeyCode == Enum.KeyCode.C then
-			toggleTopView()
 		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 			shootAt(UserInputService:GetMouseLocation())
 		end

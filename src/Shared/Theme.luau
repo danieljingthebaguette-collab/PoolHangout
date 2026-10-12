@@ -27,6 +27,7 @@ local Theme = {
 		ButtonHeight = 44, -- big enough for a thumb
 		PanelWidth = 240,
 		SliderBar = 6,
+		MeterReserve = 96, -- screen width the top-down view keeps clear on the right for the power meter
 	},
 
 	-- By ball id. In the greybox each stripe shares its solid's color.
