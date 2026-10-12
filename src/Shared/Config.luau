@@ -39,6 +39,12 @@ local Config = {
 		HoldStartSpeed = 15, -- degrees/s
 		HoldMaxSpeed = 120, -- degrees/s
 		HoldRampSeconds = 1,
+		HoldDelaySeconds = 0.25, -- a key held this long starts turning, so a tap is only a nudge
+		DragDeadZone = 2, -- ball radii: a drag this close to the cue ball doesn't turn the aim, where it would jump
+		CueLength = 0.6, -- share of the table length
+		CueThickness = 0.5, -- share of a ball's width
+		CueTipGap = 1, -- ball radii between the cue ball and the cue's tip
+		CueHeight = 4, -- ball radii above the felt, clear of the rails; from straight above it looks the same as ball height
 	},
 
 	Camera = {

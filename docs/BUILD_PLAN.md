@@ -7,9 +7,9 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
-- **In progress:** the real shot controls, in 3 steps with a stop after each: (1) F and the top-down view, (2) cue stick and aim (A/D and arrows; drag to rotate, GamePigeon-style, by touch and mouse), (3) the power meter, with the cue sliding back as you pull, then remove click-to-shoot and the Power slider. Step 1 is done: I checked it on PC and in the phone emulator. Step 2 is in progress. Physics step 2 still needs my 2-player check before its box is ticked.
-- **Last session:** 2026-10-12. Tuned physics: RollingSlowdown 5 → 1.5 (full power now rolls about 13 table lengths), BallBounce 0.95 → 0.9, Follow 0.29 → 0.25. Built shot controls step 1 in `Client/ShotController.luau`: F toggles a high, narrow (20°) top-down camera that keeps room for the test panel and the meter, and turns off walking. Removed the test panel's C key and Top view button.
-- **Next up:** shot controls step 2, the cue stick and aim
+- **In progress:** the real shot controls, in 3 steps with a stop after each: (1) F and the top-down view, (2) cue stick and aim (A/D and arrows; drag to rotate, GamePigeon-style, by touch and mouse), (3) the power meter, with the cue sliding back as you pull, then remove click-to-shoot and the Power slider. Step 1 is done: I checked it on PC and in the phone emulator. Step 2 (cue stick and aim) is done: I checked it on PC and in the phone emulator. Step 3 is in progress. Physics step 2 still needs my 2-player check before its box is ticked.
+- **Last session:** 2026-10-12. Tuned physics: RollingSlowdown 5 → 1.5 (full power now rolls about 13 table lengths), BallBounce 0.95 → 0.9, Follow 0.29 → 0.25. Built shot controls step 1 in `Client/ShotController.luau`: F toggles a high, narrow (20°) top-down camera that keeps room for the test panel and the meter, and turns off walking. Removed the test panel's C key and Top view button. Built step 2: a cue stick only you see, A/D and arrows (0.25° tap, hold turns after 0.25 s, 15 → 120°/s), and drag-to-rotate around the cue ball by mouse or touch. In the top view, clicks aim instead of shooting.
+- **Next up:** shot controls step 3, the power meter
 - **Known issues:**
   - A full-power break moves rack balls only about 1.5 studs each and rarely pockets one. Look at it when tuning the feel.
 
@@ -33,7 +33,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [x] Greybox table: 10 × 5 studs of playing surface, 16 balls, and 6 pockets about 20% wider than real (Claude builds it, I adjust)
 - [ ] Ball physics: our own simulation on the server for rolling, ball-to-ball hits, rail bounces and pockets, played back smoothly on every screen (Claude)
 - [x] Press F to switch to the top-down view, and F again to go back (Claude)
-- [ ] Aim with A/D or the arrow keys: tap to nudge, hold to turn faster. On phones, drag on the table (Claude)
+- [x] Aim with A/D or the arrow keys: tap to nudge, hold to turn faster. On phones, drag on the table (Claude)
 - [ ] Power meter: drag the ball icon back, then push it to the end to shoot. Same on PC and phones (Claude)
 - [ ] Plain aim line to the first ball, switchable in the config file (Claude)
 - [ ] Tune the feel together: friction, power, rail bounce, pocket size (Me + Claude)

@@ -19,6 +19,7 @@ local Theme = {
 		Text = Color3.fromRGB(248, 236, 218),
 		Track = Color3.fromRGB(84, 62, 48),
 		Fill = Color3.fromRGB(236, 168, 72), -- warm lamp glow
+		Cue = Color3.fromRGB(214, 170, 112), -- light maple
 	},
 
 	Ui = {

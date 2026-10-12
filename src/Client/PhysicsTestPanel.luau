@@ -52,6 +52,10 @@ function PhysicsTestPanel.start()
 	local power = 1
 
 	local function shootAt(viewportPoint: Vector2)
+		-- In the top-down view (the only scriptable camera) clicks and drags turn the cue instead
+		if workspace.CurrentCamera.CameraType == Enum.CameraType.Scriptable then
+			return
+		end
 		local cue = tableModel:FindFirstChild("Ball0", true) :: BasePart?
 		local ray = workspace.CurrentCamera:ViewportPointToRay(viewportPoint.X, viewportPoint.Y)
 		local hit = workspace:Raycast(ray.Origin, ray.Direction * CLICK_REACH, feltOnly)
