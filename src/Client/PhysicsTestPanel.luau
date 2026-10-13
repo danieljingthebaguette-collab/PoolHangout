@@ -13,6 +13,16 @@ local Theme = require(ReplicatedStorage.Shared.Theme)
 
 local PhysicsTestPanel = {}
 
+local panelGui: ScreenGui? = nil
+
+-- The Test button and panel show only in the top-down view, clear of the phones' thumbstick in the normal view.
+-- R racks in any view.
+function PhysicsTestPanel.show(visible: boolean)
+	if panelGui then
+		panelGui.Enabled = visible
+	end
+end
+
 local function style(item: TextLabel | TextButton, text: string)
 	item.Size = UDim2.new(1, 0, 0, Theme.Ui.ButtonHeight)
 	item.BackgroundTransparency = 1
@@ -43,14 +53,21 @@ function PhysicsTestPanel.start()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "PhysicsTest"
 	gui.ResetOnSpawn = false
+	gui.Enabled = false
+	gui.DisplayOrder = 2 -- the open panel covers the power meter
+	panelGui = gui
 
-	-- Closed until you open it with the Test button, beside the settings gear, so it doesn't cover the HUD
-	local panel = Instance.new("Frame")
+	-- Closed until you open it with the Test button, beside the settings gear, so it doesn't cover the HUD. It
+	-- scrolls when it's taller than the screen, as on a phone held sideways.
+	local panel = Instance.new("ScrollingFrame")
 	panel.AnchorPoint = Vector2.new(0, 1)
 	panel.Position = UDim2.new(0, Theme.Ui.Padding, 1, -Theme.Ui.ButtonHeight - 2 * Theme.Ui.Padding)
 	panel.Visible = false
-	panel.Size = UDim2.fromOffset(Theme.Ui.PanelWidth, 0)
-	panel.AutomaticSize = Enum.AutomaticSize.Y
+	panel.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	panel.CanvasSize = UDim2.new()
+	panel.ScrollBarThickness = Theme.Ui.Padding
+	panel.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+	panel.BorderSizePixel = 0
 	panel.BackgroundColor3 = Theme.Colors.Panel
 	panel.Active = true
 	panel.Parent = gui
@@ -65,6 +82,15 @@ function PhysicsTestPanel.start()
 	list.Padding = UDim.new(0, Theme.Ui.Padding / 2)
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Parent = panel
+	-- As tall as its contents, up to the room above the Test button
+	local function fit()
+		local room = gui.AbsoluteSize.Y - Theme.Ui.ButtonHeight - 3 * Theme.Ui.Padding
+		local height = list.AbsoluteContentSize.Y + 2 * Theme.Ui.Padding
+		panel.Size = UDim2.fromOffset(Theme.Ui.PanelWidth, math.min(height, room))
+	end
+	list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(fit)
+	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+	fit()
 
 	local toggle = button("Test", 0, function()
 		panel.Visible = not panel.Visible
@@ -155,13 +181,9 @@ function PhysicsTestPanel.start()
 		end)
 	end
 
+	-- The server prints them, so they show in Studio's Output however the game is running
 	local printButton = button("Print values", #Config.Debug.TestSliders + 1, function()
-		local lines = { "Physics test values, as the server has them:" }
-		for _, range in Config.Debug.TestSliders do
-			local value = string.format("%g", Remotes.TestTune:GetAttribute(range.name))
-			table.insert(lines, `  {range.group}.{range.name} = {value},`)
-		end
-		print(table.concat(lines, "\n"))
+		Remotes.TestPrint:FireServer()
 	end)
 	printButton.Parent = panel
 

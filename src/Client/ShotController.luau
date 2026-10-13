@@ -24,7 +24,6 @@ local Preview = require(ReplicatedStorage.Shared.Physics.Preview)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
-local Hud = require(script.Parent.Hud)
 local TableView = require(script.Parent.TableView)
 
 local VIEW_ACTION = "TopDownView"
@@ -69,7 +68,8 @@ local function styleText(label: TextLabel | TextButton, text: string)
 	label.Text = text
 end
 
-function ShotController.start(tableModel: Model)
+-- `onView` hears when the top-down view turns on and off, for the HUD and anything else that only shows there
+function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	local felt = tableModel:WaitForChild("Felt") :: BasePart
 	local ballFolder = tableModel:WaitForChild("Balls")
 	local ballParts: { [number]: BasePart } = {}
@@ -507,7 +507,7 @@ function ShotController.start(tableModel: Model)
 		saved = nil
 		characterInput.Enabled = true
 		controls:Enable()
-		Hud.showTable(false)
+		onView(false)
 	end
 
 	local function enterView()
@@ -530,7 +530,7 @@ function ShotController.start(tableModel: Model)
 		frame()
 		characterInput.Enabled = false
 		controls:Disable()
-		Hud.showTable(true)
+		onView(true)
 		ContextActionService:BindAction(LOCK_ACTION, function(_, state: Enum.UserInputState)
 			if state == Enum.UserInputState.Begin then
 				toggleLock()

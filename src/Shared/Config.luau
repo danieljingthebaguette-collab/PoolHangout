@@ -64,6 +64,7 @@ local Config = {
 		Pocket = "rbxassetid://117731873975344",
 		Volume = 1, -- at a full-power hit; softer hits are quieter
 		LightHitShare = 0.15, -- ball hits slower than this share of full-power speed use the light clip
+		MaxPerFrame = 4, -- only the loudest few sounds play in a single frame, so a break isn't a wall of clicks
 		FullVolumeDistance = 10, -- studs: closer than this, sounds play at full volume
 		SilentDistance = 60, -- studs: sounds fade to nothing this far away, so each table sounds like its own
 	},

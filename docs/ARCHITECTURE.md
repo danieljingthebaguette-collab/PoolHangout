@@ -128,6 +128,7 @@ Workspace
 | `TestRack` | client → server | Physics test mode: rack Table1 |
 | `TestShoot` | client → server | Physics test mode: direction and power |
 | `TestTune` | client → server | Physics test mode: a slider's name and value. Its attributes hold every slider's current value |
+| `TestPrint` | client → server | Physics test mode: the server prints every slider's value to the Output |
 
 ## Saving and analytics
 

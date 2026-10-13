@@ -12,7 +12,8 @@ local TableView = require(script.Parent.TableView)
 
 local Hud = {}
 
-local tableGui: ScreenGui? = nil
+-- Everything the HUD shows only in the top-down view
+local guis: { ScreenGui } = {}
 
 local function roundCorners(item: GuiObject, radius: UDim?)
 	local corner = Instance.new("UICorner")
@@ -41,10 +42,10 @@ local function panel(parent: Instance): Frame
 	return item
 end
 
--- Shows the top bar and the tray while you're in the top-down view
+-- Shows the HUD while you're in the top-down view. In the normal view it would sit where phones put the thumbstick.
 function Hud.showTable(visible: boolean)
-	if tableGui then
-		tableGui.Enabled = visible
+	for _, gui in guis do
+		gui.Enabled = visible
 	end
 end
 
@@ -55,6 +56,7 @@ local function playerCard(gui: ScreenGui)
 	card.AnchorPoint = Vector2.new(1, 0)
 	card.Position = UDim2.new(0.5, -Theme.Ui.Padding, 0, Theme.Ui.Padding)
 	card.Size = UDim2.fromOffset(Theme.Ui.CardWidth, Theme.Ui.CardHeight)
+	card.Active = true -- pressing it doesn't start a shot
 	local avatarSize = Theme.Ui.CardHeight - 2 * Theme.Ui.Padding
 	local avatar = Instance.new("ImageLabel")
 	avatar.AnchorPoint = Vector2.new(1, 0.5)
@@ -129,6 +131,7 @@ local function tray(gui: ScreenGui, tableModel: Model)
 	frame.Size = UDim2.new(0, Theme.Ui.TrayWidth, Theme.Ui.TrayHeight, 0)
 	frame.BackgroundColor3 = Theme.Colors.Tray
 	frame.BorderSizePixel = 0
+	frame.Active = true -- pressing it doesn't start a shot
 	frame.Parent = gui
 	roundCorners(frame)
 	local list = Instance.new("UIListLayout")
@@ -261,14 +264,16 @@ function Hud.start(tableModel: Model)
 	gui.Enabled = false
 	playerCard(gui)
 	gui.Parent = playerGui
-	tableGui = gui
+	table.insert(guis, gui)
 
 	local settingsGui = Instance.new("ScreenGui")
 	settingsGui.Name = "Settings"
 	settingsGui.ResetOnSpawn = false
-	settingsGui.DisplayOrder = 1 -- the open panel covers the test panel's button beside the gear
+	settingsGui.Enabled = false
+	settingsGui.DisplayOrder = 3 -- the open panel covers the test panel's button beside the gear
 	settings(settingsGui)
 	settingsGui.Parent = playerGui
+	table.insert(guis, settingsGui)
 
 	-- Waits for the table's balls, so it goes last
 	tray(gui, tableModel)

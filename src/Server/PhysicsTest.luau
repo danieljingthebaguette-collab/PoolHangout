@@ -59,6 +59,27 @@ local function addMarks(ball: Part, id: number)
 	end
 end
 
+-- The first spot on the line across the table at `x` where the cue ball overlaps no other ball: the middle, then
+-- out to either side a ball's width at a time
+local function freeSpot(balls: { Simulate.Ball }, x: number, tableParams: typeof(Config.Table)): (number, number)
+	local diameter = 2 * tableParams.BallRadius
+	local steps = math.floor((tableParams.Width / 2 - tableParams.BallRadius) / diameter)
+	for i = 0, 2 * steps do
+		local y = (if i % 2 == 0 then 1 else -1) * math.ceil(i / 2) * diameter
+		local clear = true
+		for _, ball in balls do
+			if ball.id ~= 0 and not ball.pocket and (ball.x - x) ^ 2 + (ball.y - y) ^ 2 < diameter * diameter then
+				clear = false
+				break
+			end
+		end
+		if clear then
+			return x, y
+		end
+	end
+	return x, 0
+end
+
 function PhysicsTest.start()
 	local tableModel = workspace:WaitForChild("Tables"):WaitForChild("Table1") :: Model
 	local felt = tableModel:WaitForChild("Felt") :: BasePart
@@ -124,6 +145,18 @@ function PhysicsTest.start()
 		end
 	end)
 
+	Remotes.TestPrint.OnServerEvent:Connect(function(player: Player)
+		if not PhysicsTestAccess.canTest(player) then
+			return
+		end
+		local lines = { `Physics test values, printed for {player.Name}:` }
+		for _, slider in Config.Debug.TestSliders do
+			local value = string.format("%g", Remotes.TestTune:GetAttribute(slider.name))
+			table.insert(lines, `  {slider.group}.{slider.name} = {value},`)
+		end
+		print(table.concat(lines, "\n"))
+	end)
+
 	Remotes.TestShoot.OnServerEvent:Connect(function(player: Player, dirX: unknown, dirY: unknown, power: unknown)
 		if rolling or typeof(dirX) ~= "number" or typeof(dirY) ~= "number" or typeof(power) ~= "number" then
 			return
@@ -164,11 +197,10 @@ function PhysicsTest.start()
 			)
 		end
 		-- The cue ball sorts first. A sunk one comes back on the head line so testing can go on.
-		-- ponytail: no check for a ball already sitting there; press R if one is.
 		local cue = balls[1]
 		if cue.pocket then
 			cue.pocket = nil
-			cue.x, cue.y = Geometry.build(params.Table).headLineX, 0
+			cue.x, cue.y = freeSpot(balls, Geometry.build(params.Table).headLineX, params.Table)
 		end
 		place()
 		Remotes.ShotResolved:FireAllClients(tableModel, balls)

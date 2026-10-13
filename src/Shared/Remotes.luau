@@ -36,4 +36,7 @@ return {
 	-- client → server: (slider name, value). The server keeps each slider's current value as an attribute on
 	-- this remote, so every screen shows the same numbers, including players who join later.
 	TestTune = remote("TestTune"),
+	-- client → server: (). The server prints the sliders' values, so they show in Studio's Output in any playtest
+	-- and under Server in a published server's console (F9)
+	TestPrint = remote("TestPrint"),
 }

@@ -31,6 +31,10 @@ type Replay = {
 
 local TableView = {}
 
+-- Share of its radius above the felt below which a ball counts as sinking. Just under 1, since a resting ball's
+-- height is its radius give or take rounding.
+local SINKING = 0.99
+
 local replays: { [Model]: Replay } = {}
 -- Tables with a shot from start until the server sends its result: no new shot can start there
 local busy: { [Model]: boolean } = {}
@@ -99,22 +103,30 @@ local function show(view: View, ball: Simulate.Ball, radius: number)
 	end
 end
 
+-- Plays the sounds of this frame's new events: only the loudest few, so a break doesn't fire dozens at once
 local function playEvents(replay: Replay)
 	local events, physics = replay.sim.events, replay.sim.params.Physics
+	local sounds: { { part: BasePart, soundId: string, share: number } } = {}
 	for i = replay.heard + 1, #events do
 		local event = events[i]
 		local part = replay.view.parts[event.id]
 		if part then
-			local share = event.speed / physics.FullPowerSpeed
+			local share = if event.kind == "pocket" then 1 else event.speed / physics.FullPowerSpeed
 			local soundId = if event.kind == "rail"
 				then Config.Sounds.RailHit
 				elseif event.kind == "pocket" then Config.Sounds.Pocket
 				elseif share < Config.Sounds.LightHitShare then Config.Sounds.BallHitLight
 				else Config.Sounds.BallHit
-			TableView.playSound(part, soundId, if event.kind == "pocket" then 1 else share)
+			table.insert(sounds, { part = part, soundId = soundId, share = share })
 		end
 	end
 	replay.heard = #events
+	table.sort(sounds, function(a, b): boolean
+		return a.share > b.share
+	end)
+	for i = 1, math.min(#sounds, Config.Sounds.MaxPerFrame) do
+		TableView.playSound(sounds[i].part, sounds[i].soundId, sounds[i].share)
+	end
 end
 
 -- Draws one frame of a replay. Returns true once it's over and nothing is still sinking.
@@ -247,7 +259,10 @@ local function addShadow(felt: BasePart, ball: BasePart, folder: Folder)
 		local x, y = TableSpace.toTable(felt, ball.Position)
 		-- Lying flat on the felt. Cylinders run along their X axis.
 		shadow.CFrame = TableSpace.toWorld(felt, x + offset, y + offset, 0.005) * CFrame.Angles(0, 0, math.rad(90))
-		shadow.Transparency = if ball.Transparency == 1 then 1 else Theme.BallShadow.Transparency
+		-- Gone as soon as the ball starts sinking into a pocket, since it's no longer on the felt
+		local height = felt.CFrame:PointToObjectSpace(ball.Position).Y - felt.Size.Y / 2
+		local sinking = height < radius * SINKING
+		shadow.Transparency = if ball.Transparency == 1 or sinking then 1 else Theme.BallShadow.Transparency
 	end
 	follow()
 	ball:GetPropertyChangedSignal("CFrame"):Connect(follow)
