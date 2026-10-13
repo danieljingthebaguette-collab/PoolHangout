@@ -20,6 +20,7 @@ local Theme = {
 		Track = Color3.fromRGB(84, 62, 48),
 		Fill = Color3.fromRGB(236, 168, 72), -- warm lamp glow
 		Cue = Color3.fromRGB(214, 170, 112), -- light maple
+		AimLine = Color3.fromRGB(255, 255, 255),
 	},
 
 	Ui = {
@@ -31,6 +32,7 @@ local Theme = {
 		MeterReserve = 96, -- screen width the top-down view keeps clear on the right for the power meter
 		MeterTrack = 16, -- width of the power meter
 		MeterHeight = 0.45, -- share of the screen's height
+		AimLineThickness = 2, -- pixels, for the aim indicator's lines and circle
 	},
 
 	-- By ball id. In the greybox each stripe shares its solid's color.

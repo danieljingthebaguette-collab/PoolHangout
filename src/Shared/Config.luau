@@ -37,7 +37,9 @@ local Config = {
 	},
 
 	Aim = {
-		ShowAimLine = true,
+		ShowAimLine = true, -- the aim indicator's line from the cue ball and the circle where it first touches something
+		ShowTargetLine = true, -- the aim indicator's short line showing which way the hit ball goes
+		TargetLineLength = 6, -- ball radii
 		NudgeDegrees = 0.25,
 		HoldStartSpeed = 15, -- degrees/s
 		HoldMaxSpeed = 120, -- degrees/s

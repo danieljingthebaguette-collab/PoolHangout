@@ -3,7 +3,8 @@
 -- You can only aim and shoot from the view: walking is off and a cue stick lies behind the cue ball.
 -- Aim: on PC the cue follows the mouse and A/D or the arrow keys nudge it; on phones a drag that starts away
 -- from the cue ball turns it. Power works like a slingshot: hold the mouse button (phones: touch near the cue
--- ball or cue) and drag; the farther from where you pressed, the harder. Let go to shoot.
+-- ball or cue) and drag; the farther from where you pressed, the harder. Let go to shoot. The aim indicator
+-- shows where the cue ball first touches something and which way a hit ball goes.
 
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
@@ -14,6 +15,8 @@ local StarterPlayer = game:GetService("StarterPlayer")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
+local Preview = require(ReplicatedStorage.Shared.Physics.Preview)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
@@ -55,7 +58,12 @@ end
 -- `leftReserve` is screen width, in pixels, that the view keeps clear on the left for other UI
 function ShotController.start(tableModel: Model, leftReserve: number)
 	local felt = tableModel:WaitForChild("Felt") :: BasePart
-	local cueBall = tableModel:WaitForChild("Balls"):WaitForChild("Ball0") :: BasePart
+	local ballFolder = tableModel:WaitForChild("Balls")
+	local ballParts: { [number]: BasePart } = {}
+	for id = 0, 15 do
+		ballParts[id] = ballFolder:WaitForChild(`Ball{id}`) :: BasePart
+	end
+	local cueBall = ballParts[0]
 	-- Roblox's current player module lives in StarterPlayer and moves the character through input actions, so
 	-- switching off its character context is what stops walking and jumping. Disabling its controls hides the
 	-- phone thumbstick and jump button.
@@ -109,6 +117,37 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 	roundCorners(fill)
 	meterGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 
+	-- The aim indicator. Only this screen sees it. It's drawn on the screen over the fixed top-down view:
+	-- 3D line adornments came out broken up and hidden behind balls, and a hollow cylinder shows nothing
+	-- from straight above.
+	local layout = Geometry.build(Config.Table)
+	local indicatorGui = Instance.new("ScreenGui")
+	indicatorGui.Name = "AimIndicator"
+	indicatorGui.ResetOnSpawn = false
+	indicatorGui.IgnoreGuiInset = true -- so the camera's viewport points place it directly
+	local function indicatorLine(): Frame
+		local line = Instance.new("Frame")
+		line.AnchorPoint = Vector2.new(0.5, 0.5)
+		line.BackgroundColor3 = Theme.Colors.AimLine
+		line.BorderSizePixel = 0
+		line.Visible = false
+		line.Parent = indicatorGui
+		return line
+	end
+	local pathLine, targetLine = indicatorLine(), indicatorLine()
+	-- A ring the size of a ball, where the cue ball will be when it first touches something
+	local ghost = Instance.new("Frame")
+	ghost.AnchorPoint = Vector2.new(0.5, 0.5)
+	ghost.BackgroundTransparency = 1
+	ghost.Visible = false
+	ghost.Parent = indicatorGui
+	roundCorners(ghost)
+	local outline = Instance.new("UIStroke")
+	outline.Color = Theme.Colors.AimLine
+	outline.Thickness = Theme.Ui.AimLineThickness
+	outline.Parent = ghost
+	indicatorGui.Parent = meterGui.Parent
+
 	-- Radians in table space: 0 aims along +x, at the rack
 	local aim = 0
 	-- The key turning the aim, which way, and when it went down
@@ -143,6 +182,56 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 			felt.CFrame.RightVector,
 			felt.CFrame.LookVector
 		)
+	end
+
+	-- Where a table-space point at ball-center height is on the screen
+	local function toScreen(x: number, y: number): Vector2
+		local point = workspace.CurrentCamera:WorldToViewportPoint(TableSpace.toWorld(felt, x, y, radius).Position)
+		return Vector2.new(point.X, point.Y)
+	end
+
+	local function hideIndicator()
+		pathLine.Visible, targetLine.Visible, ghost.Visible = false, false, false
+	end
+
+	local function showLine(line: Frame, fromX: number, fromY: number, toX: number, toY: number)
+		local from, to = toScreen(fromX, fromY), toScreen(toX, toY)
+		local middle, along = (from + to) / 2, to - from
+		line.Position = UDim2.fromOffset(middle.X, middle.Y)
+		line.Size = UDim2.fromOffset(along.Magnitude, Theme.Ui.AimLineThickness)
+		line.Rotation = math.deg(math.atan2(along.Y, along.X))
+		line.Visible = true
+	end
+
+	local function drawIndicator(cueX: number, cueY: number)
+		local balls: { Preview.Ball } = {}
+		for id, part in ballParts do
+			if part.Transparency ~= 1 then
+				local x, y = TableSpace.toTable(felt, part.Position)
+				table.insert(balls, { id = id, x = x, y = y })
+			end
+		end
+		local contact = Preview.firstContact(balls, math.cos(aim), math.sin(aim), Config.Table, layout)
+		hideIndicator()
+		if Config.Aim.ShowAimLine then
+			showLine(pathLine, cueX, cueY, contact.x, contact.y)
+			local middle = toScreen(contact.x, contact.y)
+			local diameter = 2 * (toScreen(contact.x + radius, contact.y) - middle).Magnitude
+			ghost.Position = UDim2.fromOffset(middle.X, middle.Y)
+			ghost.Size = UDim2.fromOffset(diameter, diameter)
+			ghost.Visible = true
+		end
+		if Config.Aim.ShowTargetLine and contact.ball then
+			local hitX, hitY = TableSpace.toTable(felt, ballParts[contact.ball].Position)
+			local length = Config.Aim.TargetLineLength * radius
+			showLine(
+				targetLine,
+				hitX,
+				hitY,
+				hitX + (contact.pushX :: number) * length,
+				hitY + (contact.pushY :: number) * length
+			)
+		end
 	end
 
 	local function canShoot(): boolean
@@ -201,8 +290,11 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		cue.Transparency = if hidden then 1 else 0
 		meterGui.Enabled = not hidden
 		fill.Size = UDim2.fromScale(1, pull)
-		if not hidden then
+		if hidden then
+			hideIndicator()
+		else
 			local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
+			drawIndicator(cueX, cueY)
 			local back = cueBack + pull * radius * Config.Aim.CuePullBack
 			cue.CFrame = TableSpace.toWorld(felt, cueX - math.cos(aim) * back, cueY - math.sin(aim) * back, cueHeight)
 				* CFrame.Angles(0, -aim, 0)
@@ -288,6 +380,7 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		turning, drag, pulling, pull = nil, nil, nil, 0
 		cue.Transparency = 1
 		meterGui.Enabled = false
+		hideIndicator()
 		camera.CameraType = saved.cameraType
 		camera.CFrame = saved.cframe
 		camera.FieldOfView = saved.fieldOfView
