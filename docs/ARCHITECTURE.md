@@ -59,12 +59,13 @@ Starting values for Config (tune by feel):
 | Table length × width | 16 × 8 studs | 2:1 like a real table; 20 × 12 with the cushions and frame |
 | Ball radius | 0.24 studs | Real ball-to-table proportion |
 | Pocket mouth, corner / side | 1.2 / 1.28 studs | About 20% wider than real |
-| Full-power speed | 32 studs/s | |
-| Rolling slowdown | 2.4 studs/s² | Full power rolls about 213 studs, about 13 table lengths |
-| Rail bounce | 0.8 | Keeps about 80% of the speed |
+| Full-power speed | 30 studs/s | Tuned by feel |
+| Power curve | 1.2 | Speed is pull ^ 1.2, so soft shots get more of the drag |
+| Rolling slowdown | 2.3 studs/s² | Full power rolls about 196 studs, about 12 table lengths |
+| Rail bounce | 0.7 | Keeps about 70% of the speed |
 | Ball bounce | 0.9 | |
-| Follow | 0.25 | Natural roll in real pool is 2/7; with ball bounce 0.9 a straight hit keeps about 29% |
-| Rack gap | 0 studs | A tight rack |
+| Follow | 0.3 | Natural roll in real pool is 2/7; with ball bounce 0.9 a straight hit keeps about 34% |
+| Rack gap | 0.025 studs | A hair apart, so the break spreads |
 | Stop speed / time step / time cap | 0.032 studs/s / 1/960 s / 20 s | 1/960 keeps the test mode's top speed of 64 under a third of a radius per step |
 | Shot clock / warning | 45 s / last 10 s | |
 | Countdown / takeover / open-spot wait / end screen | 5 / 5 / 15 / 10 s | |

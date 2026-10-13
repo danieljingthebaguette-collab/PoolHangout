@@ -7,11 +7,12 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
-- **In progress:** nothing. Owner-only physics test mode in the published game (`Config.Debug.PhysicsTestLive`) is built and committed; I'll publish privately and try it in Phase 1's phone check.
-- **Last session:** 2026-10-13. Finished the shot controls: the aim indicator, mouse-only aim (A/D removed), an optional aim lock (Space, or Lock on phones), and a hidden cancel zone shown by the indicator turning see-through. Added owner-only test mode for published servers. Switched to PC-only checks after each step, with a real-phone check at the end of each phase.
-- **Next up:** tuning the feel together on PC
+- **In progress:** tuning the feel. Shots feel finished (placeholder sounds, cue strike, rolling markings, pocket sinks, instant start), and I tuned the physics: FullPowerSpeed 32 → 30, RollingSlowdown 2.4 → 2.3, RailBounce 0.8 → 0.7, Follow 0.25 → 0.3, PowerCurve 1 → 1.2, RackGap 0 → 0.025. Next, real-size pockets, a table restyle and the HUD.
+- **Last session:** 2026-10-13. Rescaled the table to its final size, 16 × 8 studs of playing surface (20 × 12 with the frame), with every stud-based setting scaled 1.6× so the feel stayed the same, and rebuilt the greybox Table1 with rounded corners and curved pocket cut-outs at hip height. Then built the pre-tuning items above.
+- **Next up:** tune the feel together on PC
 - **Known issues:**
   - Touch hasn't been tried on a real phone yet, only in the emulator; it's covered by Phase 1's phone check
+  - The physics test panel now has 7 sliders and may not fit a phone's height in landscape; check it in the phone check
   - `.claude/rules/client.md` still says the top-down view turns off walking "so A/D only aim"; A/D aiming is gone
 
 ## Rules that protect quality

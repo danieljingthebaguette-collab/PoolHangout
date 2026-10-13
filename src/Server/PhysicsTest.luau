@@ -20,6 +20,45 @@ local function isFinite(value: number): boolean
 	return value == value and math.abs(value) ~= math.huge
 end
 
+-- Placeholder markings, welded on, so you can see a ball roll. The commissioned balls replace them.
+local function addMarks(ball: Part, id: number)
+	local radius = ball.Size.X / 2
+	local marks = Theme.BallMarks
+	local function mark(color: Color3, size: Vector3, offset: CFrame)
+		local part = Instance.new("Part")
+		part.Name = "Mark"
+		part.Shape = Enum.PartType.Cylinder
+		part.Size = size
+		part.Color = color
+		part.CFrame = ball.CFrame * offset
+		part.CanCollide = false
+		part.CanTouch = false
+		part.CanQuery = false
+		part.CastShadow = false
+		part.Massless = true
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = ball
+		weld.Part1 = part
+		weld.Parent = part
+		part.Parent = ball
+	end
+	if id >= 9 then
+		-- A white ball with a band of color around it
+		ball.Color = Theme.Colors.BallMark
+		local width, across = marks.BandWidth * radius, marks.BandDiameter * radius
+		mark(Theme.BallColors[id], Vector3.new(width, across, across), CFrame.Angles(0, math.rad(90), 0))
+	else
+		ball.Color = Theme.BallColors[id]
+		local color = if id == 0 then Theme.Colors.CueBallMark else Theme.Colors.BallMark
+		local thickness, diameter = marks.DotThickness * radius, marks.DotDiameter * radius
+		for _, side in { 1, -1 } do
+			-- A flat dot resting on the top or bottom of the ball. Cylinders run along their X axis.
+			local offset = CFrame.new(0, side * (radius + thickness / 2), 0) * CFrame.Angles(0, 0, math.rad(90))
+			mark(color, Vector3.new(thickness, diameter, diameter), offset)
+		end
+	end
+end
+
 function PhysicsTest.start()
 	local tableModel = workspace:WaitForChild("Tables"):WaitForChild("Table1") :: Model
 	local felt = tableModel:WaitForChild("Felt") :: BasePart
@@ -36,11 +75,11 @@ function PhysicsTest.start()
 		part.Name = `Ball{id}`
 		part.Shape = Enum.PartType.Ball
 		part.Size = Vector3.one * 2 * radius
-		part.Color = Theme.BallColors[id]
 		part.Anchored = true
 		part.CanCollide = false
 		part.CanTouch = false
 		part.CanQuery = false
+		addMarks(part, id)
 		part.Parent = folder
 		parts[id] = part
 	end
@@ -49,7 +88,7 @@ function PhysicsTest.start()
 	local function place()
 		for _, ball in balls do
 			parts[ball.id].CFrame = TableSpace.toWorld(felt, ball.x, ball.y, radius)
-			parts[ball.id].Transparency = if ball.pocket then 1 else 0
+			TableSpace.setShown(parts[ball.id], not ball.pocket)
 		end
 	end
 
@@ -57,17 +96,8 @@ function PhysicsTest.start()
 		Remotes.TestTune:SetAttribute(slider.name, (Config :: any)[slider.group][slider.name])
 	end
 
-	-- A fresh copy of Config with the sliders' values, so moving a slider mid-shot can't change that shot
-	local function currentParams(): Simulate.Params
-		local params = { Table = table.clone(Config.Table), Physics = table.clone(Config.Physics) }
-		for _, slider in Config.Debug.TestSliders do
-			(params :: any)[slider.group][slider.name] = Remotes.TestTune:GetAttribute(slider.name)
-		end
-		return params
-	end
-
 	local function rack()
-		local layout = Geometry.build(currentParams().Table)
+		local layout = Geometry.build(PhysicsTestAccess.params().Table)
 		balls = { { id = 0, x = layout.headLineX, y = 0, vx = 0, vy = 0 } }
 		for id, spot in layout.rack do
 			table.insert(balls, { id = id, x = spot.x, y = spot.y, vx = 0, vy = 0 })
@@ -107,7 +137,7 @@ function PhysicsTest.start()
 		end
 
 		rolling = true
-		local params = currentParams()
+		local params = PhysicsTestAccess.params()
 		local shot: Simulate.Shot = { dirX = dirX / length, dirY = dirY / length, power = power }
 		local sim = Simulate.start(balls, shot, params)
 		Remotes.ShotStarted:FireAllClients(tableModel, balls, shot, params)

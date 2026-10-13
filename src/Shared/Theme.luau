@@ -21,6 +21,8 @@ local Theme = {
 		Fill = Color3.fromRGB(236, 168, 72), -- warm lamp glow
 		Cue = Color3.fromRGB(214, 170, 112), -- light maple
 		AimLine = Color3.fromRGB(255, 255, 255),
+		BallMark = Color3.fromRGB(245, 242, 230), -- the white on the placeholder balls: stripes and number dots
+		CueBallMark = Color3.fromRGB(200, 35, 35),
 	},
 
 	Ui = {
@@ -37,7 +39,16 @@ local Theme = {
 		LockButtonWidth = 80, -- the phones' Lock button, beside the power meter
 	},
 
-	-- By ball id. In the greybox each stripe shares its solid's color.
+	-- The placeholder balls' markings, so you can see them roll, in ball radii. Solids, the 8 and the cue ball
+	-- get a dot on top and bottom, stripes a band of color around a white ball.
+	BallMarks = {
+		DotDiameter = 0.8,
+		DotThickness = 0.05,
+		BandWidth = 1,
+		BandDiameter = 1.96, -- a little under the ball's 2, so the band and the ball don't flicker where they meet
+	},
+
+	-- By ball id. Each stripe shares its solid's color.
 	BallColors = {
 		[0] = Color3.fromRGB(245, 242, 230),
 		[1] = YELLOW,

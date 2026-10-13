@@ -6,7 +6,8 @@
 -- of a small cancel zone around where you pressed, and letting go shoots; letting go back inside the zone
 -- cancels. Space (phones: the Lock button) optionally locks the aim first, and then a pull can start anywhere.
 -- The aim indicator shows where the cue ball first touches something and which way a hit ball goes. It's
--- see-through while you aim or when letting go would cancel, and solid while the aim is locked.
+-- see-through while you aim or when letting go would cancel, and solid while the aim is locked. When you let
+-- go, the cue strikes forward and the shot starts on this screen the moment it reaches the ball.
 
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
@@ -18,10 +19,12 @@ local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
+local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Preview = require(ReplicatedStorage.Shared.Physics.Preview)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
+local TableView = require(script.Parent.TableView)
 
 local VIEW_ACTION = "TopDownView"
 local LOCK_ACTION = "LockAim"
@@ -197,7 +200,8 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 	local pulling: { input: InputObject, x: number, y: number, left: boolean }? = nil
 	-- How far the cue is pulled back, 0 to 1: the shot's power
 	local pull = 0
-	local rolling = false
+	-- After you let go: the shot's power and how far the cue has come forward, 0 to 1, until it reaches the ball
+	local strike: { power: number, t: number }? = nil
 
 	-- The camera's settings from before the view, and everything the view connected, while it's on
 	local saved: { cameraType: Enum.CameraType, cframe: CFrame, fieldOfView: number, connections: { RBXScriptConnection } }? =
@@ -280,7 +284,19 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 	end
 
 	local function canShoot(): boolean
-		return not rolling and cueBall.Transparency ~= 1
+		return not TableView.isBusy(tableModel) and cueBall.Transparency ~= 1
+	end
+
+	-- The cue has reached the ball: the shot goes, here at once and to the server
+	local function fire()
+		local power = (strike :: { power: number, t: number }).power
+		strike = nil
+		pull = 0
+		local shot = { dirX = math.cos(aim), dirY = math.sin(aim), power = power }
+		-- ponytail: the test mode's remote, until Match (Phase 2) brings RequestShot and turns
+		Remotes.TestShoot:FireServer(shot.dirX, shot.dirY, shot.power)
+		TableView.predict(tableModel, shot, PhysicsTestAccess.params())
+		TableView.playSound(cueBall, Config.Sounds.CueStrike, power)
 	end
 
 	-- Where the pointer meets the plane of the felt's top, in table space. Off the table's edge counts too.
@@ -328,14 +344,24 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		if pulling and not stillHeld(pulling.input) then
 			cancelPull()
 		end
-		if not pulling and pull > 0 then
+		local strikeOffset = 0
+		if strike then
+			strike.t = math.min(strike.t + dt / Config.Shot.StrikeSeconds, 1)
+			-- Speeds up into the ball, from the pull to the tip touching it
+			local touching = -Config.Aim.CueTipGap / Config.Aim.CuePullBack
+			strikeOffset = strike.power + (touching - strike.power) * strike.t * strike.t - pull
+			if strike.t >= 1 then
+				fire()
+				strikeOffset = 0
+			end
+		elseif not pulling and pull > 0 then
 			pull = math.max(pull - dt / Config.Shot.MeterSpringSeconds, 0)
 		end
 		local hidden = not canShoot()
 		cue.Transparency = if hidden then 1 else 0
 		meterGui.Enabled = not hidden
 		fill.Size = UDim2.fromScale(1, pull)
-		local held = locked or pulling ~= nil
+		local held = locked or pulling ~= nil or strike ~= nil
 		-- Back inside the cancel zone after leaving it, where letting go cancels
 		local cancelling = pulling ~= nil and pulling.left and pull == 0
 		hint.Text = if cancelling then CANCEL_HINT elseif held then hints.locked else hints.aiming
@@ -347,7 +373,7 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		fadeIndicator(cancelling or not held)
 		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
 		drawIndicator(cueX, cueY)
-		local back = cueBack + pull * radius * Config.Aim.CuePullBack
+		local back = cueBack + (pull + strikeOffset) * radius * Config.Aim.CuePullBack
 		cue.CFrame = TableSpace.toWorld(felt, cueX - math.cos(aim) * back, cueY - math.sin(aim) * back, cueHeight)
 			* CFrame.Angles(0, -aim, 0)
 	end
@@ -358,7 +384,12 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 			return
 		end
 		local isTouch = input.UserInputType == Enum.UserInputType.Touch
-		if gameProcessed or pulling or not (isTouch or input.UserInputType == Enum.UserInputType.MouseButton1) then
+		if
+			gameProcessed
+			or pulling
+			or strike
+			or not (isTouch or input.UserInputType == Enum.UserInputType.MouseButton1)
+		then
 			return
 		end
 		local x, y = pointerOnTable(input.Position)
@@ -402,8 +433,7 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		if pulling and input == pulling.input then
 			-- Letting go inside the cancel ring fires nothing, and the lock stays as it was
 			if pull > 0 then
-				-- ponytail: the test mode's remote, until Match (Phase 2) brings RequestShot and turns
-				Remotes.TestShoot:FireServer(math.cos(aim), math.sin(aim), pull)
+				strike = { power = pull, t = 0 }
 				-- Each new shot starts unlocked
 				locked = false
 			end
@@ -424,6 +454,10 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 			connection:Disconnect()
 		end
 		ContextActionService:UnbindAction(LOCK_ACTION)
+		-- A shot you've let go of still goes
+		if strike then
+			fire()
+		end
 		-- Leaving mid-pull cancels the shot, and the view starts over unlocked
 		drag, pulling, pull, locked = nil, nil, 0, false
 		cue.Transparency = 1
@@ -476,17 +510,6 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		return Enum.ContextActionResult.Sink
 	end, true, Enum.KeyCode.F)
 	ContextActionService:SetTitle(VIEW_ACTION, "View")
-
-	Remotes.ShotStarted.OnClientEvent:Connect(function(shotTable: Model?)
-		if shotTable == tableModel then
-			rolling = true
-		end
-	end)
-	Remotes.ShotResolved.OnClientEvent:Connect(function(shotTable: Model?)
-		if shotTable == tableModel then
-			rolling = false
-		end
-	end)
 
 	-- A new character gets fresh controls and camera, so start it in the normal view
 	Players.LocalPlayer.CharacterAdded:Connect(leaveView)

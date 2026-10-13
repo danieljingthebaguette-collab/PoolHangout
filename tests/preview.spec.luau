@@ -9,7 +9,7 @@ local LENGTH, WIDTH, RADIUS = Config.Table.Length, Config.Table.Width, Config.Ta
 local layout = Geometry.build(Config.Table)
 local POWER = 0.5
 -- The farthest a ball moves in one step at that power: how close a stepped contact can be to an exact one
-local STEP_TRAVEL = POWER * Config.Physics.FullPowerSpeed * Config.Physics.TimeStep
+local STEP_TRAVEL = POWER ^ Config.Physics.PowerCurve * Config.Physics.FullPowerSpeed * Config.Physics.TimeStep
 
 local function ball(id: number, x: number, y: number): Simulate.Ball
 	return { id = id, x = x, y = y, vx = 0, vy = 0 }

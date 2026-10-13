@@ -27,7 +27,11 @@ end
 local function shotRolling(dx: number, dy: number, distance: number): Simulate.Shot
 	local length = math.sqrt(dx * dx + dy * dy)
 	local speed = math.sqrt(2 * PHYSICS.RollingSlowdown * distance)
-	return { dirX = dx / length, dirY = dy / length, power = speed / PHYSICS.FullPowerSpeed }
+	return {
+		dirX = dx / length,
+		dirY = dy / length,
+		power = (speed / PHYSICS.FullPowerSpeed) ^ (1 / PHYSICS.PowerCurve),
+	}
 end
 
 -- Config with no rolling slowdown, so speeds right after a hit can be checked exactly.
@@ -75,7 +79,7 @@ return function(test, check)
 
 	test("Follow: a ball rolling into another keeps some of its forward roll", function()
 		local keep = 1 - (1 - PHYSICS.Follow) * (1 + PHYSICS.BallBounce) / 2
-		local speed = PHYSICS.FullPowerSpeed / 2
+		local speed = PHYSICS.FullPowerSpeed * 0.5 ^ PHYSICS.PowerCurve
 
 		local sim = Simulate.start(
 			{ ball(0, layout.headLineX, 0), ball(1, 0, 0) },
@@ -112,7 +116,7 @@ return function(test, check)
 		stepUntil(sim, function()
 			return cue.vy < 0
 		end)
-		local speed = PHYSICS.FullPowerSpeed / 2 * PHYSICS.RailBounce
+		local speed = PHYSICS.FullPowerSpeed * 0.5 ^ PHYSICS.PowerCurve * PHYSICS.RailBounce
 		check.near(cue.vx, speed * diagonal, 1e-9, "vx")
 		check.near(cue.vy, -speed * diagonal, 1e-9, "vy")
 		-- Bouncing from the exact point it touched the rail puts it on the mirrored path
@@ -210,6 +214,36 @@ return function(test, check)
 		end
 		check.equal(start[1].x, layout.headLineX, "starting cue ball x")
 		check.equal(start[1].vx, 0, "starting cue ball vx")
+	end)
+
+	test("a shot records each ball hit, rail hit and pocket drop once, in order", function()
+		local function events(balls: { Simulate.Ball }, shot: Simulate.Shot, params: Simulate.Params?): string
+			local sim = Simulate.run(balls, shot, params)
+			local kinds = {}
+			for _, event in sim.events do
+				check.truthy(event.speed > 0, `{event.kind} {event.id} speed`)
+				table.insert(kinds, `{event.kind} {event.id}`)
+			end
+			return table.concat(kinds, ", ")
+		end
+		-- Straight into ball 1, which drops in the +y side pocket, and the cue ball follows it in
+		local potted = events({ ball(0, 0, -WIDTH / 4), ball(1, 0, 0) }, shotRolling(0, 1, WIDTH), frictionless())
+		check.equal(potted, "ball 0, pocket 1, pocket 0", "pot")
+		-- Just reaches the +y long rail, comes off it and stops
+		local banked = events({ ball(0, -LENGTH / 4, 0) }, shotRolling(0, 1, WIDTH / 2 - RADIUS + WIDTH / 8))
+		check.equal(banked, "rail 0", "rail")
+	end)
+
+	test("PowerCurve: half a pull gives half ^ PowerCurve of full speed", function()
+		for _, curve in { 1, 2 } do
+			local physics = table.clone(PHYSICS)
+			physics.PowerCurve = curve
+			local sim = Simulate.start({ ball(0, 0, 0) }, { dirX = 1, dirY = 0, power = 0.5 }, {
+				Table = Config.Table,
+				Physics = physics,
+			})
+			check.near(sim.balls[1].vx, PHYSICS.FullPowerSpeed * 0.5 ^ curve, 1e-9, `curve {curve}`)
+		end
 	end)
 
 	test("a full-power break takes under 50 ms to simulate", function()

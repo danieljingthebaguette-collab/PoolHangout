@@ -16,7 +16,18 @@ export type Shot = { dirX: number, dirY: number, power: number }
 -- being tuned live.
 export type Params = { Table: typeof(Config.Table), Physics: typeof(Config.Physics) }
 
-export type Sim = { balls: { Ball }, params: Params, layout: Geometry.Layout, steps: number, done: boolean }
+-- Something that happened during a shot, for sounds and, later, the rules. `speed` is how hard: the closing
+-- speed of a ball hit, the speed into a rail, or the speed a ball dropped at.
+export type Event = { time: number, kind: "ball" | "rail" | "pocket", id: number, speed: number }
+
+export type Sim = {
+	balls: { Ball },
+	params: Params,
+	layout: Geometry.Layout,
+	steps: number,
+	done: boolean,
+	events: { Event },
+}
 
 local Simulate = {}
 
@@ -30,19 +41,20 @@ function Simulate.start(balls: { Ball }, shot: Shot, params: Params?): Sim
 	table.sort(copies, function(a: Ball, b: Ball): boolean
 		return a.id < b.id
 	end)
-	local speed = shot.power * p.Physics.FullPowerSpeed
+	-- A curve above 1 gives soft shots more of the pull
+	local speed = shot.power ^ p.Physics.PowerCurve * p.Physics.FullPowerSpeed
 	for _, ball in copies do
 		if ball.id == 0 then
 			ball.vx, ball.vy = shot.dirX * speed, shot.dirY * speed
 		end
 	end
-	return { balls = copies, params = p, layout = Geometry.build(p.Table), steps = 0, done = false }
+	return { balls = copies, params = p, layout = Geometry.build(p.Table), steps = 0, done = false, events = {} }
 end
 
 -- Advances the shot by up to `count` time steps. Returns true once it's over: every ball has stopped
 -- or dropped, or the time cap was reached.
 function Simulate.step(sim: Sim, count: number): boolean
-	local balls, rails, pockets = sim.balls, sim.layout.rails, sim.layout.pockets
+	local balls, rails, pockets, events = sim.balls, sim.layout.rails, sim.layout.pockets, sim.events
 	local tableParams, physics = sim.params.Table, sim.params.Physics
 	local radius, dt = tableParams.BallRadius, physics.TimeStep
 	local diameterSq = 4 * radius * radius
@@ -60,6 +72,7 @@ function Simulate.step(sim: Sim, count: number): boolean
 		if sim.done then
 			break
 		end
+		local time = (sim.steps + 1) * dt
 
 		for _, ball in balls do
 			ball.x += ball.vx * dt
@@ -97,6 +110,7 @@ function Simulate.step(sim: Sim, count: number): boolean
 				local nx, ny = dx / dist, dy / dist
 				local aInto, bInto = a.vx * nx + a.vy * ny, -(b.vx * nx + b.vy * ny)
 				local push = hitShare * (aInto + bInto)
+				table.insert(events, { time = time, kind = "ball", id = a.id, speed = aInto + bInto })
 				-- A ball rolling into the hit keeps Follow of the speed the hit takes away, like natural roll.
 				-- Every moving ball counts as rolling, even one that was only just hit.
 				local pushA = if aInto > 0 then push * (1 - physics.Follow) else push
@@ -136,6 +150,12 @@ function Simulate.step(sim: Sim, count: number): boolean
 				or math.abs(ball.y) > halfWidth
 			then
 				ball.pocket = nearest
+				table.insert(events, {
+					time = time,
+					kind = "pocket",
+					id = ball.id,
+					speed = math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy),
+				})
 				ball.vx, ball.vy = 0, 0
 				continue
 			end
@@ -158,6 +178,7 @@ function Simulate.step(sim: Sim, count: number): boolean
 				end
 				-- Bounce from the point where it touched the rail, so bank shots come off true
 				local back = math.min((radius - dist) / into, dt)
+				table.insert(events, { time = time, kind = "rail", id = ball.id, speed = into })
 				ball.x -= ball.vx * back
 				ball.y -= ball.vy * back
 				ball.vx = (ball.vx + 2 * into * nx) * physics.RailBounce

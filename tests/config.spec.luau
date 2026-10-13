@@ -34,9 +34,9 @@ return function(test, check)
 		check.truthy(perStep < Config.Table.BallRadius / 3, "moves " .. perStep .. " per step")
 	end)
 
-	test("full power rolls about 13 table lengths", function()
+	test("full power rolls about 12 table lengths", function()
 		local speed = Config.Physics.FullPowerSpeed
 		local distance = speed * speed / (2 * Config.Physics.RollingSlowdown)
-		check.near(distance / Config.Table.Length, 13, 1)
+		check.near(distance / Config.Table.Length, 12, 1)
 	end)
 end

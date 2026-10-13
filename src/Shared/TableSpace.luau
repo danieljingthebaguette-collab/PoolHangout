@@ -14,4 +14,15 @@ function TableSpace.toTable(felt: BasePart, position: Vector3): (number, number)
 	return point.X, point.Z
 end
 
+-- Shows or hides a ball part along with any markings welded to it
+function TableSpace.setShown(ball: BasePart, shown: boolean)
+	local transparency = if shown then 0 else 1
+	ball.Transparency = transparency
+	for _, child in ball:GetChildren() do
+		if child:IsA("BasePart") then
+			child.Transparency = transparency
+		end
+	end
+end
+
 return TableSpace
