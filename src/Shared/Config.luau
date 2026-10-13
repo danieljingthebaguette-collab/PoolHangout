@@ -33,6 +33,7 @@ local Config = {
 		FullPullDistance = 0.25, -- share of the table length you drag past the cancel zone for full power
 		MeterSpringSeconds = 0.15, -- how long the cue takes to slide back to rest from a full pull
 		StrikeSeconds = 0.08, -- how long the cue takes to strike forward into the cue ball after you let go
+		FollowThroughSeconds = 0.15, -- after the strike, how long the cue carries on forward while it fades out
 		DropSeconds = 0.2, -- how long a ball takes to sink into a pocket. Keep under ResolveBufferSeconds
 		DropDepth = 3, -- ball radii a pocketed ball sinks, enough to go fully under the felt
 		-- If the server never starts a shot this screen already started, put the balls back after this long
@@ -52,6 +53,7 @@ local Config = {
 		CueThickness = 0.5, -- share of a ball's width
 		CueTipGap = 1, -- ball radii between the cue ball and the cue's tip
 		CuePullBack = 6, -- ball radii the cue slides back at a full pull
+		CueFollowThrough = 2, -- ball radii the cue carries on past where the cue ball was, after the strike
 		CueHeight = 4, -- ball radii above the felt, clear of the rails; from straight above it looks the same as ball height
 	},
 

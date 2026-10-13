@@ -141,7 +141,7 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	percent.Parent = meterGui
 	styleText(percent, "0%")
 	percent.TextSize = Theme.Ui.PercentTextSize
-	percent.TextColor3 = Theme.Colors.HudSubtle
+	percent.TextColor3 = Theme.Colors.Subtle
 	-- Beside the meter, where a thumb resting near it reaches
 	local lockButton = Instance.new("TextButton")
 	lockButton.AnchorPoint = Vector2.new(0, 0.5)
@@ -212,6 +212,9 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	local pull = 0
 	-- After you let go: the shot's power and how far the cue has come forward, 0 to 1, until it reaches the ball
 	local strike: { power: number, t: number }? = nil
+	-- After the strike: the cue carries on a little past where the cue ball was and fades out. How far through, 0 to
+	-- 1, and where the cue ball and aim were when it struck.
+	local followThrough: { t: number, x: number, y: number, aim: number }? = nil
 
 	-- The camera's settings from before the view, and everything the view connected, while it's on
 	local saved: { cameraType: Enum.CameraType, cframe: CFrame, fieldOfView: number, connections: { RBXScriptConnection } }? =
@@ -321,6 +324,8 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		strike = nil
 		pull = 0
 		local shot = { dirX = math.cos(aim), dirY = math.sin(aim), power = power }
+		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
+		followThrough = { t = 0, x = cueX, y = cueY, aim = aim }
 		-- ponytail: the test mode's remote, until Match (Phase 2) brings RequestShot and turns
 		Remotes.TestShoot:FireServer(shot.dirX, shot.dirY, shot.power)
 		TableView.predict(tableModel, shot, PhysicsTestAccess.params())
@@ -398,7 +403,25 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 			pull = math.max(pull - dt / Config.Shot.MeterSpringSeconds, 0)
 		end
 		local hidden = not canShoot()
-		cue.Transparency = if hidden then 1 else 0
+		if followThrough then
+			followThrough.t = math.min(followThrough.t + dt / Config.Shot.FollowThroughSeconds, 1)
+			local t = followThrough.t
+			-- Slowing as it goes, from the tip touching the ball to CueFollowThrough past it
+			local back = cueBack - radius * (Config.Aim.CueTipGap + Config.Aim.CueFollowThrough * t * (2 - t))
+			local cueAim = followThrough.aim
+			cue.CFrame = TableSpace.toWorld(
+				felt,
+				followThrough.x - math.cos(cueAim) * back,
+				followThrough.y - math.sin(cueAim) * back,
+				cueHeight
+			) * CFrame.Angles(0, -cueAim, 0)
+			cue.Transparency = t
+			if t >= 1 then
+				followThrough = nil
+			end
+		else
+			cue.Transparency = if hidden then 1 else 0
+		end
 		meterGui.Enabled = not hidden
 		fill.Size = UDim2.fromScale(1, pull)
 		percent.Text = `{math.round(pull * 100)}%`
@@ -496,6 +519,7 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		if strike then
 			fire()
 		end
+		followThrough = nil
 		-- Leaving mid-pull cancels the shot, and the view starts over unlocked
 		drag, pulling, pull, locked = nil, nil, 0, false
 		cue.Transparency = 1

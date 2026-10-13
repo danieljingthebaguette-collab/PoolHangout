@@ -26,7 +26,7 @@ local function label(text: string, parent: Instance): TextLabel
 	item.BackgroundTransparency = 1
 	item.Font = Theme.Font
 	item.TextSize = Theme.TextSize
-	item.TextColor3 = Theme.Colors.HudText
+	item.TextColor3 = Theme.Colors.Text
 	item.Text = text
 	item.Parent = parent
 	return item
@@ -34,7 +34,7 @@ end
 
 local function panel(parent: Instance): Frame
 	local item = Instance.new("Frame")
-	item.BackgroundColor3 = Theme.Colors.HudPanel
+	item.BackgroundColor3 = Theme.Colors.Panel
 	item.BackgroundTransparency = Theme.Ui.HudTransparency
 	item.BorderSizePixel = 0
 	item.Parent = parent
@@ -98,7 +98,7 @@ local function ballIcon(id: number): Frame
 	fit.Parent = icon
 	-- So the 8 shows against the black tray
 	local outline = Instance.new("UIStroke")
-	outline.Color = Theme.Colors.HudSubtle
+	outline.Color = Theme.Colors.Subtle
 	outline.Thickness = 1
 	outline.Parent = icon
 	if id >= 9 then
@@ -175,11 +175,11 @@ local function settings(gui: ScreenGui)
 	gear.AnchorPoint = Vector2.new(0, 1)
 	gear.Position = UDim2.new(0, Theme.Ui.Padding, 1, -Theme.Ui.Padding)
 	gear.Size = UDim2.fromOffset(Theme.Ui.ButtonHeight, Theme.Ui.ButtonHeight)
-	gear.BackgroundColor3 = Theme.Colors.HudPanel
+	gear.BackgroundColor3 = Theme.Colors.Panel
 	gear.BackgroundTransparency = Theme.Ui.HudTransparency
 	gear.Font = Theme.Font
 	gear.TextSize = Theme.Ui.PercentTextSize
-	gear.TextColor3 = Theme.Colors.HudText
+	gear.TextColor3 = Theme.Colors.Text
 	gear.Text = "⚙"
 	gear.Parent = gui
 	roundCorners(gear, UDim.new(0.5, 0))

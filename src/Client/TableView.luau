@@ -43,6 +43,10 @@ local spins: { [BasePart]: CFrame } = {}
 local renderConnection: RBXScriptConnection? = nil
 -- The settings' sound volume, 0 to 1
 local volume = 1
+-- Shadows show only in the top-down view; in the normal view Roblox's own shadows are enough. Each shadow's update
+-- function, so they can all be redrawn when that changes.
+local shadowsShown = false
+local shadowUpdates: { [BasePart]: () -> () } = {}
 
 -- The table's felt and ball parts, or nil while the table hasn't streamed in
 local function findView(tableModel: Model?): View?
@@ -84,6 +88,14 @@ end
 -- The settings' sound volume for every game sound, 0 to 1
 function TableView.setVolume(share: number)
 	volume = math.clamp(share, 0, 1)
+end
+
+-- Shows the balls' shadows in the top-down view and hides them in the normal view
+function TableView.showShadows(visible: boolean)
+	shadowsShown = visible
+	for _, update in shadowUpdates do
+		update()
+	end
 end
 
 -- Whether a shot is running on this table, from the cue's strike until the server sends the result
@@ -262,12 +274,15 @@ local function addShadow(felt: BasePart, ball: BasePart, folder: Folder)
 		-- Gone as soon as the ball starts sinking into a pocket, since it's no longer on the felt
 		local height = felt.CFrame:PointToObjectSpace(ball.Position).Y - felt.Size.Y / 2
 		local sinking = height < radius * SINKING
-		shadow.Transparency = if ball.Transparency == 1 or sinking then 1 else Theme.BallShadow.Transparency
+		local hidden = not shadowsShown or ball.Transparency == 1 or sinking
+		shadow.Transparency = if hidden then 1 else Theme.BallShadow.Transparency
 	end
+	shadowUpdates[shadow] = follow
 	follow()
 	ball:GetPropertyChangedSignal("CFrame"):Connect(follow)
 	ball:GetPropertyChangedSignal("Transparency"):Connect(follow)
 	ball.Destroying:Connect(function()
+		shadowUpdates[shadow] = nil
 		shadow:Destroy()
 	end)
 	shadow.Parent = folder

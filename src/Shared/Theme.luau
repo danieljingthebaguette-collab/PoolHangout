@@ -23,11 +23,8 @@ local Theme = {
 		AimLine = Color3.fromRGB(255, 255, 255),
 		BallMark = Color3.fromRGB(245, 242, 230), -- the white on the placeholder balls: stripes and number dots
 		CueBallMark = Color3.fromRGB(200, 35, 35),
-		-- The HUD around the top-down view
-		HudPanel = Color3.fromRGB(30, 38, 56), -- dark navy cards
-		HudText = Color3.fromRGB(255, 255, 255),
-		HudSubtle = Color3.fromRGB(140, 150, 168), -- the power meter's % readout
-		Tray = Color3.fromRGB(10, 10, 14),
+		Subtle = Color3.fromRGB(184, 156, 128), -- quieter text, like the power meter's % readout
+		Tray = Color3.fromRGB(26, 19, 15), -- the sunk-ball tray, darker than the panels so the balls stand out
 		BallShadow = Color3.fromRGB(10, 20, 40),
 	},
 
@@ -46,7 +43,7 @@ local Theme = {
 		TrayHeight = 0.6, -- share of the screen's height
 		CardWidth = 260, -- the player card in the top bar
 		CardHeight = 56,
-		HudTransparency = 0.15, -- the top bar's cards and the settings panel
+		HudTransparency = 0.15, -- the top bar's cards and the gear, a touch see-through over the table
 		AimLineThickness = 2, -- pixels, for the aim indicator's lines and circle
 		AimFaintTransparency = 0.6, -- the aim indicator while aiming or about to cancel; solid while locked
 		LockButtonWidth = 80, -- the phones' Lock button, beside the power meter
@@ -56,7 +53,8 @@ local Theme = {
 	-- get a dot on top and bottom, stripes a band of color around a white ball.
 	BallMarks = {
 		DotDiameter = 0.8,
-		DotThickness = 0.05,
+		DotThickness = 0.1, -- thick enough that the dot's edge sinks into the ball while its face sits just above it
+		DotRaise = 0.01, -- how far the dot's face sits above the ball's surface
 		BandWidth = 1,
 		BandDiameter = 1.96, -- a little under the ball's 2, so the band and the ball don't flicker where they meet
 	},

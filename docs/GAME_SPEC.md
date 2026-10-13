@@ -59,7 +59,7 @@ A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat 
 6b. Cancelling: drag back into the cancel zone and the cue slides back to rest, the meter empties, the aim indicator turns see-through again and the hint says "Let go to cancel"; let go there to cancel with no shot. Right-clicking, opening the Roblox menu (Esc) or a release the game misses also cancels. These put you back where you were before the pull: still locked if you'd pressed Space first, aiming again if not. Space or the Lock button mid-pull cancels and unlocks, and leaving the view cancels and resets.
 7. Aim indicator, always on: a white line from the cue ball to a white circle where the cue ball will be when it first touches a ball, and a short white line from that ball showing which way it will go. If the cue ball would hit a rail or drop in a pocket first, the line and circle stop there, with no bounce lines. It uses the physics' own geometry, so it's exact. Only the shooter sees it, and it hides while balls roll. `Config.Aim.ShowAimLine` switches the line and circle and `Config.Aim.ShowTargetLine` the target ball's line; there's no player setting.
 8. When shooting at the 8, the shooter clicks or taps the pocket they're calling before they can shoot *(default)*.
-9. The shot fires when they let go, and everyone sees the balls roll.
+9. When they let go, the cue strikes forward and the shot fires the moment it touches the cue ball; the cue carries on a little and fades out. Everyone sees the balls roll.
 10. The shooter stays in the top-down view while it's still their turn. The camera goes back to normal when their turn ends *(default)*.
 
 - **Top-down only:** you can only aim and shoot from the top-down view. The cue and the power meter only show there, and leaving the view in the middle of a pull cancels it with no shot.
@@ -75,8 +75,9 @@ Laid out like 8 Ball Duels.
   - a top bar with your player card (name and avatar)
   - the power meter on the left, with a % readout under it; on phones the Lock button sits next to it
   - a tray on the right where sunk balls collect, the first one sunk at the bottom
-  - soft shadows under the balls
-- **In every view:** a settings button bottom-left with a sound volume slider. The volume lasts for the session and isn't saved *(default)*.
+  - soft shadows under the balls (the normal view has Roblox's own shadows)
+  - a settings button bottom-left with a sound volume slider. The volume lasts for the session and isn't saved *(default)*. It shows only in the top-down view, so it never covers the phones' thumbstick.
+- **Colors:** every panel, button and the meter in warm browns, matching the table's wood.
 - **Phase 2:**
   - the other player's card in the top bar
   - a highlight on whose turn it is

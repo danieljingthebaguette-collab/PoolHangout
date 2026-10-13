@@ -5,8 +5,9 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
+local TableView = require(script.Parent.TableView)
 
-require(script.Parent.TableView).start()
+TableView.start()
 if PhysicsTestAccess.canTest(Players.LocalPlayer) then
 	local Hud = require(script.Parent.Hud)
 	local PhysicsTestPanel = require(script.Parent.PhysicsTestPanel)
@@ -17,6 +18,7 @@ if PhysicsTestAccess.canTest(Players.LocalPlayer) then
 	require(script.Parent.ShotController).start(testTable, function(inView: boolean)
 		Hud.showTable(inView)
 		PhysicsTestPanel.show(inView)
+		TableView.showShadows(inView)
 	end)
 	Hud.start(testTable)
 end

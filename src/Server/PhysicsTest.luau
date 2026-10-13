@@ -52,8 +52,10 @@ local function addMarks(ball: Part, id: number)
 		local color = if id == 0 then Theme.Colors.CueBallMark else Theme.Colors.BallMark
 		local thickness, diameter = marks.DotThickness * radius, marks.DotDiameter * radius
 		for _, side in { 1, -1 } do
-			-- A flat dot resting on the top or bottom of the ball. Cylinders run along their X axis.
-			local offset = CFrame.new(0, side * (radius + thickness / 2), 0) * CFrame.Angles(0, 0, math.rad(90))
+			-- A flat dot on the top or bottom of the ball, its face just above the surface and its edge sunk in.
+			-- Cylinders run along their X axis.
+			local out = radius * (1 + marks.DotRaise) - thickness / 2
+			local offset = CFrame.new(0, side * out, 0) * CFrame.Angles(0, 0, math.rad(90))
 			mark(color, Vector3.new(thickness, diameter, diameter), offset)
 		end
 	end
