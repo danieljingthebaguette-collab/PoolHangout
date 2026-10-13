@@ -62,11 +62,13 @@ local Config = {
 		EndScreenSeconds = 10,
 	},
 
-	-- Studio only; the server also checks RunService:IsStudio() before using these.
+	-- Studio only; the server also checks RunService:IsStudio() before using these, except PhysicsTestLive.
 	Debug = {
 		SoloTables = true,
 		LogShots = true,
 		PhysicsTest = true, -- R racks Table1, the shot controls work on it, sliders tune the physics live
+		-- Also runs the physics test mode in published servers, for the place's owner only. Off before launch.
+		PhysicsTestLive = true,
 		-- The physics test mode's live sliders: the Config value each one sets, its range and its step
 		TestSliders = {
 			{ group = "Physics", name = "RollingSlowdown", min = 1, max = 15, step = 0.1 },

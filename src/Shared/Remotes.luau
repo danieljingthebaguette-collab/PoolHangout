@@ -29,7 +29,7 @@ return {
 	-- server → clients: (table model, final balls)
 	ShotResolved = remote("ShotResolved"),
 
-	-- Physics test mode, Studio only. client → server: ()
+	-- Physics test mode, Studio and the owner only (PhysicsTestAccess). client → server: ()
 	TestRack = remote("TestRack"),
 	-- client → server: (dirX, dirY, power), a direction in table space and power 0–1
 	TestShoot = remote("TestShoot"),

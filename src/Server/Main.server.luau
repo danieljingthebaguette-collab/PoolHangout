@@ -8,6 +8,6 @@ local Config = require(ReplicatedStorage.Shared.Config)
 -- Creates every remote before any client looks for them
 require(ReplicatedStorage.Shared.Remotes)
 
-if Config.Debug.PhysicsTest and RunService:IsStudio() then
+if Config.Debug.PhysicsTest and (RunService:IsStudio() or Config.Debug.PhysicsTestLive) then
 	require(script.Parent.PhysicsTest).start()
 end

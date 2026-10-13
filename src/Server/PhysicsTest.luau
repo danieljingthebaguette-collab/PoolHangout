@@ -1,12 +1,14 @@
 --!strict
--- Physics test mode (Studio only, see Config.Debug.PhysicsTest): racks Table1 when a player asks, shoots
--- the cue ball the way they clicked, and keeps the sliders' values. Any player may rack or shoot while the
--- balls are still, and move a slider any time.
+-- Physics test mode (see Config.Debug.PhysicsTest and PhysicsTestLive): racks Table1 when a player asks,
+-- shoots the cue ball the way they aimed, and keeps the sliders' values. Any player PhysicsTestAccess allows
+-- may rack or shoot while the balls are still, and move a slider any time.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
+local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Simulate = require(ReplicatedStorage.Shared.Physics.Simulate)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
@@ -74,14 +76,14 @@ function PhysicsTest.start()
 	end
 	rack()
 
-	Remotes.TestRack.OnServerEvent:Connect(function()
-		if not rolling then
+	Remotes.TestRack.OnServerEvent:Connect(function(player: Player)
+		if not rolling and PhysicsTestAccess.canTest(player) then
 			rack()
 		end
 	end)
 
-	Remotes.TestTune.OnServerEvent:Connect(function(_player: Player, name: unknown, value: unknown)
-		if typeof(value) ~= "number" then
+	Remotes.TestTune.OnServerEvent:Connect(function(player: Player, name: unknown, value: unknown)
+		if typeof(value) ~= "number" or not PhysicsTestAccess.canTest(player) then
 			return
 		end
 		for _, slider in Config.Debug.TestSliders do
@@ -92,8 +94,11 @@ function PhysicsTest.start()
 		end
 	end)
 
-	Remotes.TestShoot.OnServerEvent:Connect(function(_player: Player, dirX: unknown, dirY: unknown, power: unknown)
+	Remotes.TestShoot.OnServerEvent:Connect(function(player: Player, dirX: unknown, dirY: unknown, power: unknown)
 		if rolling or typeof(dirX) ~= "number" or typeof(dirY) ~= "number" or typeof(power) ~= "number" then
+			return
+		end
+		if not PhysicsTestAccess.canTest(player) then
 			return
 		end
 		local length = math.sqrt(dirX * dirX + dirY * dirY)
@@ -115,7 +120,7 @@ function PhysicsTest.start()
 		task.wait(startedAt + duration + Config.Shot.ResolveBufferSeconds - workspace:GetServerTimeNow())
 
 		balls = sim.balls
-		if Config.Debug.LogShots then
+		if Config.Debug.LogShots and RunService:IsStudio() then
 			local sunk = {}
 			for _, ball in balls do
 				if ball.pocket then

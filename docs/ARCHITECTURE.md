@@ -26,13 +26,13 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Server/TableService.luau` | Finds tables, watches platforms, runs countdowns and signs, starts and resets games |
 | `Server/Match.luau` | One game: seats, turn order, shot clock, ball in hand, takeovers, end-screen data |
 | `Server/StatsService.luau` | Lifetime stats. The only module that touches DataStores |
-| `Server/PhysicsTest.luau` | Physics test mode on Table1 (Studio only): ball parts, rack, test shots |
+| `Server/PhysicsTest.luau` | Physics test mode on Table1 (Studio, or the owner in a published server): ball parts, rack, test shots |
 | `Client/Main.local.luau` | Starts the controllers |
 | `Client/TableView.luau` | Replays shots on the ball parts and plays their sounds |
 | `Client/ShotController.luau` | F and the top-down camera, placing the cue ball, aim, pocket call, power meter |
 | `Client/Hud.luau` | Shot clock, end screen, Leave button |
 | `Client/Spectate.luau` | "Watch from above" |
-| `Client/PhysicsTestPanel.luau` | Physics test mode controls (Studio only) |
+| `Client/PhysicsTestPanel.luau` | Physics test mode controls (Studio, or the owner in a published server) |
 
 Pure modules require each other only by relative string path, like `require("./Geometry")` or `require("../Config")`. That form works in both Roblox and Lune.
 
@@ -91,7 +91,7 @@ Starting values for Config (tune by feel):
 - Every state change goes through one function that updates the sign and fires `TableChanged`.
 - Timers (countdown, shot clock, takeover window, end screen) carry the game id and the step they were made for, and do nothing if that step is over. This is what keeps tables from getting stuck.
 - One `Match` object holds everything about a game. Resetting the table destroys it and disconnects everything it made.
-- **Debug, Studio only:** with `Config.Debug.SoloTables` on and one player in the server, standing on one platform starts the table and that player takes every turn. `Config.Debug.LogShots` prints each shot's input and outcome. `Config.Debug.PhysicsTest` turns on the physics test mode on Table1: R or the Rack button racks, anyone can shoot with the real shot controls while the balls are still, and sliders tune the settings in `Config.Debug.TestSliders` live for everyone. The server keeps the slider values and sends them with each shot; Print values prints them to Output. All of them check `RunService:IsStudio()`, so they can never run in a live server.
+- **Debug, Studio only:** with `Config.Debug.SoloTables` on and one player in the server, standing on one platform starts the table and that player takes every turn. `Config.Debug.LogShots` prints each shot's input and outcome. `Config.Debug.PhysicsTest` turns on the physics test mode on Table1: R or the Rack button racks, anyone can shoot with the real shot controls while the balls are still, and sliders tune the settings in `Config.Debug.TestSliders` live for everyone. The server keeps the slider values and sends them with each shot; Print values prints them to Output. All of them check `RunService:IsStudio()`, so they can never run in a live server, with one exception: `Config.Debug.PhysicsTestLive` also runs the physics test mode in published servers, for the place's owner only, so I can test on my real phone. `Shared/PhysicsTestAccess.luau` decides who may use it, and the server checks it on every test request. It's turned off before launch.
 
 ## Place contract
 

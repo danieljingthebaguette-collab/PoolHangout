@@ -1,5 +1,5 @@
 --!strict
--- Physics test mode (Studio only, see Config.Debug.PhysicsTest): R or the Rack button racks Table1, and the
+-- Physics test mode (see Config.Debug.PhysicsTest and PhysicsTestLive): R or the Rack button racks Table1, and the
 -- sliders tune the physics live for everyone. Shots use the real controls (ShotController).
 
 local Players = game:GetService("Players")
