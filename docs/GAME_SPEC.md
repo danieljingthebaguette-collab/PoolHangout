@@ -19,14 +19,14 @@ A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat 
 
 - 30 players per server and 8 tables: 4 for 1v1 and 4 for 2v2. Both kinds are the same size.
 - A counter serving sodas, milkshakes and coffee, places to sit, warm lamps over each table, and lo-fi music.
-- Style: blocky Roblox look with a cozy, warm feel. Tables in classic green felt and warm wood *(default)*.
+- Style: blocky Roblox look with a cozy, warm feel. Tables in classic green felt and warm wood: dark green cushions, slim warm brown rails with white diamonds, and black pockets.
 - Every model is a placeholder: the table, platforms, cue, balls, the bar and the rest of the map. Nothing visual is final until a modeler I commission delivers it, built to the brief in `docs/MODELS.md`.
 
 ## Table and balls
 
-- Playing surface 16 × 8 studs, 2:1 like a real table. With its cushions and wooden frame the whole table fits in 20 × 12 studs, with rounded outer corners and the frame curving around each pocket. The playing surface is about an avatar's hip height.
+- Playing surface 16 × 8 studs, 2:1 like a real table. With its cushions and slim wooden rails the whole table is about 18.2 × 10.2 studs: black plates over the corner pockets, the side pockets set into the rails, cushions angled at the pocket mouths, and white diamonds on the rails. The playing surface is about an avatar's hip height.
 - 16 balls: the cue ball, solids 1–7, the 8, stripes 9–15.
-- 6 pockets about 20% wider than real ones, so it's forgiving.
+- 6 pockets about real size: the corners about 2.1 ball widths across, the sides about 2.3.
 - A full-power shot rolls about 12 table lengths if nothing stops it.
 - A ball loses about 30% of its speed when it bounces off a rail, and comes off at the same angle it hit.
 - A rolling ball that hits another keeps some forward roll, like natural roll in real pool: about 34% of its speed on a straight hit, and it bends slightly forward after a cut.
@@ -53,9 +53,9 @@ A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat 
 2. The shooter presses F from anywhere (phones: an on-screen button) to switch to the top-down view. Where they stand doesn't matter. F again goes back to the normal view *(default)*.
 3. The top-down view shows the whole table, fixed and horizontal on screen, the same for everyone *(default)*.
 4. With ball in hand, they drag the cue ball to place it first: behind the head line on the break, anywhere after a foul. It can't overlap another ball.
-5. Aim, on PC: only moving the mouse changes the aim. The cue follows it, so the shot points from the cue ball toward the cursor. No keys aim. On phones, dragging on the table turns the aim around the cue ball.
+5. Aim, on PC: only the mouse aims. The cue always points from the cue ball toward the cursor, even when the cue ball moves under a still mouse, like after a shot. No keys aim. On phones, dragging on the table turns the aim around the cue ball.
 6. Aim lock (optional): Space locks the aim, and Space again unlocks it and goes back to aiming. On phones, a thumb-sized Lock button next to the power meter does the same. Space never shoots. Locking first lets you move the mouse freely before you pull. The aim indicator (step 7) shows the state: see-through white while aiming, solid white whenever the aim is locked, including during a pull. A small hint reads "Hold and drag to shoot · Space: lock aim" while aiming and "Drag to shoot · Space: unlock" while locked (phones: "Drag from the cue ball to shoot · Tap Lock to lock aim" and "Drag to shoot · Tap Lock to unlock"). Each new shot starts unlocked.
-6a. Power, like a slingshot: on PC, hold the mouse button anywhere and drag. If the aim isn't locked, pressing locks it where it is. On phones, while unlocked a touch on or near the cue ball or the cue starts a pull and a touch anywhere else turns the aim; while locked, a pull can start anywhere. Around where you pressed is a small cancel zone, about fingertip size on a phone, that isn't drawn. Power counts from its edge, so soft shots still work, and the farther you drag, in any direction, the harder, with full power at a distance set in Config. Power rises on a gentle curve, so soft shots get more of the drag. Any direction counts, so a cue ball against a rail can still get full power. The cue slides back as you drag, and a meter in the bottom-right fills up; the meter only shows power, you don't drag it. Let go to shoot.
+6a. Power, like a slingshot: on PC, hold the mouse button anywhere and drag. If the aim isn't locked, pressing locks it where it is. On phones, while unlocked a touch on or near the cue ball or the cue starts a pull and a touch anywhere else turns the aim; while locked, a pull can start anywhere. Around where you pressed is a small cancel zone, about fingertip size on a phone, that isn't drawn. Power counts from its edge, so soft shots still work, and the farther you drag, in any direction, the harder, with full power at a distance set in Config. Power rises on a gentle curve, so soft shots get more of the drag. Any direction counts, so a cue ball against a rail can still get full power. The cue slides back as you drag, and the power meter on the left fills up, with the power as a % under it; the meter only shows power, you don't drag it. Let go to shoot.
 6b. Cancelling: drag back into the cancel zone and the cue slides back to rest, the meter empties, the aim indicator turns see-through again and the hint says "Let go to cancel"; let go there to cancel with no shot. Right-clicking, opening the Roblox menu (Esc) or a release the game misses also cancels. These put you back where you were before the pull: still locked if you'd pressed Space first, aiming again if not. Space or the Lock button mid-pull cancels and unlocks, and leaving the view cancels and resets.
 7. Aim indicator, always on: a white line from the cue ball to a white circle where the cue ball will be when it first touches a ball, and a short white line from that ball showing which way it will go. If the cue ball would hit a rail or drop in a pocket first, the line and circle stop there, with no bounce lines. It uses the physics' own geometry, so it's exact. Only the shooter sees it, and it hides while balls roll. `Config.Aim.ShowAimLine` switches the line and circle and `Config.Aim.ShowTargetLine` the target ball's line; there's no player setting.
 8. When shooting at the 8, the shooter clicks or taps the pocket they're calling before they can shoot *(default)*.
@@ -65,7 +65,24 @@ A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat 
 - **Top-down only:** you can only aim and shoot from the top-down view. The cue and the power meter only show there, and leaving the view in the middle of a pull cancels it with no shot.
 - **Shot clock:** 45 seconds per shot (I said 30–60). It covers placing and aiming, shows a countdown for the last 10 seconds, and stops when the shot fires. The next shot gets a fresh 45. Running out is a foul, and 2 timeouts in a row remove the player, the same as leaving.
 - **Between turns:** players can walk around, sit or grab a drink.
-- **No spin** in the base build. Leave room on the screen for a spin control later.
+- **No spin** in the base build. The top-right corner of the screen stays free for a spin control later.
+
+## The screen
+
+Laid out like 8 Ball Duels.
+
+- **In the top-down view:**
+  - a top bar with your player card (name and avatar)
+  - the power meter on the left, with a % readout under it; on phones the Lock button sits next to it
+  - a tray on the right where sunk balls collect, the first one sunk at the bottom
+  - soft shadows under the balls
+- **In every view:** a settings button bottom-left with a sound volume slider. The volume lasts for the session and isn't saved *(default)*.
+- **Phase 2:**
+  - the other player's card in the top bar
+  - a highlight on whose turn it is
+  - the shot-clock bar under the shooter's name
+  - each side's balls still left to sink
+  - your group's balls pulse white briefly when your turn starts
 
 ## 8-ball rules
 
@@ -120,9 +137,9 @@ Leaving means leaving the server, disconnecting, pressing a Leave button in the 
 
 ## Later list (after launch, roughly in this order)
 
-1. Spin: GamePigeon's red dot on a cue-ball icon. Top and back spin first, side spin later.
+1. Spin: GamePigeon's red dot on a cue-ball icon in the top-right corner. Top and back spin first, side spin later.
 2. Levels, plus lifetime stats on each player's profile.
-3. Cosmetics: cues, cloth colors, ball sets. The economy comes with this.
+3. Cosmetics: cues, cloth colors, ball sets. The economy comes with this, along with missions and a coin pot for matches.
 4. Ranked mode, alongside casual.
 5. A back room with extra tables that opens once a server passes 15 players.
 

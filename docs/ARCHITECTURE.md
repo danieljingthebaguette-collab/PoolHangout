@@ -28,9 +28,9 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Server/StatsService.luau` | Lifetime stats. The only module that touches DataStores |
 | `Server/PhysicsTest.luau` | Physics test mode on Table1 (Studio, or the owner in a published server): ball parts, rack, test shots |
 | `Client/Main.local.luau` | Starts the controllers |
-| `Client/TableView.luau` | Replays shots on the ball parts and plays their sounds |
-| `Client/ShotController.luau` | F and the top-down camera, placing the cue ball, aim, pocket call, power meter |
-| `Client/Hud.luau` | Shot clock, end screen, Leave button |
+| `Client/TableView.luau` | Replays shots on the ball parts, plays their sounds, draws the balls' shadows, and starts the shooter's shot before the server's copy arrives |
+| `Client/ShotController.luau` | F and the top-down camera, placing the cue ball, aim, pocket call, the power meter on the left, the cue's strike |
+| `Client/Hud.luau` | Top bar with player cards, the sunk-ball tray, settings (sound volume); later the shot clock, end screen and Leave button |
 | `Client/Spectate.luau` | "Watch from above" |
 | `Client/PhysicsTestPanel.luau` | Physics test mode controls (Studio, or the owner in a published server) |
 
@@ -56,9 +56,9 @@ Starting values for Config (tune by feel):
 
 | Setting | Start | Why |
 | --- | --- | --- |
-| Table length × width | 16 × 8 studs | 2:1 like a real table; 20 × 12 with the cushions and frame |
+| Table length × width | 16 × 8 studs | 2:1 like a real table; about 18.2 × 10.2 with the cushions and rails |
 | Ball radius | 0.24 studs | Real ball-to-table proportion |
-| Pocket mouth, corner / side | 1.2 / 1.28 studs | About 20% wider than real |
+| Pocket mouth, corner / side | 1.0 / 1.1 studs | About real size: 2.1 and 2.3 ball widths |
 | Full-power speed | 30 studs/s | Tuned by feel |
 | Power curve | 1.2 | Speed is pull ^ 1.2, so soft shots get more of the drag |
 | Rolling slowdown | 2.3 studs/s² | Full power rolls about 196 studs, about 12 table lengths |

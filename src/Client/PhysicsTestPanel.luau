@@ -1,6 +1,7 @@
 --!strict
 -- Physics test mode (see Config.Debug.PhysicsTest and PhysicsTestLive): R or the Rack button racks Table1, and the
--- sliders tune the physics live for everyone. Shots use the real controls (ShotController).
+-- sliders tune the physics live for everyone. Shots use the real controls (ShotController). The panel stays closed
+-- until you open it with the Test button.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -43,9 +44,11 @@ function PhysicsTestPanel.start()
 	gui.Name = "PhysicsTest"
 	gui.ResetOnSpawn = false
 
+	-- Closed until you open it with the Test button, beside the settings gear, so it doesn't cover the HUD
 	local panel = Instance.new("Frame")
-	panel.AnchorPoint = Vector2.new(0, 0.5)
-	panel.Position = UDim2.new(0, Theme.Ui.Padding, 0.5, 0)
+	panel.AnchorPoint = Vector2.new(0, 1)
+	panel.Position = UDim2.new(0, Theme.Ui.Padding, 1, -Theme.Ui.ButtonHeight - 2 * Theme.Ui.Padding)
+	panel.Visible = false
 	panel.Size = UDim2.fromOffset(Theme.Ui.PanelWidth, 0)
 	panel.AutomaticSize = Enum.AutomaticSize.Y
 	panel.BackgroundColor3 = Theme.Colors.Panel
@@ -62,6 +65,14 @@ function PhysicsTestPanel.start()
 	list.Padding = UDim.new(0, Theme.Ui.Padding / 2)
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Parent = panel
+
+	local toggle = button("Test", 0, function()
+		panel.Visible = not panel.Visible
+	end)
+	toggle.AnchorPoint = Vector2.new(0, 1)
+	toggle.Position = UDim2.new(0, Theme.Ui.ButtonHeight + 2 * Theme.Ui.Padding, 1, -Theme.Ui.Padding)
+	toggle.Size = UDim2.fromOffset(Theme.Ui.LockButtonWidth, Theme.Ui.ButtonHeight)
+	toggle.Parent = gui
 
 	button("Rack (R)", 0, function()
 		Remotes.TestRack:FireServer()

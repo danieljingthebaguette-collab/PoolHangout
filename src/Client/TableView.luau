@@ -2,7 +2,7 @@
 -- Replays each shot on a table's ball parts by stepping the same simulation the server ran, in real time,
 -- then snaps them to the server's final positions. Balls spin as they roll, sink into pockets, and click,
 -- thud and drop with sound. The shooter's screen starts the shot itself the moment the cue strikes (predict),
--- then switches to the server's copy when it arrives.
+-- then switches to the server's copy when it arrives. Only this screen draws the soft shadows under the balls.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -11,6 +11,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Simulate = require(ReplicatedStorage.Shared.Physics.Simulate)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
+local Theme = require(ReplicatedStorage.Shared.Theme)
 
 type View = { felt: BasePart, parts: { [number]: BasePart } }
 type Replay = {
@@ -36,6 +37,8 @@ local busy: { [Model]: boolean } = {}
 -- Each ball part's rotation relative to the felt, so it keeps its spin between replays
 local spins: { [BasePart]: CFrame } = {}
 local renderConnection: RBXScriptConnection? = nil
+-- The settings' sound volume, 0 to 1
+local volume = 1
 
 -- The table's felt and ball parts, or nil while the table hasn't streamed in
 local function findView(tableModel: Model?): View?
@@ -69,9 +72,14 @@ function TableView.playSound(part: BasePart, soundId: string, share: number)
 	end
 	local played = sound :: Sound
 	-- Square root, because loudness sounds even to the ear that way
-	played.Volume = Config.Sounds.Volume * math.sqrt(math.clamp(share, 0, 1))
+	played.Volume = volume * Config.Sounds.Volume * math.sqrt(math.clamp(share, 0, 1))
 	played.TimePosition = 0
 	played:Play()
+end
+
+-- The settings' sound volume for every game sound, 0 to 1
+function TableView.setVolume(share: number)
+	volume = math.clamp(share, 0, 1)
 end
 
 -- Whether a shot is running on this table, from the cue's strike until the server sends the result
@@ -220,7 +228,69 @@ function TableView.predict(tableModel: Model, shot: Simulate.Shot, params: Simul
 	play(tableModel, replay)
 end
 
+-- A soft shadow on the felt under a ball part, following it wherever it's moved: by a replay here or by the server
+local function addShadow(felt: BasePart, ball: BasePart, folder: Folder)
+	local radius = ball.Size.X / 2
+	local shadow = Instance.new("Part")
+	shadow.Name = ball.Name
+	shadow.Shape = Enum.PartType.Cylinder
+	shadow.Size = Vector3.new(0.01, Theme.BallShadow.Diameter * radius, Theme.BallShadow.Diameter * radius)
+	shadow.Color = Theme.Colors.BallShadow
+	shadow.Material = Enum.Material.SmoothPlastic
+	shadow.Anchored = true
+	shadow.CanCollide = false
+	shadow.CanTouch = false
+	shadow.CanQuery = false
+	shadow.CastShadow = false
+	local offset = Theme.BallShadow.Offset * radius
+	local function follow()
+		local x, y = TableSpace.toTable(felt, ball.Position)
+		-- Lying flat on the felt. Cylinders run along their X axis.
+		shadow.CFrame = TableSpace.toWorld(felt, x + offset, y + offset, 0.005) * CFrame.Angles(0, 0, math.rad(90))
+		shadow.Transparency = if ball.Transparency == 1 then 1 else Theme.BallShadow.Transparency
+	end
+	follow()
+	ball:GetPropertyChangedSignal("CFrame"):Connect(follow)
+	ball:GetPropertyChangedSignal("Transparency"):Connect(follow)
+	ball.Destroying:Connect(function()
+		shadow:Destroy()
+	end)
+	shadow.Parent = folder
+end
+
+-- Shadows for every table's balls, as each table's Balls folder and ball parts arrive
+local function watchShadows(tableModel: Instance)
+	local felt = tableModel:WaitForChild("Felt") :: BasePart
+	local folder = Instance.new("Folder")
+	folder.Name = "Shadows"
+	folder.Parent = tableModel
+	local function watchBalls(balls: Instance)
+		if balls.Name ~= "Balls" then
+			return
+		end
+		for _, ball in balls:GetChildren() do
+			if ball:IsA("BasePart") then
+				addShadow(felt, ball, folder)
+			end
+		end
+		balls.ChildAdded:Connect(function(ball: Instance)
+			if ball:IsA("BasePart") then
+				addShadow(felt, ball, folder)
+			end
+		end)
+	end
+	for _, child in tableModel:GetChildren() do
+		watchBalls(child)
+	end
+	tableModel.ChildAdded:Connect(watchBalls)
+end
+
 function TableView.start()
+	task.spawn(function()
+		for _, tableModel in workspace:WaitForChild("Tables"):GetChildren() do
+			task.spawn(watchShadows, tableModel)
+		end
+	end)
 	Remotes.ShotStarted.OnClientEvent:Connect(
 		function(tableModel: Model?, balls: { Simulate.Ball }, shot: Simulate.Shot, params: Simulate.Params)
 			local view = findView(tableModel)

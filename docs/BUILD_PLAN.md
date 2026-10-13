@@ -7,9 +7,9 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
-- **In progress:** tuning the feel. Shots feel finished (placeholder sounds, cue strike, rolling markings, pocket sinks, instant start), and I tuned the physics: FullPowerSpeed 32 → 30, RollingSlowdown 2.4 → 2.3, RailBounce 0.8 → 0.7, Follow 0.25 → 0.3, PowerCurve 1 → 1.2, RackGap 0 → 0.025. Next, real-size pockets, a table restyle and the HUD.
-- **Last session:** 2026-10-13. Rescaled the table to its final size, 16 × 8 studs of playing surface (20 × 12 with the frame), with every stud-based setting scaled 1.6× so the feel stayed the same, and rebuilt the greybox Table1 with rounded corners and curved pocket cut-outs at hip height. Then built the pre-tuning items above.
-- **Next up:** tune the feel together on PC
+- **In progress:** nothing. Back to the classic table colors with the slim rails, a solid power meter, the corner-pocket clipping fixed, and the aim fixed to stay on the cursor after a shot. Waiting on my PC test and my picks from the cleanup list.
+- **Last session:** 2026-10-13. Rescaled the table to 16 × 8. Made shots feel finished (sounds, cue strike, rolling markings, pocket sinks, instant start) and tuned: FullPowerSpeed 30, RollingSlowdown 2.3, RailBounce 0.7, Follow 0.3, PowerCurve 1.2, RackGap 0.025. Restyled the greybox table (slim light wood rails with diamonds, blue felt and cushions, black corner plates, angled cushion ends, real side-pocket holes) and built the HUD in `Client/Hud.luau`: my player card, the sunk-ball tray, ball shadows, settings with sound volume, the power meter on the left with %, and a collapsible test panel. Added Phase 2's two-player top bar and turn pulse, and spin, missions and a coin pot to the Later list.
+- **Next up:** my PC test of the new look, then Phase 1's phone check and the age check
 - **Known issues:**
   - Touch hasn't been tried on a real phone yet, only in the emulator; it's covered by Phase 1's phone check
   - The physics test panel now has 7 sliders and may not fit a phone's height in landscape; check it in the phone check
@@ -38,7 +38,8 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [x] Aim: on PC only the mouse aims (the cue follows it). On phones, drag on the table. Space (phones: a Lock button) locks and unlocks the aim; the aim indicator is see-through while aiming and solid while locked, with a hint (Claude)
 - [x] Power, like a slingshot: hold the mouse button and drag (it locks the aim where it is), or press Space first to lock. Phones: while unlocked, a touch near the cue ball pulls; while locked, anywhere. Power counts from the edge of a small cancel zone around where you pressed, in any direction. The cue slides back and a display-only meter fills. Let go to shoot; let go back inside the cancel zone (the indicator turns see-through and the hint says "Let go to cancel"), right-click, Esc or a missed release cancels back to how you were; Space or Lock mid-pull cancels and unlocks. You can only aim and shoot from the top-down view: the cue and the meter only show there, and leaving the view mid-pull cancels the shot (Claude)
 - [x] Aim indicator, always on: a line from the cue ball to a circle where it first touches a ball (stopping at a rail or pocket), and a short line showing where that ball goes. Two Config switches, no player setting (Claude)
-- [ ] Tune the feel together: friction, power, rail bounce, pocket size (Me + Claude)
+- [x] Tune the feel together: friction, power, rail bounce, pocket size (Me + Claude)
+- [x] Restyle the table (slim rails with diamonds, real-size pockets, classic green and warm wood) and add a HUD laid out like 8 Ball Duels: power meter with %, sunk-ball tray, ball shadows, my player card, settings with sound volume, a collapsible test panel (Claude)
 - [x] Decide the final table size, since the modeler's brief (`docs/MODELS.md`) needs it (Me)
 - [ ] Complete the age check and the Maturity & Compliance Questionnaire, so friends can test from Phase 2 (Me)
 - [ ] End-of-phase check on my real phone: everything built this phase works by touch (Me)
@@ -55,6 +56,8 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] Fouls (cue ball sunk, wrong ball hit first, nothing hit): the next player places the cue ball anywhere (Claude)
 - [ ] The 8: call your pocket. Sinking it early, in the wrong pocket, or along with the cue ball loses (Claude)
 - [ ] "Turn" arrow over the shooter, and a 45-second shot clock that stops while balls roll. Running out counts as a foul (Claude)
+- [ ] Top bar for two: the other player's card, a highlight on whose turn it is, the shot-clock bar under the shooter's name, and each side's balls still left to sink (Claude)
+- [ ] Your group's balls pulse white briefly when your turn starts (Claude)
 - [ ] Automatic rule tests: 25+ scenarios, like sinking the cue ball on the 8, that rerun after every change (Claude)
 - [ ] Block out the bar in plain parts: walls, 8 table spots, the counter (Me)
 - [ ] Find a modeler and send them `docs/MODELS.md` and my bar blockout by Nov 8, with everything due Nov 22 (Me)

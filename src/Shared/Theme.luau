@@ -23,6 +23,12 @@ local Theme = {
 		AimLine = Color3.fromRGB(255, 255, 255),
 		BallMark = Color3.fromRGB(245, 242, 230), -- the white on the placeholder balls: stripes and number dots
 		CueBallMark = Color3.fromRGB(200, 35, 35),
+		-- The HUD around the top-down view
+		HudPanel = Color3.fromRGB(30, 38, 56), -- dark navy cards
+		HudText = Color3.fromRGB(255, 255, 255),
+		HudSubtle = Color3.fromRGB(140, 150, 168), -- the power meter's % readout
+		Tray = Color3.fromRGB(10, 10, 14),
+		BallShadow = Color3.fromRGB(10, 20, 40),
 	},
 
 	Ui = {
@@ -31,9 +37,16 @@ local Theme = {
 		ButtonHeight = 44, -- big enough for a thumb
 		PanelWidth = 240,
 		SliderBar = 6,
-		MeterReserve = 96, -- screen width the top-down view keeps clear on the right for the power meter
-		MeterTrack = 16, -- width of the power meter
-		MeterHeight = 0.45, -- share of the screen's height
+		MeterReserve = 72, -- screen width the top-down view keeps clear on the left for the power meter
+		MeterTrack = 24, -- width of the power meter
+		MeterHeight = 0.5, -- share of the screen's height
+		PercentTextSize = 22, -- the % under the power meter
+		TrayReserve = 72, -- screen width the top-down view keeps clear on the right for the sunk-ball tray
+		TrayWidth = 36,
+		TrayHeight = 0.6, -- share of the screen's height
+		CardWidth = 260, -- the player card in the top bar
+		CardHeight = 56,
+		HudTransparency = 0.15, -- the top bar's cards and the settings panel
 		AimLineThickness = 2, -- pixels, for the aim indicator's lines and circle
 		AimFaintTransparency = 0.6, -- the aim indicator while aiming or about to cancel; solid while locked
 		LockButtonWidth = 80, -- the phones' Lock button, beside the power meter
@@ -46,6 +59,13 @@ local Theme = {
 		DotThickness = 0.05,
 		BandWidth = 1,
 		BandDiameter = 1.96, -- a little under the ball's 2, so the band and the ball don't flicker where they meet
+	},
+
+	-- The soft shadow under each ball, in ball radii: a little down and right of the ball, as if lit from above left
+	BallShadow = {
+		Diameter = 2.1,
+		Offset = 0.25,
+		Transparency = 0.55,
 	},
 
 	-- By ball id. Each stripe shares its solid's color.

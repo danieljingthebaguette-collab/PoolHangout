@@ -9,8 +9,8 @@ local Config = {
 		Length = 16,
 		Width = 8,
 		BallRadius = 0.24,
-		CornerPocketMouth = 1.2,
-		SidePocketMouth = 1.28,
+		CornerPocketMouth = 1.0,
+		SidePocketMouth = 1.1,
 		RackGap = 0.025, -- space between neighboring balls in the rack: 0 is a tight rack
 	},
 
@@ -71,7 +71,7 @@ local Config = {
 	Camera = {
 		-- Degrees, top to bottom. Narrow and high above, so balls near the table's edges don't look stretched.
 		TopDownFieldOfView = 20,
-		TopDownMargin = 1.3, -- the top-down view shows the playing surface plus this share of room, enough for the frame
+		TopDownMargin = 1.3, -- studs of room the top-down view shows around the playing surface: the rails plus a little
 	},
 
 	Timers = {

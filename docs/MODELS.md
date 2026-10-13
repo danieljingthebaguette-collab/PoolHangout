@@ -2,7 +2,7 @@
 
 Pool! is a cozy, blocky Roblox bar where players hang out on voice chat and play 8-ball pool. Every model in the game today is a grey placeholder. This brief covers what the final models need so they drop straight into the place with no code changes.
 
-**Style:** blocky Roblox look, cozy and warm. Tables in classic green felt and warm wood.
+**Style:** blocky Roblox look, cozy and warm. Tables in classic green felt and warm wood: dark green cushions, slim warm brown rails with white diamonds, black pockets.
 
 **Content rule:** no alcohol anywhere: no bottles, taps, beer signs, wine glasses or drink names. The bar serves sodas, milkshakes and coffee.
 
@@ -14,7 +14,7 @@ Pool! is a cozy, blocky Roblox bar where players hang out on voice chat and play
 
 ## Table
 
-A Model containing the items below. The whole table, cushions and wooden frame included, fits in **20 × 12 studs**: 2 studs on every side of the playing surface for the cushions and frame. Like a real table, its outer corners are rounded and the frame curves around each pocket. The felt's top sits about **2.5 studs** above the floor, about an avatar's hip height.
+A Model containing the items below. The rails are slim: the whole table, cushions and wooden rails included, is about **18.2 × 10.2 studs** (about 1.1 studs on every side of the playing surface) and must stay within 20 × 12. Black plates cover the corner pockets, the side pockets are set into the rails, the cushions are angled at each pocket mouth, and white diamonds sit on the rails: 6 on each long rail, every eighth of the length, and 3 on each end. The felt's top sits about **2.5 studs** above the floor, about an avatar's hip height.
 
 | Name | What it is | Must have |
 | --- | --- | --- |
@@ -28,8 +28,8 @@ A Model containing the items below. The whole table, cushions and wooden frame i
 
 | Pocket | Center (X, Z) | Mouth |
 | --- | --- | --- |
-| 4 corners | (±8, ±4) | 1.2 studs, measured diagonally across the opening. The cushions on either side end **0.85 studs** from the corner along each edge |
-| 2 sides | (0, ±4) | 1.28 studs. The cushions on either side end **0.64 studs** from the center of the side |
+| 4 corners | (±8, ±4) | 1.0 studs, measured diagonally across the opening. The cushions on either side end **0.71 studs** from the corner along each edge |
+| 2 sides | (0, ±4) | 1.1 studs. The cushions on either side end **0.55 studs** from the center of the side |
 
 The cushion ends are the pockets' jaws. Inside the pocket, anything that looks like a hole works: a ball disappears once its center is over the opening.
 
@@ -41,7 +41,7 @@ Players stand on a platform to join a table, and the game lights a platform up w
 
 - Each platform is **a single Part or MeshPart**, named `A1`, `B1`, and on 2v2 tables also `A2` and `B2`, inside the table's `Platforms` folder.
 - `A` platforms go on one long side of the table (the felt's −Z side), `B` platforms on the other. On 2v2 tables, A1 and A2 sit side by side along their long side, and so do B1 and B2.
-- Current placeholder: 4 × 3 studs, 0.2 thick, about 8 studs from the table's center, just clear of the frame. The game checks whether a player is standing within the platform's footprint, so make its top the area a player stands on.
+- Current placeholder: 4 × 3 studs, 0.2 thick, about 7 studs from the table's center, just clear of the rails. The game checks whether a player is standing within the platform's footprint, so make its top the area a player stands on.
 - The game may change the platform's color or material to light it up, so keep the part you stand on plain enough to tint.
 
 ## Cue

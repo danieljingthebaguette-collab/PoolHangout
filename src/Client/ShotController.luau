@@ -24,6 +24,7 @@ local Preview = require(ReplicatedStorage.Shared.Physics.Preview)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
+local Hud = require(script.Parent.Hud)
 local TableView = require(script.Parent.TableView)
 
 local VIEW_ACTION = "TopDownView"
@@ -68,8 +69,7 @@ local function styleText(label: TextLabel | TextButton, text: string)
 	label.Text = text
 end
 
--- `leftReserve` is screen width, in pixels, that the view keeps clear on the left for other UI
-function ShotController.start(tableModel: Model, leftReserve: number)
+function ShotController.start(tableModel: Model)
 	local felt = tableModel:WaitForChild("Felt") :: BasePart
 	local ballFolder = tableModel:WaitForChild("Balls")
 	local ballParts: { [number]: BasePart } = {}
@@ -109,21 +109,22 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 	cue.Transparency = 1
 	cue.Parent = tableModel
 
-	-- The power meter, the phones' Lock button and the hint. The meter only shows the pull; you don't drag it.
+	-- The power meter on the left with its % readout, the phones' Lock button beside it, and the hint. The meter
+	-- only shows the pull; you don't drag it.
 	local meterGui = Instance.new("ScreenGui")
 	meterGui.Name = "PowerMeter"
 	meterGui.ResetOnSpawn = false
 	meterGui.Enabled = false
-	-- Centered in the space the view keeps clear on the right. Active, so pressing it doesn't start a pull.
+	-- Centered in the space the view keeps clear on the left. Active, so pressing it doesn't start a pull.
 	local track = Instance.new("Frame")
-	track.AnchorPoint = Vector2.new(0.5, 1)
-	track.Position = UDim2.new(1, -Theme.Ui.MeterReserve / 2, 1, -Theme.Ui.Padding)
+	track.AnchorPoint = Vector2.new(0.5, 0.5)
+	track.Position = UDim2.new(0, Theme.Ui.MeterReserve / 2, 0.5, 0)
 	track.Size = UDim2.new(0, Theme.Ui.MeterTrack, Theme.Ui.MeterHeight, 0)
 	track.BackgroundColor3 = Theme.Colors.Track
 	track.BorderSizePixel = 0
 	track.Active = true
 	track.Parent = meterGui
-	roundCorners(track)
+	roundCorners(track, UDim.new(0, Theme.Ui.Corner))
 	-- Fills up from the bottom as you pull
 	local fill = Instance.new("Frame")
 	fill.AnchorPoint = Vector2.new(0, 1)
@@ -131,11 +132,20 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 	fill.BackgroundColor3 = Theme.Colors.Fill
 	fill.BorderSizePixel = 0
 	fill.Parent = track
-	roundCorners(fill)
-	-- Just above the meter
+	roundCorners(fill, UDim.new(0, Theme.Ui.Corner))
+	local percent = Instance.new("TextLabel")
+	percent.AnchorPoint = Vector2.new(0.5, 0)
+	percent.Position = UDim2.new(0, Theme.Ui.MeterReserve / 2, 0.5 + Theme.Ui.MeterHeight / 2, Theme.Ui.Padding)
+	percent.Size = UDim2.fromOffset(Theme.Ui.MeterReserve, Theme.Ui.PercentTextSize)
+	percent.BackgroundTransparency = 1
+	percent.Parent = meterGui
+	styleText(percent, "0%")
+	percent.TextSize = Theme.Ui.PercentTextSize
+	percent.TextColor3 = Theme.Colors.HudSubtle
+	-- Beside the meter, where a thumb resting near it reaches
 	local lockButton = Instance.new("TextButton")
-	lockButton.AnchorPoint = Vector2.new(0.5, 1)
-	lockButton.Position = UDim2.new(1, -Theme.Ui.MeterReserve / 2, 1 - Theme.Ui.MeterHeight, -2 * Theme.Ui.Padding)
+	lockButton.AnchorPoint = Vector2.new(0, 0.5)
+	lockButton.Position = UDim2.new(0, Theme.Ui.MeterReserve, 0.5, 0)
 	lockButton.Size = UDim2.fromOffset(Theme.Ui.LockButtonWidth, Theme.Ui.ButtonHeight)
 	lockButton.BackgroundColor3 = Theme.Colors.Button
 	lockButton.AutoButtonColor = true
@@ -207,21 +217,39 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 	local saved: { cameraType: Enum.CameraType, cframe: CFrame, fieldOfView: number, connections: { RBXScriptConnection } }? =
 		nil
 
+	-- Screen space, in pixels, the view keeps clear around the table for the HUD: the meter (and on phones the Lock
+	-- button) on the left, the sunk-ball tray on the right, the top bar's cards above and the hint below
+	local reserve = {
+		left = Theme.Ui.MeterReserve
+			+ (if UserInputService.TouchEnabled then Theme.Ui.LockButtonWidth + Theme.Ui.Padding else 0),
+		right = Theme.Ui.TrayReserve,
+		top = Theme.Ui.CardHeight + 2 * Theme.Ui.Padding,
+		bottom = Theme.TextSize + 3 * Theme.Ui.Padding,
+	}
+
 	local function frame()
 		local camera = workspace.CurrentCamera
 		local viewport = camera.ViewportSize
-		local rightReserve = Theme.Ui.MeterReserve
-		local freeShare = 1 - (leftReserve + rightReserve) / viewport.X
+		local freeWidth = 1 - (reserve.left + reserve.right) / viewport.X
+		local freeHeight = 1 - (reserve.top + reserve.bottom) / viewport.Y
 		local tanHalfHeight = math.tan(math.rad(Config.Camera.TopDownFieldOfView / 2))
 		local tanHalfWidth = tanHalfHeight * viewport.X / viewport.Y
 		-- High enough that the whole table fits between the reserves, with its length across the screen
-		local height = Config.Camera.TopDownMargin
-			* math.max(Config.Table.Length / 2 / (tanHalfWidth * freeShare), Config.Table.Width / 2 / tanHalfHeight)
-		-- Slide the view so the table sits in the middle of the space the reserves leave
-		local shift = (leftReserve - rightReserve) / viewport.X * height * tanHalfWidth
+		local margin = Config.Camera.TopDownMargin
+		local height = math.max(
+			(Config.Table.Length / 2 + margin) / (tanHalfWidth * freeWidth),
+			(Config.Table.Width / 2 + margin) / (tanHalfHeight * freeHeight)
+		)
+		-- Slide the view so the table sits in the middle of the space the reserves leave. The screen's up is the
+		-- felt's LookVector.
+		local shiftX = (reserve.left - reserve.right) / viewport.X * height * tanHalfWidth
+		local shiftY = (reserve.top - reserve.bottom) / viewport.Y * height * tanHalfHeight
 		camera.FieldOfView = Config.Camera.TopDownFieldOfView
 		camera.CFrame = CFrame.fromMatrix(
-			felt.Position + felt.CFrame.UpVector * height - felt.CFrame.RightVector * shift,
+			felt.Position
+				+ felt.CFrame.UpVector * height
+				- felt.CFrame.RightVector * shiftX
+				+ felt.CFrame.LookVector * shiftY,
 			felt.CFrame.RightVector,
 			felt.CFrame.LookVector
 		)
@@ -299,17 +327,22 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		TableView.playSound(cueBall, Config.Sounds.CueStrike, power)
 	end
 
-	-- Where the pointer meets the plane of the felt's top, in table space. Off the table's edge counts too.
-	local function pointerOnTable(screenPosition: Vector3): (number, number)
-		local ray = workspace.CurrentCamera:ScreenPointToRay(screenPosition.X, screenPosition.Y)
+	-- The camera's ray through an input's position. Input positions sit below Roblox's top bar, and ScreenPointToRay
+	-- allows for that.
+	local function inputRay(input: InputObject): Ray
+		return workspace.CurrentCamera:ScreenPointToRay(input.Position.X, input.Position.Y)
+	end
+
+	-- Where a ray from the camera meets the plane of the felt's top, in table space. Off the table's edge counts too.
+	local function pointerOnTable(ray: Ray): (number, number)
 		local up = felt.CFrame.UpVector
 		local distance = (felt.Position + up * felt.Size.Y / 2 - ray.Origin):Dot(up) / ray.Direction:Dot(up)
 		return TableSpace.toTable(felt, ray.Origin + ray.Direction * distance)
 	end
 
 	-- The pointer's angle around the cue ball, or nil too close to the ball to be steady
-	local function pointerAngle(screenPosition: Vector3): number?
-		local x, y = pointerOnTable(screenPosition)
+	local function pointerAngle(ray: Ray): number?
+		local x, y = pointerOnTable(ray)
 		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
 		local dx, dy = x - cueX, y - cueY
 		if dx * dx + dy * dy < (Config.Aim.DragDeadZone * radius) ^ 2 then
@@ -344,6 +377,13 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		if pulling and not stillHeld(pulling.input) then
 			cancelPull()
 		end
+		-- On PC the cue points at the mouse, worked out every frame rather than only when the mouse moves, so it stays
+		-- on the cursor when the cue ball moves under a still mouse: after a shot or a rack, or on entering the view.
+		-- GetMouseLocation counts from the screen's very top, so it pairs with ViewportPointToRay.
+		if UserInputService.MouseEnabled and not (locked or pulling or strike or drag) then
+			local mouse = UserInputService:GetMouseLocation()
+			aim = pointerAngle(workspace.CurrentCamera:ViewportPointToRay(mouse.X, mouse.Y)) or aim
+		end
 		local strikeOffset = 0
 		if strike then
 			strike.t = math.min(strike.t + dt / Config.Shot.StrikeSeconds, 1)
@@ -361,6 +401,7 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		cue.Transparency = if hidden then 1 else 0
 		meterGui.Enabled = not hidden
 		fill.Size = UDim2.fromScale(1, pull)
+		percent.Text = `{math.round(pull * 100)}%`
 		local held = locked or pulling ~= nil or strike ~= nil
 		-- Back inside the cancel zone after leaving it, where letting go cancels
 		local cancelling = pulling ~= nil and pulling.left and pull == 0
@@ -392,7 +433,7 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		then
 			return
 		end
-		local x, y = pointerOnTable(input.Position)
+		local x, y = pointerOnTable(inputRay(input))
 		-- Unlocked, a touch away from the cue ball turns the aim instead
 		if locked or not isTouch or nearCue(x, y) then
 			if canShoot() then
@@ -400,14 +441,14 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 				pull = 0
 			end
 		elseif not drag then
-			drag = { input = input, angle = pointerAngle(input.Position) }
+			drag = { input = input, angle = pointerAngle(inputRay(input)) }
 		end
 	end
 
 	local function pointerMoved(input: InputObject)
 		if pulling then
 			if movesPointer(input, pulling.input) then
-				local x, y = pointerOnTable(input.Position)
+				local x, y = pointerOnTable(inputRay(input))
 				-- Any direction counts, so a cue ball against a rail can still get full power. Power counts from
 				-- the cancel ring's edge, so soft shots still work.
 				local beyond = math.sqrt((x - pulling.x) ^ 2 + (y - pulling.y) ^ 2) - cancelRadius
@@ -417,15 +458,12 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 				pull = math.clamp(beyond / fullPull, 0, 1)
 			end
 		elseif drag and input == drag.input then
-			local angle = pointerAngle(input.Position)
+			local angle = pointerAngle(inputRay(input))
 			if angle and drag.angle then
 				-- The aim turns as far as the finger swept around the cue ball, the short way round
 				aim += (angle - drag.angle + math.pi) % (2 * math.pi) - math.pi
 			end
 			drag.angle = angle
-		elseif input.UserInputType == Enum.UserInputType.MouseMovement and not locked then
-			-- Moving the mouse is the only way to aim on PC
-			aim = pointerAngle(input.Position) or aim
 		end
 	end
 
@@ -469,6 +507,7 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		saved = nil
 		characterInput.Enabled = true
 		controls:Enable()
+		Hud.showTable(false)
 	end
 
 	local function enterView()
@@ -491,6 +530,7 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		frame()
 		characterInput.Enabled = false
 		controls:Disable()
+		Hud.showTable(true)
 		ContextActionService:BindAction(LOCK_ACTION, function(_, state: Enum.UserInputState)
 			if state == Enum.UserInputState.Begin then
 				toggleLock()
