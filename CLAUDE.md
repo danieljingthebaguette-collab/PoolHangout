@@ -27,6 +27,7 @@ Studio's Script Sync mirrors these folders both ways.
 | `src/Client` | StarterPlayer/StarterPlayerScripts/Client | Each player |
 | `src/Shared` | ReplicatedStorage/Shared | Both |
 | `tests/`, `docs/` | Not synced | Lune tests, docs |
+| `tools/` | Not synced | Studio scripts Claude runs through the MCP, like `BuildTable.luau` that rebuilds the greybox table from Config |
 
 - File names set the script type: `Name.server.luau` = server Script, `Name.local.luau` = LocalScript, `Name.luau` = ModuleScript, a folder = Folder. Don't use `init.luau` files; use plain folders of modules.
 - Only scripts and folders sync. Parts, models and lighting live only in the place file, which isn't in git. After you build or change anything in the place, remind me to save it (Cmd+S).

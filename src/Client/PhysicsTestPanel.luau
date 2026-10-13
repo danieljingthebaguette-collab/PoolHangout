@@ -10,6 +10,7 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Theme = require(ReplicatedStorage.Shared.Theme)
+local Slider = require(script.Parent.Slider)
 
 local PhysicsTestPanel = {}
 
@@ -97,85 +98,29 @@ function PhysicsTestPanel.start()
 	end)
 	toggle.AnchorPoint = Vector2.new(0, 1)
 	toggle.Position = UDim2.new(0, Theme.Ui.ButtonHeight + 2 * Theme.Ui.Padding, 1, -Theme.Ui.Padding)
-	toggle.Size = UDim2.fromOffset(Theme.Ui.LockButtonWidth, Theme.Ui.ButtonHeight)
+	toggle.Size = UDim2.fromOffset(Theme.Ui.TestButtonWidth, Theme.Ui.ButtonHeight)
 	toggle.Parent = gui
 
 	button("Rack (R)", 0, function()
 		Remotes.TestRack:FireServer()
 	end).Parent = panel
 
-	-- The slider being dragged, if any: where to move it, and what to do when it's let go
-	local dragging: { moveTo: (number) -> (), release: () -> () }? = nil
-
-	-- Returns a function that shows a new value on the slider
-	local function slider(
-		label: string,
-		range: { min: number, max: number, step: number },
-		value: number,
-		order: number,
-		onRelease: (number) -> ()
-	): (number) -> ()
-		local row = Instance.new("TextButton")
-		style(row, "")
-		row.AutoButtonColor = false
-		row.LayoutOrder = order
-		local text = Instance.new("TextLabel")
-		style(text, "")
-		text.Size = UDim2.fromScale(1, 0.5)
-		text.TextXAlignment = Enum.TextXAlignment.Left
-		text.Parent = row
-		local bar = Instance.new("Frame")
-		bar.AnchorPoint = Vector2.new(0, 0.5)
-		bar.Position = UDim2.fromScale(0, 0.75)
-		bar.Size = UDim2.new(1, 0, 0, Theme.Ui.SliderBar)
-		bar.BackgroundColor3 = Theme.Colors.Track
-		bar.BorderSizePixel = 0
-		bar.Parent = row
-		local fill = Instance.new("Frame")
-		fill.BackgroundColor3 = Theme.Colors.Fill
-		fill.BorderSizePixel = 0
-		fill.Parent = bar
-
-		local function show(newValue: number)
-			value = newValue
-			fill.Size = UDim2.fromScale((value - range.min) / (range.max - range.min), 1)
-			text.Text = `{label}   {string.format("%g", value)}`
-		end
-		show(value)
-
-		local function moveTo(x: number)
-			local share = math.clamp((x - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
-			local raw = range.min + share * (range.max - range.min)
-			show(math.clamp(math.round(raw / range.step) * range.step, range.min, range.max))
-		end
-		row.InputBegan:Connect(function(input: InputObject)
-			if
-				input.UserInputType == Enum.UserInputType.MouseButton1
-				or input.UserInputType == Enum.UserInputType.Touch
-			then
-				dragging = {
-					moveTo = moveTo,
-					release = function()
-						onRelease(value)
-					end,
-				}
-				moveTo(input.Position.X)
-			end
-		end)
-		row.Parent = panel
-		return show
-	end
-
 	for i, range in Config.Debug.TestSliders do
-		local show = slider(
-			range.name,
-			range,
-			Remotes.TestTune:GetAttribute(range.name) or (Config :: any)[range.group][range.name],
-			i,
-			function(value: number)
+		local row, show = Slider.new({
+			min = range.min,
+			max = range.max,
+			step = range.step,
+			value = Remotes.TestTune:GetAttribute(range.name) or (Config :: any)[range.group][range.name],
+			label = function(value: number): string
+				return `{range.name}   {string.format("%g", value)}`
+			end,
+			-- Sent once on letting go, so dragging doesn't flood the server
+			onRelease = function(value: number)
 				Remotes.TestTune:FireServer(range.name, value)
-			end
-		)
+			end,
+		})
+		row.LayoutOrder = i
+		row.Parent = panel
 		Remotes.TestTune:GetAttributeChangedSignal(range.name):Connect(function()
 			show(Remotes.TestTune:GetAttribute(range.name))
 		end)
@@ -194,30 +139,6 @@ function PhysicsTestPanel.start()
 			Remotes.TestRack:FireServer()
 		end
 	end)
-	UserInputService.InputChanged:Connect(function(input: InputObject)
-		if
-			dragging
-			and (
-				input.UserInputType == Enum.UserInputType.MouseMovement
-				or input.UserInputType == Enum.UserInputType.Touch
-			)
-		then
-			dragging.moveTo(input.Position.X)
-		end
-	end)
-	UserInputService.InputEnded:Connect(function(input: InputObject)
-		if
-			dragging
-			and (
-				input.UserInputType == Enum.UserInputType.MouseButton1
-				or input.UserInputType == Enum.UserInputType.Touch
-			)
-		then
-			dragging.release()
-			dragging = nil
-		end
-	end)
-
 	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 end
 

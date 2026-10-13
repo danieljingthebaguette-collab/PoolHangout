@@ -47,6 +47,7 @@ local Theme = {
 		AimLineThickness = 2, -- pixels, for the aim indicator's lines and circle
 		AimFaintTransparency = 0.6, -- the aim indicator while aiming or about to cancel; solid while locked
 		LockButtonWidth = 80, -- the phones' Lock button, beside the power meter
+		TestButtonWidth = 80, -- the physics test panel's Test button, beside the settings gear
 	},
 
 	-- The placeholder balls' markings, so you can see them roll, in ball radii. Solids, the 8 and the cue ball

@@ -24,6 +24,7 @@ local Preview = require(ReplicatedStorage.Shared.Physics.Preview)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
+local Hud = require(script.Parent.Hud)
 local TableView = require(script.Parent.TableView)
 
 local VIEW_ACTION = "TopDownView"
@@ -109,39 +110,11 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	cue.Transparency = 1
 	cue.Parent = tableModel
 
-	-- The power meter on the left with its % readout, the phones' Lock button beside it, and the hint. The meter
-	-- only shows the pull; you don't drag it.
-	local meterGui = Instance.new("ScreenGui")
-	meterGui.Name = "PowerMeter"
-	meterGui.ResetOnSpawn = false
-	meterGui.Enabled = false
-	-- Centered in the space the view keeps clear on the left. Active, so pressing it doesn't start a pull.
-	local track = Instance.new("Frame")
-	track.AnchorPoint = Vector2.new(0.5, 0.5)
-	track.Position = UDim2.new(0, Theme.Ui.MeterReserve / 2, 0.5, 0)
-	track.Size = UDim2.new(0, Theme.Ui.MeterTrack, Theme.Ui.MeterHeight, 0)
-	track.BackgroundColor3 = Theme.Colors.Track
-	track.BorderSizePixel = 0
-	track.Active = true
-	track.Parent = meterGui
-	roundCorners(track, UDim.new(0, Theme.Ui.Corner))
-	-- Fills up from the bottom as you pull
-	local fill = Instance.new("Frame")
-	fill.AnchorPoint = Vector2.new(0, 1)
-	fill.Position = UDim2.fromScale(0, 1)
-	fill.BackgroundColor3 = Theme.Colors.Fill
-	fill.BorderSizePixel = 0
-	fill.Parent = track
-	roundCorners(fill, UDim.new(0, Theme.Ui.Corner))
-	local percent = Instance.new("TextLabel")
-	percent.AnchorPoint = Vector2.new(0.5, 0)
-	percent.Position = UDim2.new(0, Theme.Ui.MeterReserve / 2, 0.5 + Theme.Ui.MeterHeight / 2, Theme.Ui.Padding)
-	percent.Size = UDim2.fromOffset(Theme.Ui.MeterReserve, Theme.Ui.PercentTextSize)
-	percent.BackgroundTransparency = 1
-	percent.Parent = meterGui
-	styleText(percent, "0%")
-	percent.TextSize = Theme.Ui.PercentTextSize
-	percent.TextColor3 = Theme.Colors.Subtle
+	-- The phones' Lock button beside the power meter (which Hud draws), and the hint
+	local controlsGui = Instance.new("ScreenGui")
+	controlsGui.Name = "ShotControls"
+	controlsGui.ResetOnSpawn = false
+	controlsGui.Enabled = false
 	-- Beside the meter, where a thumb resting near it reaches
 	local lockButton = Instance.new("TextButton")
 	lockButton.AnchorPoint = Vector2.new(0, 0.5)
@@ -150,7 +123,7 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	lockButton.BackgroundColor3 = Theme.Colors.Button
 	lockButton.AutoButtonColor = true
 	lockButton.Visible = UserInputService.TouchEnabled
-	lockButton.Parent = meterGui
+	lockButton.Parent = controlsGui
 	styleText(lockButton, "Lock")
 	roundCorners(lockButton, UDim.new(0, Theme.Ui.Corner))
 	local hint = Instance.new("TextLabel")
@@ -159,14 +132,14 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	hint.Size = UDim2.fromOffset(0, Theme.TextSize + Theme.Ui.Padding)
 	hint.AutomaticSize = Enum.AutomaticSize.X
 	hint.BackgroundColor3 = Theme.Colors.Panel
-	hint.Parent = meterGui
+	hint.Parent = controlsGui
 	styleText(hint, hints.aiming)
 	roundCorners(hint, UDim.new(0, Theme.Ui.Corner))
 	local hintPadding = Instance.new("UIPadding")
 	hintPadding.PaddingLeft = UDim.new(0, Theme.Ui.Padding)
 	hintPadding.PaddingRight = hintPadding.PaddingLeft
 	hintPadding.Parent = hint
-	meterGui.Parent = playerGui
+	controlsGui.Parent = playerGui
 
 	-- The aim indicator, the lock icon and the cancel ring. Only this screen sees them. They're drawn on the
 	-- screen over the fixed top-down view: 3D line adornments came out broken up and hidden behind balls, and a
@@ -329,7 +302,7 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		-- ponytail: the test mode's remote, until Match (Phase 2) brings RequestShot and turns
 		Remotes.TestShoot:FireServer(shot.dirX, shot.dirY, shot.power)
 		TableView.predict(tableModel, shot, PhysicsTestAccess.params())
-		TableView.playSound(cueBall, Config.Sounds.CueStrike, power)
+		TableView.playSound(cueBall, "CueStrike", power)
 	end
 
 	-- The camera's ray through an input's position. Input positions sit below Roblox's top bar, and ScreenPointToRay
@@ -422,9 +395,8 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		else
 			cue.Transparency = if hidden then 1 else 0
 		end
-		meterGui.Enabled = not hidden
-		fill.Size = UDim2.fromScale(1, pull)
-		percent.Text = `{math.round(pull * 100)}%`
+		controlsGui.Enabled = not hidden
+		Hud.setPower(if hidden then nil else pull)
 		local held = locked or pulling ~= nil or strike ~= nil
 		-- Back inside the cancel zone after leaving it, where letting go cancels
 		local cancelling = pulling ~= nil and pulling.left and pull == 0
@@ -523,7 +495,8 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		-- Leaving mid-pull cancels the shot, and the view starts over unlocked
 		drag, pulling, pull, locked = nil, nil, 0, false
 		cue.Transparency = 1
-		meterGui.Enabled = false
+		controlsGui.Enabled = false
+		Hud.setPower(nil)
 		hideIndicator()
 		camera.CameraType = saved.cameraType
 		camera.CFrame = saved.cframe

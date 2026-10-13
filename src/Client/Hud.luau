@@ -1,19 +1,20 @@
 --!strict
--- The HUD around the top-down view: the top bar with your player card, and the tray on the right where sunk
--- balls collect. The settings button bottom-left, with the sound volume, shows in every view. The power meter
--- belongs to ShotController.
+-- The HUD around the top-down view: the top bar with your player card, the power meter on the left, the tray on
+-- the right where sunk balls collect, and the settings button bottom-left with the sound volume.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 
 local Theme = require(ReplicatedStorage.Shared.Theme)
+local Slider = require(script.Parent.Slider)
 local TableView = require(script.Parent.TableView)
 
 local Hud = {}
 
 -- Everything the HUD shows only in the top-down view
 local guis: { ScreenGui } = {}
+-- The power meter, once it's built: its screen, its fill and its % readout
+local meter: { gui: ScreenGui, fill: Frame, percent: TextLabel }? = nil
 
 local function roundCorners(item: GuiObject, radius: UDim?)
 	local corner = Instance.new("UICorner")
@@ -47,6 +48,54 @@ function Hud.showTable(visible: boolean)
 	for _, gui in guis do
 		gui.Enabled = visible
 	end
+end
+
+-- Shows the pull on the power meter, 0 to 1, or hides the meter with nil while you can't shoot
+function Hud.setPower(share: number?)
+	if not meter then
+		return
+	end
+	meter.gui.Enabled = share ~= nil
+	if share then
+		meter.fill.Size = UDim2.fromScale(1, share)
+		meter.percent.Text = `{math.round(share * 100)}%`
+	end
+end
+
+-- The power meter on the left with its % readout. It only shows the pull; you don't drag it. Its own screen, below
+-- Roblox's top bar, so the phones' Lock button (ShotController) lines up beside it.
+local function powerMeter(playerGui: Instance)
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "PowerMeter"
+	gui.ResetOnSpawn = false
+	gui.Enabled = false
+	-- Centered in the space the view keeps clear on the left. Active, so pressing it doesn't start a pull.
+	local track = Instance.new("Frame")
+	track.AnchorPoint = Vector2.new(0.5, 0.5)
+	track.Position = UDim2.new(0, Theme.Ui.MeterReserve / 2, 0.5, 0)
+	track.Size = UDim2.new(0, Theme.Ui.MeterTrack, Theme.Ui.MeterHeight, 0)
+	track.BackgroundColor3 = Theme.Colors.Track
+	track.BorderSizePixel = 0
+	track.Active = true
+	track.Parent = gui
+	roundCorners(track)
+	-- Fills up from the bottom as you pull
+	local fill = Instance.new("Frame")
+	fill.AnchorPoint = Vector2.new(0, 1)
+	fill.Position = UDim2.fromScale(0, 1)
+	fill.Size = UDim2.fromScale(1, 0)
+	fill.BackgroundColor3 = Theme.Colors.Fill
+	fill.BorderSizePixel = 0
+	fill.Parent = track
+	roundCorners(fill)
+	local percent = label("0%", gui)
+	percent.AnchorPoint = Vector2.new(0.5, 0)
+	percent.Position = UDim2.new(0, Theme.Ui.MeterReserve / 2, 0.5 + Theme.Ui.MeterHeight / 2, Theme.Ui.Padding)
+	percent.Size = UDim2.fromOffset(Theme.Ui.MeterReserve, Theme.Ui.PercentTextSize)
+	percent.TextSize = Theme.Ui.PercentTextSize
+	percent.TextColor3 = Theme.Colors.Subtle
+	gui.Parent = playerGui
+	meter = { gui = gui, fill = fill, percent = percent }
 end
 
 -- Your card, left of the top bar's center. The other player's card goes right of it in Phase 2.
@@ -192,62 +241,19 @@ local function settings(gui: ScreenGui)
 	box.BackgroundTransparency = 0 -- solid, since it covers the Test button
 	box.Active = true
 	box.Visible = false
-	local text = label("", box)
-	text.Position = UDim2.fromOffset(Theme.Ui.Padding, 0)
-	text.Size = UDim2.new(1, -2 * Theme.Ui.Padding, 0.5, 0)
-	text.TextXAlignment = Enum.TextXAlignment.Left
-	local bar = Instance.new("Frame")
-	bar.AnchorPoint = Vector2.new(0, 0.5)
-	bar.Position = UDim2.new(0, Theme.Ui.Padding, 0.72, 0)
-	bar.Size = UDim2.new(1, -2 * Theme.Ui.Padding, 0, Theme.Ui.SliderBar)
-	bar.BackgroundColor3 = Theme.Colors.Track
-	bar.BorderSizePixel = 0
-	bar.Parent = box
-	local fill = Instance.new("Frame")
-	fill.BackgroundColor3 = Theme.Colors.Fill
-	fill.BorderSizePixel = 0
-	fill.Parent = bar
-
-	local function setVolume(share: number)
-		TableView.setVolume(share)
-		fill.Size = UDim2.fromScale(share, 1)
-		text.Text = `Sound volume   {math.round(share * 100)}%`
-	end
-	setVolume(1)
-
-	-- Drag anywhere on the panel to set the volume, by mouse or finger
-	local dragging: InputObject? = nil
-	local function moveTo(x: number)
-		setVolume(math.clamp((x - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1))
-	end
-	box.InputBegan:Connect(function(input: InputObject)
-		if
-			input.UserInputType == Enum.UserInputType.MouseButton1
-			or input.UserInputType == Enum.UserInputType.Touch
-		then
-			dragging = input
-			moveTo(input.Position.X)
-		end
-	end)
-	UserInputService.InputChanged:Connect(function(input: InputObject)
-		if
-			dragging
-			and (
-				input == dragging
-				or (
-					input.UserInputType == Enum.UserInputType.MouseMovement
-					and dragging.UserInputType == Enum.UserInputType.MouseButton1
-				)
-			)
-		then
-			moveTo(input.Position.X)
-		end
-	end)
-	UserInputService.InputEnded:Connect(function(input: InputObject)
-		if input == dragging then
-			dragging = nil
-		end
-	end)
+	local row = Slider.new({
+		min = 0,
+		max = 1,
+		step = 0.01,
+		value = 1,
+		label = function(share: number): string
+			return `Sound volume   {math.round(share * 100)}%`
+		end,
+		onChange = TableView.setVolume,
+	})
+	row.Position = UDim2.fromOffset(Theme.Ui.Padding, Theme.Ui.Padding / 2)
+	row.Size = UDim2.new(1, -2 * Theme.Ui.Padding, 0, Theme.Ui.ButtonHeight)
+	row.Parent = box
 
 	gear.Activated:Connect(function()
 		box.Visible = not box.Visible
@@ -274,6 +280,8 @@ function Hud.start(tableModel: Model)
 	settings(settingsGui)
 	settingsGui.Parent = playerGui
 	table.insert(guis, settingsGui)
+
+	powerMeter(playerGui)
 
 	-- Waits for the table's balls, so it goes last
 	tray(gui, tableModel)

@@ -29,8 +29,9 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Server/PhysicsTest.luau` | Physics test mode on Table1 (Studio, or the owner in a published server): ball parts, rack, test shots |
 | `Client/Main.local.luau` | Starts the controllers |
 | `Client/TableView.luau` | Replays shots on the ball parts, plays their sounds, draws the balls' shadows, and starts the shooter's shot before the server's copy arrives |
-| `Client/ShotController.luau` | F and the top-down camera, placing the cue ball, aim, pocket call, the power meter on the left, the cue's strike |
-| `Client/Hud.luau` | Top bar with player cards, the sunk-ball tray, settings (sound volume); later the shot clock, end screen and Leave button |
+| `Client/ShotController.luau` | F and the top-down camera, placing the cue ball, aim, pocket call, the pull for power, the cue's strike and follow-through |
+| `Client/Hud.luau` | Top bar with player cards, the power meter, the sunk-ball tray, settings (sound volume); later the shot clock, end screen and Leave button |
+| `Client/Slider.luau` | A labelled slider row for mouse and touch, for the settings and the test panel |
 | `Client/Spectate.luau` | "Watch from above" |
 | `Client/PhysicsTestPanel.luau` | Physics test mode controls (Studio, or the owner in a published server) |
 
@@ -107,7 +108,7 @@ Workspace
                              A platforms on one long side, B on the other
 ```
 
-- Rails and pocket visuals must line up with Config. When pocket or table sizes change in Config, update the greybox to match.
+- Rails and pocket visuals must line up with Config. When pocket or table sizes change in Config, rebuild the greybox with `tools/BuildTable.luau`, which reads Config.
 - Ball parts, signs, the Turn arrow and all UI are made by code at runtime. Don't build them in the place.
 - At startup, TableService warns in the output about anything missing or mismatched.
 

@@ -65,13 +65,14 @@ local function findView(tableModel: Model?): View?
 	return { felt = felt, parts = parts }
 end
 
--- Plays a sound from a part. `share` is how hard, 0 to 1 of a full-power hit.
-function TableView.playSound(part: BasePart, soundId: string, share: number)
-	local sound = part:FindFirstChild(soundId) :: Sound?
+-- Plays one of Config.Sounds from a part, by its name there, like "RailHit". `share` is how hard, 0 to 1 of a
+-- full-power hit.
+function TableView.playSound(part: BasePart, name: string, share: number)
+	local sound = part:FindFirstChild(name) :: Sound?
 	if not sound then
 		local newSound = Instance.new("Sound")
-		newSound.Name = soundId
-		newSound.SoundId = soundId
+		newSound.Name = name
+		newSound.SoundId = (Config.Sounds :: any)[name]
 		newSound.RollOffMode = Enum.RollOffMode.InverseTapered
 		newSound.RollOffMinDistance = Config.Sounds.FullVolumeDistance
 		newSound.RollOffMaxDistance = Config.Sounds.SilentDistance
@@ -118,18 +119,18 @@ end
 -- Plays the sounds of this frame's new events: only the loudest few, so a break doesn't fire dozens at once
 local function playEvents(replay: Replay)
 	local events, physics = replay.sim.events, replay.sim.params.Physics
-	local sounds: { { part: BasePart, soundId: string, share: number } } = {}
+	local sounds: { { part: BasePart, name: string, share: number } } = {}
 	for i = replay.heard + 1, #events do
 		local event = events[i]
 		local part = replay.view.parts[event.id]
 		if part then
 			local share = if event.kind == "pocket" then 1 else event.speed / physics.FullPowerSpeed
-			local soundId = if event.kind == "rail"
-				then Config.Sounds.RailHit
-				elseif event.kind == "pocket" then Config.Sounds.Pocket
-				elseif share < Config.Sounds.LightHitShare then Config.Sounds.BallHitLight
-				else Config.Sounds.BallHit
-			table.insert(sounds, { part = part, soundId = soundId, share = share })
+			local name = if event.kind == "rail"
+				then "RailHit"
+				elseif event.kind == "pocket" then "Pocket"
+				elseif share < Config.Sounds.LightHitShare then "BallHitLight"
+				else "BallHit"
+			table.insert(sounds, { part = part, name = name, share = share })
 		end
 	end
 	replay.heard = #events
@@ -137,7 +138,7 @@ local function playEvents(replay: Replay)
 		return a.share > b.share
 	end)
 	for i = 1, math.min(#sounds, Config.Sounds.MaxPerFrame) do
-		TableView.playSound(sounds[i].part, sounds[i].soundId, sounds[i].share)
+		TableView.playSound(sounds[i].part, sounds[i].name, sounds[i].share)
 	end
 end
 

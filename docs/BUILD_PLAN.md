@@ -12,8 +12,6 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - **Next up:** my PC test of the new look, then Phase 1's phone check and the age check
 - **Known issues:**
   - Touch hasn't been tried on a real phone yet, only in the emulator; it's covered by Phase 1's phone check
-  - The physics test panel now has 7 sliders and may not fit a phone's height in landscape; check it in the phone check
-  - `.claude/rules/client.md` still says the top-down view turns off walking "so A/D only aim"; A/D aiming is gone
 
 ## Rules that protect quality
 
