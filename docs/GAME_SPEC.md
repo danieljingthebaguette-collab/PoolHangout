@@ -6,7 +6,7 @@ Markers: no marker = decided by me. *(default)* = Claude's proposal I haven't co
 
 ## The game
 
-A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat and play 8-ball at pool tables, 1v1 or 2v2. The heart of it is the shot: a top-down view, A/D to aim, and a power meter you pull back and push forward like a real cue. Mechanics come first. The base build has no economy, cosmetics or ranked mode.
+A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat and play 8-ball at pool tables, 1v1 or 2v2. The heart of it is the shot: a top-down view, the cue following your mouse (or your finger on phones), and a slingshot pull for power. Mechanics come first. The base build has no economy, cosmetics or ranked mode.
 
 ## Audience and platform
 
@@ -53,11 +53,11 @@ A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat 
 2. The shooter presses F from anywhere (phones: an on-screen button) to switch to the top-down view. Where they stand doesn't matter. F again goes back to the normal view *(default)*.
 3. The top-down view shows the whole table, fixed and horizontal on screen, the same for everyone *(default)*.
 4. With ball in hand, they drag the cue ball to place it first: behind the head line on the break, anywhere after a foul. It can't overlap another ball.
-5. Aim: A/D or the left/right arrow keys turn the cue around the cue ball, a full 360°. Tap for a tiny nudge; hold to turn faster the longer you hold. W and S do nothing. On phones, drag on the table to turn the aim *(default)*.
-6. Power: a vertical meter in the bottom-right of the screen with a ball icon on it. Drag the icon back (down) to load power, then push it all the way forward (up) to shoot. Power is how far back the icon was when the final push began. Let go before the end and the icon springs back with no shot, so practice strokes are free. Mouse and touch work the same way.
-7. Aim line: a plain line from the cue ball to the first ball it would hit, switched with `Config.Aim.ShowAimLine`. It's a testing aid in the base build; the real aim help is on the Later list.
+5. Aim, on PC: the cue follows the mouse, so the shot points from the cue ball toward the cursor. A/D or the left/right arrow keys nudge it for fine aiming: tap for a tiny nudge, hold to turn faster the longer you hold. A nudge holds until the mouse moves again. W and S do nothing. On phones, a drag that starts away from the cue ball turns the aim around it.
+6. Power, like a slingshot: hold the left mouse button anywhere on the table (phones: touch on or near the cue ball or the cue). The aim locks, and the farther you drag from where you pressed, in any direction, the harder the shot, with full power at a distance set in Config. Any direction counts, so a cue ball against a rail can still get full power. The cue slides back as you drag, and a meter in the bottom-right fills up; the meter only shows power, you don't drag it. Let go to shoot. Drag back near where you started (under the shortest pull) and let go to cancel. Right-clicking, opening the Roblox menu (Esc) or a release the game misses also cancels.
+7. Aim indicator, always on: a white line from the cue ball to a white circle where the cue ball will be when it first touches a ball, and a short white line from that ball showing which way it will go. If the cue ball would hit a rail or drop in a pocket first, the line and circle stop there, with no bounce lines. It uses the physics' own geometry, so it's exact. Only the shooter sees it, and it hides while balls roll. `Config.Aim.ShowAimLine` switches the line and circle and `Config.Aim.ShowTargetLine` the target ball's line; there's no player setting.
 8. When shooting at the 8, the shooter clicks or taps the pocket they're calling before they can shoot *(default)*.
-9. The shot fires when the icon reaches the end, and everyone sees the balls roll.
+9. The shot fires when they let go, and everyone sees the balls roll.
 10. The shooter stays in the top-down view while it's still their turn. The camera goes back to normal when their turn ends *(default)*.
 
 - **Top-down only:** you can only aim and shoot from the top-down view. The cue and the power meter only show there, and leaving the view in the middle of a pull cancels it with no shot.
@@ -118,12 +118,11 @@ Leaving means leaving the server, disconnecting, pressing a Leave button in the 
 
 ## Later list (after launch, roughly in this order)
 
-1. Aim help, my fading-line idea: the aim line shows only near the end of the forward stroke, while the icon is moving, so practice strokes reveal where you'll shoot.
-2. Spin: GamePigeon's red dot on a cue-ball icon. Top and back spin first, side spin later.
-3. Levels, plus lifetime stats on each player's profile.
-4. Cosmetics: cues, cloth colors, ball sets. The economy comes with this.
-5. Ranked mode, alongside casual.
-6. A back room with extra tables that opens once a server passes 15 players.
+1. Spin: GamePigeon's red dot on a cue-ball icon. Top and back spin first, side spin later.
+2. Levels, plus lifetime stats on each player's profile.
+3. Cosmetics: cues, cloth colors, ball sets. The economy comes with this.
+4. Ranked mode, alongside casual.
+5. A back room with extra tables that opens once a server passes 15 players.
 
 ## Decided against (don't re-propose)
 
@@ -134,6 +133,7 @@ Leaving means leaving the server, disconnecting, pressing a Leave button in the 
 - W/S controls, or holding Space to shoot.
 - Alcohol.
 - Shooting from the normal view.
+- My fading aim line (shown only near the end of a forward stroke): the slingshot pull has no forward stroke.
 - An economy, cosmetics or ranked mode before the mechanics are done.
 
 ## Raised but not decided (don't build)

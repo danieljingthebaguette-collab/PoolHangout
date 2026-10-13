@@ -68,7 +68,8 @@ Starting values for Config (tune by feel):
 | Shot clock / warning | 45 s / last 10 s | |
 | Countdown / takeover / open-spot wait / end screen | 5 / 5 / 15 / 10 s | |
 | Aim nudge / hold speed | 0.25° / 15°/s rising to 120°/s over 1 s | |
-| Shortest pull that shoots | 5% of the meter | Stops twitches from firing |
+| Full-power pull | A quarter of the table length | Measured on the table, so it's the same share of the screen on every device |
+| Shortest pull that shoots | 5% of a full pull | Stops twitches from firing |
 
 ## A shot, end to end
 

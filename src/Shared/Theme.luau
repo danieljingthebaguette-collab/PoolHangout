@@ -29,8 +29,7 @@ local Theme = {
 		PanelWidth = 240,
 		SliderBar = 6,
 		MeterReserve = 96, -- screen width the top-down view keeps clear on the right for the power meter
-		MeterTrack = 16, -- width of the power meter's track
-		MeterIcon = 56, -- the ball icon you drag: big enough for a thumb
+		MeterTrack = 16, -- width of the power meter
 		MeterHeight = 0.45, -- share of the screen's height
 	},
 

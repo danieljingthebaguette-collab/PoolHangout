@@ -7,11 +7,11 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
-- **In progress:** the real shot controls, in 3 steps with a stop after each: (1) F and the top-down view, (2) cue stick and aim (A/D and arrows; drag to rotate, GamePigeon-style, by touch and mouse), (3) the power meter, with the cue sliding back as you pull, then remove click-to-shoot and the Power slider. Step 1 is done: I checked it on PC and in the phone emulator. Step 2 (cue stick and aim) is done: I checked it on PC and in the phone emulator. Step 3 (the power meter) is built and passed lint, tests and a solo PC playtest; waiting for my check on PC and in the phone emulator. Physics step 2 still needs my 2-player check before its box is ticked.
-- **Last session:** 2026-10-12. Tuned physics: RollingSlowdown 5 → 1.5 (full power now rolls about 13 table lengths), BallBounce 0.95 → 0.9, Follow 0.29 → 0.25. Built shot controls step 1 in `Client/ShotController.luau`: F toggles a high, narrow (20°) top-down camera that keeps room for the test panel and the meter, and turns off walking. Removed the test panel's C key and Top view button. Built step 2: a cue stick only you see, A/D and arrows (0.25° tap, hold turns after 0.25 s, 15 → 120°/s), and drag-to-rotate around the cue ball by mouse or touch. In the top view, clicks aim instead of shooting. Built step 3: the power meter (bottom right, top-down view only) with the cue sliding back as you pull; leaving the view mid-pull cancels. Removed click-to-shoot and the Power slider. Added the placeholder-models rule and `docs/MODELS.md`, the modeler's brief.
-- **Next up:** my check of the power meter, then the plain aim line
+- **In progress:** step 4 of the shot controls, the aim indicator. Steps 1–3 (F and the top-down view; mouse and A/D aim; slingshot power) are done and I checked them on PC and in the phone emulator. Ball physics passed my 2-player check.
+- **Last session:** 2026-10-12. Tuned physics: RollingSlowdown 5 → 1.5 (full power now rolls about 13 table lengths), BallBounce 0.95 → 0.9, Follow 0.29 → 0.25. Built shot controls step 1 in `Client/ShotController.luau`: F toggles a high, narrow (20°) top-down camera that keeps room for the test panel and the meter, and turns off walking. Removed the test panel's C key and Top view button. Built step 2: a cue stick only you see, A/D and arrows (0.25° tap, hold turns after 0.25 s, 15 → 120°/s), and drag-to-rotate around the cue ball by mouse or touch. In the top view, clicks aim instead of shooting. Built a first step 3 (drag a meter icon back, push it forward to shoot), then replaced it with a slingshot design. Removed click-to-shoot and the Power slider. Added the placeholder-models rule and `docs/MODELS.md`, the modeler's brief.
+- **Next up:** my check of the aim indicator, then tuning the feel together
 - **Known issues:**
-  - A full-power break moves rack balls only about 1.5 studs each and rarely pockets one. Look at it when tuning the feel.
+  - None
 
 ## Rules that protect quality
 
@@ -31,11 +31,11 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [x] Set up Studio's MCP connection, Script Sync, git and this kit (Me)
 - [x] One config file for every tuning number: table size, pocket size, friction, rail bounce, max power, shot clock (Claude)
 - [x] Greybox table: 10 × 5 studs of playing surface, 16 balls, and 6 pockets about 20% wider than real (Claude builds it, I adjust)
-- [ ] Ball physics: our own simulation on the server for rolling, ball-to-ball hits, rail bounces and pockets, played back smoothly on every screen (Claude)
+- [x] Ball physics: our own simulation on the server for rolling, ball-to-ball hits, rail bounces and pockets, played back smoothly on every screen (Claude)
 - [x] Press F to switch to the top-down view, and F again to go back (Claude)
-- [x] Aim with A/D or the arrow keys: tap to nudge, hold to turn faster. On phones, drag on the table (Claude)
-- [ ] Power meter: drag the ball icon back, then push it to the end to shoot. Same on PC and phones. You can only aim and shoot from the top-down view: the cue and the meter only show there, and leaving the view mid-pull cancels the shot (Claude)
-- [ ] Plain aim line to the first ball, switchable in the config file (Claude)
+- [x] Aim: on PC the cue follows the mouse, and A/D or the arrow keys nudge it (tap to nudge, hold to turn faster). On phones, drag on the table (Claude)
+- [x] Power, like a slingshot: hold the mouse button (phones: touch near the cue ball or cue) and drag; the farther from where you pressed, in any direction, the harder. The aim locks, the cue slides back and a display-only meter fills. Let go to shoot; let go near the start, right-click, Esc or a missed release cancels. You can only aim and shoot from the top-down view: the cue and the meter only show there, and leaving the view mid-pull cancels the shot (Claude)
+- [ ] Aim indicator, always on: a line from the cue ball to a circle where it first touches a ball (stopping at a rail or pocket), and a short line showing where that ball goes. Two Config switches, no player setting (Claude)
 - [ ] Tune the feel together: friction, power, rail bounce, pocket size (Me + Claude)
 - [ ] Decide the final table size, since the modeler's brief (`docs/MODELS.md`) needs it (Me)
 - [ ] Complete the age check and the Maturity & Compliance Questionnaire, so friends can test from Phase 2 (Me)

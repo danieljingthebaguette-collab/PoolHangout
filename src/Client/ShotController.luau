@@ -1,10 +1,12 @@
 --!strict
 -- The shooter's controls. F (phones: an on-screen button) switches to a top-down view of the table and back.
--- You can only aim and shoot from the view: walking is off, a cue stick lies behind the cue ball, and A/D,
--- the arrow keys or dragging around the cue ball turn it. Dragging the power meter's ball icon back loads
--- power and pushing it all the way forward shoots. Letting go early, or leaving the view, cancels.
+-- You can only aim and shoot from the view: walking is off and a cue stick lies behind the cue ball.
+-- Aim: on PC the cue follows the mouse and A/D or the arrow keys nudge it; on phones a drag that starts away
+-- from the cue ball turns it. Power works like a slingshot: hold the mouse button (phones: touch near the cue
+-- ball or cue) and drag; the farther from where you pressed, the harder. Let go to shoot.
 
 local ContextActionService = game:GetService("ContextActionService")
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -63,8 +65,9 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 
 	local radius = Config.Table.BallRadius
 	local cueLength = Config.Aim.CueLength * Config.Table.Length
-	-- From the cue ball's center to the cue's center
-	local cueBack = radius * (1 + Config.Aim.CueTipGap) + cueLength / 2
+	-- From the cue ball's center to the cue's tip, and to the cue's center
+	local tipBack = radius * (1 + Config.Aim.CueTipGap)
+	local cueBack = tipBack + cueLength / 2
 	local cueHeight = radius * Config.Aim.CueHeight
 
 	-- Only this screen sees the cue
@@ -81,11 +84,12 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 	cue.Transparency = 1
 	cue.Parent = tableModel
 
+	-- The power meter only shows the pull; you don't drag it
 	local meterGui = Instance.new("ScreenGui")
 	meterGui.Name = "PowerMeter"
 	meterGui.ResetOnSpawn = false
 	meterGui.Enabled = false
-	-- Centered in the space the view keeps clear on the right. Active, so pressing it doesn't turn the aim.
+	-- Centered in the space the view keeps clear on the right. Active, so pressing it doesn't start a pull.
 	local track = Instance.new("Frame")
 	track.AnchorPoint = Vector2.new(0.5, 1)
 	track.Position = UDim2.new(1, -Theme.Ui.MeterReserve / 2, 1, -Theme.Ui.Padding)
@@ -95,36 +99,26 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 	track.Active = true
 	track.Parent = meterGui
 	roundCorners(track)
-	-- Shows how far back the icon is
+	-- Fills up from the bottom as you pull
 	local fill = Instance.new("Frame")
+	fill.AnchorPoint = Vector2.new(0, 1)
+	fill.Position = UDim2.fromScale(0, 1)
 	fill.BackgroundColor3 = Theme.Colors.Fill
 	fill.BorderSizePixel = 0
 	fill.Parent = track
 	roundCorners(fill)
-	local icon = Instance.new("TextButton")
-	icon.Text = ""
-	icon.AutoButtonColor = false
-	icon.AnchorPoint = Vector2.new(0.5, 0.5)
-	icon.Size = UDim2.fromOffset(Theme.Ui.MeterIcon, Theme.Ui.MeterIcon)
-	icon.BackgroundColor3 = Theme.BallColors[0]
-	icon.Parent = track
-	roundCorners(icon)
-	local outline = Instance.new("UIStroke")
-	outline.Color = Theme.Colors.Panel
-	outline.Thickness = 2
-	outline.Parent = icon
 	meterGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 
 	-- Radians in table space: 0 aims along +x, at the rack
 	local aim = 0
 	-- The key turning the aim, which way, and when it went down
 	local turning: { key: Enum.KeyCode, sign: number, since: number }? = nil
-	-- The mouse button or finger dragging the aim, and its last angle around the cue ball
+	-- The finger dragging the aim around the cue ball, and its last angle there
 	local drag: { input: InputObject, angle: number? }? = nil
-	-- How far back the power icon is, 0 to 1
+	-- The mouse button or finger pulling for power, and where it pressed in table space
+	local pulling: { input: InputObject, x: number, y: number }? = nil
+	-- How far the cue is pulled back, 0 to 1: the shot's power
 	local pull = 0
-	-- The mouse button or finger holding the icon, where on the icon it grabbed, and the power loaded so far
-	local grab: { input: InputObject, offset: number, power: number }? = nil
 	local rolling = false
 
 	-- The camera's settings from before the view, and everything the view connected, while it's on
@@ -151,13 +145,21 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		)
 	end
 
-	-- The pointer's angle around the cue ball in table space, or nil too close to the ball to be steady
-	local function pointerAngle(screenPosition: Vector3): number?
+	local function canShoot(): boolean
+		return not rolling and cueBall.Transparency ~= 1
+	end
+
+	-- Where the pointer meets the plane of the felt's top, in table space. Off the table's edge counts too.
+	local function pointerOnTable(screenPosition: Vector3): (number, number)
 		local ray = workspace.CurrentCamera:ScreenPointToRay(screenPosition.X, screenPosition.Y)
 		local up = felt.CFrame.UpVector
-		-- Where the ray meets the plane of the felt's top, so a drag off the table edge still turns the aim
 		local distance = (felt.Position + up * felt.Size.Y / 2 - ray.Origin):Dot(up) / ray.Direction:Dot(up)
-		local x, y = TableSpace.toTable(felt, ray.Origin + ray.Direction * distance)
+		return TableSpace.toTable(felt, ray.Origin + ray.Direction * distance)
+	end
+
+	-- The pointer's angle around the cue ball, or nil too close to the ball to be steady
+	local function pointerAngle(screenPosition: Vector3): number?
+		local x, y = pointerOnTable(screenPosition)
 		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
 		local dx, dy = x - cueX, y - cueY
 		if dx * dx + dy * dy < (Config.Aim.DragDeadZone * radius) ^ 2 then
@@ -166,19 +168,28 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		return math.atan2(dy, dx)
 	end
 
-	-- How far back the icon would be with the pointer at `screenY`
-	local function pullAt(screenY: number, offset: number): number
-		local travel = track.AbsoluteSize.Y - Theme.Ui.MeterIcon
-		return math.clamp((screenY - offset - track.AbsolutePosition.Y - Theme.Ui.MeterIcon / 2) / travel, 0, 1)
+	-- Whether a point is on or near the cue ball or the cue at rest
+	local function nearCue(x: number, y: number): boolean
+		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
+		local dirX, dirY = math.cos(aim), math.sin(aim)
+		-- The closest point on the line from the cue ball's center back to the cue's butt
+		local back = math.clamp(-((x - cueX) * dirX + (y - cueY) * dirY), 0, tipBack + cueLength)
+		local dx, dy = x - (cueX - dirX * back), y - (cueY - dirY * back)
+		return dx * dx + dy * dy <= (Config.Aim.GrabRadius * radius) ^ 2
+	end
+
+	local function cancelPull()
+		pulling = nil
 	end
 
 	local function render(dt: number)
-		if not grab and pull > 0 then
+		if pulling and not stillHeld(pulling.input) then
+			cancelPull()
+		end
+		if not pulling and pull > 0 then
 			pull = math.max(pull - dt / Config.Shot.MeterSpringSeconds, 0)
 		end
-		icon.Position = UDim2.new(0.5, 0, pull, Theme.Ui.MeterIcon * (0.5 - pull))
-		fill.Size = UDim2.new(1, 0, pull, Theme.Ui.MeterIcon * (0.5 - pull))
-		if turning then
+		if turning and not pulling then
 			local heldFor = os.clock() - turning.since - Config.Aim.HoldDelaySeconds
 			if heldFor > 0 then
 				local ramp = math.min(heldFor / Config.Aim.HoldRampSeconds, 1)
@@ -186,24 +197,22 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 				aim += turning.sign * math.rad(speed) * dt
 			end
 		end
-		local hidden = rolling or cueBall.Transparency == 1
+		local hidden = not canShoot()
 		cue.Transparency = if hidden then 1 else 0
 		meterGui.Enabled = not hidden
+		fill.Size = UDim2.fromScale(1, pull)
 		if not hidden then
 			local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
 			local back = cueBack + pull * radius * Config.Aim.CuePullBack
-			cue.CFrame = TableSpace.toWorld(
-				felt,
-				cueX - math.cos(aim) * back,
-				cueY - math.sin(aim) * back,
-				cueHeight
-			) * CFrame.Angles(0, -aim, 0)
+			cue.CFrame = TableSpace.toWorld(felt, cueX - math.cos(aim) * back, cueY - math.sin(aim) * back, cueHeight)
+				* CFrame.Angles(0, -aim, 0)
 		end
 	end
 
 	local function turnByKey(_, state: Enum.UserInputState, input: InputObject): Enum.ContextActionResult
 		local sign = TURN_KEYS[input.KeyCode]
-		if state == Enum.UserInputState.Begin then
+		-- The aim is locked while pulling
+		if state == Enum.UserInputState.Begin and not pulling then
 			aim += sign * math.rad(Config.Aim.NudgeDegrees)
 			turning = { key = input.KeyCode, sign = sign, since = os.clock() }
 		elseif turning and turning.key == input.KeyCode then
@@ -212,74 +221,59 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		return Enum.ContextActionResult.Sink
 	end
 
-	local function dragBegan(input: InputObject, gameProcessed: boolean)
-		if
-			not gameProcessed
-			and (
-				input.UserInputType == Enum.UserInputType.MouseButton1
-				or input.UserInputType == Enum.UserInputType.Touch
-			)
-		then
+	local function pointerBegan(input: InputObject, gameProcessed: boolean)
+		if input.UserInputType == Enum.UserInputType.MouseButton2 then
+			cancelPull()
+			return
+		end
+		local isMouse = input.UserInputType == Enum.UserInputType.MouseButton1
+		if gameProcessed or pulling or not (isMouse or input.UserInputType == Enum.UserInputType.Touch) then
+			return
+		end
+		local x, y = pointerOnTable(input.Position)
+		if isMouse or nearCue(x, y) then
+			if canShoot() then
+				pulling = { input = input, x = x, y = y }
+				pull = 0
+			end
+		elseif not drag then
 			drag = { input = input, angle = pointerAngle(input.Position) }
 		end
 	end
 
-	local function dragMoved(input: InputObject)
-		if drag and not stillHeld(drag.input) then
-			drag = nil
-		elseif drag and movesPointer(input, drag.input) then
+	local function pointerMoved(input: InputObject)
+		if pulling then
+			if movesPointer(input, pulling.input) then
+				local x, y = pointerOnTable(input.Position)
+				local dragged = math.sqrt((x - pulling.x) ^ 2 + (y - pulling.y) ^ 2)
+				-- Any direction counts, so a cue ball against a rail can still get full power
+				pull = math.min(dragged / (Config.Shot.FullPullDistance * Config.Table.Length), 1)
+			end
+		elseif drag and input == drag.input then
 			local angle = pointerAngle(input.Position)
 			if angle and drag.angle then
-				-- The aim turns as far as the pointer swept around the cue ball, the short way round
+				-- The aim turns as far as the finger swept around the cue ball, the short way round
 				aim += (angle - drag.angle + math.pi) % (2 * math.pi) - math.pi
 			end
 			drag.angle = angle
+		elseif input.UserInputType == Enum.UserInputType.MouseMovement then
+			-- The cue follows the mouse only when it moves, so a key nudge holds until then
+			aim = pointerAngle(input.Position) or aim
 		end
 	end
 
-	local function dragEnded(input: InputObject)
-		if drag and input == drag.input then
+	local function pointerEnded(input: InputObject)
+		if pulling and input == pulling.input then
+			-- Let go near where you pressed and nothing fires
+			if pull >= Config.Shot.MinPull then
+				-- ponytail: the test mode's remote, until Match (Phase 2) brings RequestShot and turns
+				Remotes.TestShoot:FireServer(math.cos(aim), math.sin(aim), pull)
+			end
+			pulling = nil
+		elseif drag and input == drag.input then
 			drag = nil
 		end
 	end
-
-	local function pullMoved(input: InputObject)
-		if grab and not stillHeld(grab.input) then
-			grab = nil
-		end
-		if not (grab and movesPointer(input, grab.input)) then
-			return
-		end
-		local newPull = pullAt(input.Position.Y, grab.offset)
-		-- Moving back loads power; the push forward keeps what the backswing reached
-		if newPull > pull then
-			grab.power = newPull
-		end
-		pull = newPull
-		if pull == 0 and grab.power >= Config.Shot.MinPull then
-			-- ponytail: the test mode's remote, until Match (Phase 2) brings RequestShot and turns
-			Remotes.TestShoot:FireServer(math.cos(aim), math.sin(aim), grab.power)
-			grab = nil
-		end
-	end
-
-	local function pullEnded(input: InputObject)
-		-- Let go before the end: the icon springs back and nothing fires
-		if grab and input == grab.input then
-			grab = nil
-		end
-	end
-
-	icon.InputBegan:Connect(function(input: InputObject)
-		if
-			saved
-			and not grab
-			and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch)
-		then
-			local iconCenter = icon.AbsolutePosition.Y + Theme.Ui.MeterIcon / 2
-			grab = { input = input, offset = input.Position.Y - iconCenter, power = 0 }
-		end
-	end)
 
 	local function leaveView()
 		if not saved then
@@ -291,7 +285,7 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		end
 		ContextActionService:UnbindAction(AIM_ACTION)
 		-- Leaving mid-pull cancels the shot
-		turning, drag, grab, pull = nil, nil, nil, 0
+		turning, drag, pulling, pull = nil, nil, nil, 0
 		cue.Transparency = 1
 		meterGui.Enabled = false
 		camera.CameraType = saved.cameraType
@@ -311,11 +305,11 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 			connections = {
 				camera:GetPropertyChangedSignal("ViewportSize"):Connect(frame),
 				RunService.RenderStepped:Connect(render),
-				UserInputService.InputBegan:Connect(dragBegan),
-				UserInputService.InputChanged:Connect(dragMoved),
-				UserInputService.InputEnded:Connect(dragEnded),
-				UserInputService.InputChanged:Connect(pullMoved),
-				UserInputService.InputEnded:Connect(pullEnded),
+				UserInputService.InputBegan:Connect(pointerBegan),
+				UserInputService.InputChanged:Connect(pointerMoved),
+				UserInputService.InputEnded:Connect(pointerEnded),
+				-- Esc opens Roblox's menu, which the game can't bind, so opening the menu is what cancels
+				GuiService.MenuOpened:Connect(cancelPull),
 			},
 		}
 		camera.CameraType = Enum.CameraType.Scriptable
