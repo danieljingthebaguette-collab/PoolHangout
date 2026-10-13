@@ -7,11 +7,12 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
-- **In progress:** nothing. Owner-only physics test mode in the published game (`Config.Debug.PhysicsTestLive`, `Shared/PhysicsTestAccess.luau`) is built and passed lint, tests and a Studio playtest; I'll publish privately and try it in Phase 1's phone check. All shot controls are done and checked on PC and in the phone emulator.
-- **Last session:** 2026-10-12. Tuned physics: RollingSlowdown 5 → 1.5 (full power now rolls about 13 table lengths), BallBounce 0.95 → 0.9, Follow 0.29 → 0.25. Built shot controls step 1 in `Client/ShotController.luau`: F toggles a high, narrow (20°) top-down camera that keeps room for the test panel and the meter, and turns off walking. Removed the test panel's C key and Top view button. Built step 2: a cue stick only you see, A/D and arrows (0.25° tap, hold turns after 0.25 s, 15 → 120°/s), and drag-to-rotate around the cue ball by mouse or touch. In the top view, clicks aim instead of shooting. Built a first step 3 (drag a meter icon back, push it forward to shoot), then replaced it with a slingshot design. Removed click-to-shoot and the Power slider. Added the placeholder-models rule and `docs/MODELS.md`, the modeler's brief.
-- **Next up:** tuning the feel together on PC, then Phase 1's phone check
+- **In progress:** nothing. Owner-only physics test mode in the published game (`Config.Debug.PhysicsTestLive`) is built and committed; I'll publish privately and try it in Phase 1's phone check.
+- **Last session:** 2026-10-13. Finished the shot controls: the aim indicator, mouse-only aim (A/D removed), an optional aim lock (Space, or Lock on phones), and a hidden cancel zone shown by the indicator turning see-through. Added owner-only test mode for published servers. Switched to PC-only checks after each step, with a real-phone check at the end of each phase.
+- **Next up:** tuning the feel together on PC
 - **Known issues:**
-  - None
+  - Touch hasn't been tried on a real phone yet, only in the emulator; it's covered by Phase 1's phone check
+  - `.claude/rules/client.md` still says the top-down view turns off walking "so A/D only aim"; A/D aiming is gone
 
 ## Rules that protect quality
 
@@ -30,14 +31,14 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 - [x] Set up Studio's MCP connection, Script Sync, git and this kit (Me)
 - [x] One config file for every tuning number: table size, pocket size, friction, rail bounce, max power, shot clock (Claude)
-- [x] Greybox table: 10 × 5 studs of playing surface, 16 balls, and 6 pockets about 20% wider than real (Claude builds it, I adjust)
+- [x] Greybox table: 16 × 8 studs of playing surface, 16 balls, and 6 pockets about 20% wider than real (Claude builds it, I adjust)
 - [x] Ball physics: our own simulation on the server for rolling, ball-to-ball hits, rail bounces and pockets, played back smoothly on every screen (Claude)
 - [x] Press F to switch to the top-down view, and F again to go back (Claude)
 - [x] Aim: on PC only the mouse aims (the cue follows it). On phones, drag on the table. Space (phones: a Lock button) locks and unlocks the aim; the aim indicator is see-through while aiming and solid while locked, with a hint (Claude)
 - [x] Power, like a slingshot: hold the mouse button and drag (it locks the aim where it is), or press Space first to lock. Phones: while unlocked, a touch near the cue ball pulls; while locked, anywhere. Power counts from the edge of a small cancel zone around where you pressed, in any direction. The cue slides back and a display-only meter fills. Let go to shoot; let go back inside the cancel zone (the indicator turns see-through and the hint says "Let go to cancel"), right-click, Esc or a missed release cancels back to how you were; Space or Lock mid-pull cancels and unlocks. You can only aim and shoot from the top-down view: the cue and the meter only show there, and leaving the view mid-pull cancels the shot (Claude)
 - [x] Aim indicator, always on: a line from the cue ball to a circle where it first touches a ball (stopping at a rail or pocket), and a short line showing where that ball goes. Two Config switches, no player setting (Claude)
 - [ ] Tune the feel together: friction, power, rail bounce, pocket size (Me + Claude)
-- [ ] Decide the final table size, since the modeler's brief (`docs/MODELS.md`) needs it (Me)
+- [x] Decide the final table size, since the modeler's brief (`docs/MODELS.md`) needs it (Me)
 - [ ] Complete the age check and the Maturity & Compliance Questionnaire, so friends can test from Phase 2 (Me)
 - [ ] End-of-phase check on my real phone: everything built this phase works by touch (Me)
 

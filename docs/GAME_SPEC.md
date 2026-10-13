@@ -24,7 +24,7 @@ A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat 
 
 ## Table and balls
 
-- Playing surface 10 × 5 studs, about 1.5× a real bar table *(default)*.
+- Playing surface 16 × 8 studs, 2:1 like a real table. With its cushions and wooden frame the whole table fits in 20 × 12 studs, with rounded outer corners and the frame curving around each pocket. The playing surface is about an avatar's hip height.
 - 16 balls: the cue ball, solids 1–7, the 8, stripes 9–15.
 - 6 pockets about 20% wider than real ones, so it's forgiving.
 - A full-power shot rolls about 13 table lengths if nothing stops it.

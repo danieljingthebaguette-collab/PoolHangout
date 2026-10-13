@@ -10,26 +10,26 @@ Pool! is a cozy, blocky Roblox bar where players hang out on voice chat and play
 
 - The game finds parts **by exact name**, so the names below must match, including capitals.
 - Sizes and pocket positions come from the game's settings, not from the models. A table can look however you like, but its playing surface, cushions and pockets must line up with the numbers below, or balls will bounce off empty air.
-- Units are Roblox studs. Every number below is the current setting. **The final table size isn't decided yet**, so confirm the numbers with me before you start the table, balls and cue.
+- Units are Roblox studs. Every number below is final.
 
 ## Table
 
-A Model containing:
+A Model containing the items below. The whole table, cushions and wooden frame included, fits in **20 × 12 studs**: 2 studs on every side of the playing surface for the cushions and frame. Like a real table, its outer corners are rounded and the frame curves around each pocket. The felt's top sits about **2.5 studs** above the floor, about an avatar's hip height.
 
 | Name | What it is | Must have |
 | --- | --- | --- |
-| `Felt` | The playing surface | A single flat Part or MeshPart, exactly **10 × 5 studs** on top (its X axis along the length, Z across). Its top face is where the balls sit. Its center is the table's center. Any thickness |
+| `Felt` | The playing surface | A single flat Part or MeshPart, exactly **16 × 8 studs** on top (its X axis along the length, Z across). Its top face is where the balls sit. Its center is the table's center. Any thickness |
 | `Platforms` | A Folder | The platforms below |
 | Anything else | Rails, pockets, body, legs, trim | Any names and any number of parts |
 
-**Cushions:** the face the balls bounce off must sit exactly on the felt's edges: 5 studs either side of the center along the length, and 2.5 studs either side across it. Keep the rail tops no more than **0.5 studs** above the felt, because the cue is drawn just above them.
+**Cushions:** the face the balls bounce off must sit exactly on the felt's edges: 8 studs either side of the center along the length, and 4 studs either side across it. Keep the rail tops no more than **0.8 studs** above the felt, because the cue is drawn just above them.
 
 **Pockets:** 6 of them, measured from the felt's center at its top face (X along the length, Z across):
 
 | Pocket | Center (X, Z) | Mouth |
 | --- | --- | --- |
-| 4 corners | (±5, ±2.5) | 0.75 studs, measured diagonally across the opening. The cushions on either side end **0.53 studs** from the corner along each edge |
-| 2 sides | (0, ±2.5) | 0.8 studs. The cushions on either side end **0.4 studs** from the center of the side |
+| 4 corners | (±8, ±4) | 1.2 studs, measured diagonally across the opening. The cushions on either side end **0.85 studs** from the corner along each edge |
+| 2 sides | (0, ±4) | 1.28 studs. The cushions on either side end **0.64 studs** from the center of the side |
 
 The cushion ends are the pockets' jaws. Inside the pocket, anything that looks like a hole works: a ball disappears once its center is over the opening.
 
@@ -41,14 +41,14 @@ Players stand on a platform to join a table, and the game lights a platform up w
 
 - Each platform is **a single Part or MeshPart**, named `A1`, `B1`, and on 2v2 tables also `A2` and `B2`, inside the table's `Platforms` folder.
 - `A` platforms go on one long side of the table (the felt's −Z side), `B` platforms on the other. On 2v2 tables, A1 and A2 sit side by side along their long side, and so do B1 and B2.
-- Current placeholder: 4 × 3 studs, 0.2 thick, about 5 studs from the table's center. The game checks whether a player is standing within the platform's footprint, so make its top the area a player stands on.
+- Current placeholder: 4 × 3 studs, 0.2 thick, about 8 studs from the table's center, just clear of the frame. The game checks whether a player is standing within the platform's footprint, so make its top the area a player stands on.
 - The game may change the platform's color or material to light it up, so keep the part you stand on plain enough to tint.
 
 ## Cue
 
 - A Model named `Cue` whose PrimaryPart's **X axis runs from the butt to the tip**.
 - An Attachment named `Tip` at the very center of the tip's end face. The game places it just behind the cue ball.
-- Length about **6 studs**, and a tip about **0.15 studs** across.
+- Length about **9.6 studs**, and a tip about **0.24 studs** across.
 - No collisions needed; the game anchors the cue and moves it.
 
 ## Balls
