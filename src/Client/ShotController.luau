@@ -1,10 +1,12 @@
 --!strict
 -- The shooter's controls. F (phones: an on-screen button) switches to a top-down view of the table and back.
 -- You can only aim and shoot from the view: walking is off and a cue stick lies behind the cue ball.
--- Aim: on PC the cue follows the mouse and A/D or the arrow keys nudge it; on phones a drag that starts away
--- from the cue ball turns it. Power works like a slingshot: hold the mouse button (phones: touch near the cue
--- ball or cue) and drag; the farther from where you pressed, the harder. Let go to shoot. The aim indicator
--- shows where the cue ball first touches something and which way a hit ball goes.
+-- Aim: on PC only the mouse aims; on phones dragging turns the aim around the cue ball. Power is a slingshot
+-- pull: hold the mouse button anywhere (phones: touch near the cue ball) and drag. Power counts from the edge
+-- of a small cancel zone around where you pressed, and letting go shoots; letting go back inside the zone
+-- cancels. Space (phones: the Lock button) optionally locks the aim first, and then a pull can start anywhere.
+-- The aim indicator shows where the cue ball first touches something and which way a hit ball goes. It's
+-- see-through while you aim or when letting go would cancel, and solid while the aim is locked.
 
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
@@ -22,13 +24,14 @@ local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 
 local VIEW_ACTION = "TopDownView"
-local AIM_ACTION = "Aim"
--- Negative turns the aim to the shooter's left, which is counterclockwise on screen
-local TURN_KEYS: { [Enum.KeyCode]: number } = {
-	[Enum.KeyCode.A] = -1,
-	[Enum.KeyCode.Left] = -1,
-	[Enum.KeyCode.D] = 1,
-	[Enum.KeyCode.Right] = 1,
+local LOCK_ACTION = "LockAim"
+local CANCEL_HINT = "Let go to cancel"
+local HINTS = {
+	keyboard = { aiming = "Hold and drag to shoot · Space: lock aim", locked = "Drag to shoot · Space: unlock" },
+	touch = {
+		aiming = "Drag from the cue ball to shoot · Tap Lock to lock aim",
+		locked = "Drag to shoot · Tap Lock to unlock",
+	},
 }
 
 local ShotController = {}
@@ -49,10 +52,17 @@ local function stillHeld(started: InputObject): boolean
 		or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
 end
 
-local function roundCorners(item: GuiObject)
+local function roundCorners(item: GuiObject, radius: UDim?)
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.CornerRadius = radius or UDim.new(0.5, 0)
 	corner.Parent = item
+end
+
+local function styleText(label: TextLabel | TextButton, text: string)
+	label.Font = Theme.Font
+	label.TextSize = Theme.TextSize
+	label.TextColor3 = Theme.Colors.Text
+	label.Text = text
 end
 
 -- `leftReserve` is screen width, in pixels, that the view keeps clear on the left for other UI
@@ -70,6 +80,8 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 	local playerModule = StarterPlayer:WaitForChild("PlayerModule")
 	local characterInput = playerModule:WaitForChild("InputContexts"):WaitForChild("CharacterContext") :: InputContext
 	local controls = require(playerModule:WaitForChild("ControlModule") :: ModuleScript) :: any
+	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+	local hints = if UserInputService.TouchEnabled then HINTS.touch else HINTS.keyboard
 
 	local radius = Config.Table.BallRadius
 	local cueLength = Config.Aim.CueLength * Config.Table.Length
@@ -77,6 +89,8 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 	local tipBack = radius * (1 + Config.Aim.CueTipGap)
 	local cueBack = tipBack + cueLength / 2
 	local cueHeight = radius * Config.Aim.CueHeight
+	local cancelRadius = Config.Shot.CancelRadius * radius
+	local fullPull = Config.Shot.FullPullDistance * Config.Table.Length
 
 	-- Only this screen sees the cue
 	local cue = Instance.new("Part")
@@ -92,7 +106,7 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 	cue.Transparency = 1
 	cue.Parent = tableModel
 
-	-- The power meter only shows the pull; you don't drag it
+	-- The power meter, the phones' Lock button and the hint. The meter only shows the pull; you don't drag it.
 	local meterGui = Instance.new("ScreenGui")
 	meterGui.Name = "PowerMeter"
 	meterGui.ResetOnSpawn = false
@@ -115,11 +129,35 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 	fill.BorderSizePixel = 0
 	fill.Parent = track
 	roundCorners(fill)
-	meterGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+	-- Just above the meter
+	local lockButton = Instance.new("TextButton")
+	lockButton.AnchorPoint = Vector2.new(0.5, 1)
+	lockButton.Position = UDim2.new(1, -Theme.Ui.MeterReserve / 2, 1 - Theme.Ui.MeterHeight, -2 * Theme.Ui.Padding)
+	lockButton.Size = UDim2.fromOffset(Theme.Ui.LockButtonWidth, Theme.Ui.ButtonHeight)
+	lockButton.BackgroundColor3 = Theme.Colors.Button
+	lockButton.AutoButtonColor = true
+	lockButton.Visible = UserInputService.TouchEnabled
+	lockButton.Parent = meterGui
+	styleText(lockButton, "Lock")
+	roundCorners(lockButton, UDim.new(0, Theme.Ui.Corner))
+	local hint = Instance.new("TextLabel")
+	hint.AnchorPoint = Vector2.new(0.5, 1)
+	hint.Position = UDim2.new(0.5, 0, 1, -Theme.Ui.Padding)
+	hint.Size = UDim2.fromOffset(0, Theme.TextSize + Theme.Ui.Padding)
+	hint.AutomaticSize = Enum.AutomaticSize.X
+	hint.BackgroundColor3 = Theme.Colors.Panel
+	hint.Parent = meterGui
+	styleText(hint, hints.aiming)
+	roundCorners(hint, UDim.new(0, Theme.Ui.Corner))
+	local hintPadding = Instance.new("UIPadding")
+	hintPadding.PaddingLeft = UDim.new(0, Theme.Ui.Padding)
+	hintPadding.PaddingRight = hintPadding.PaddingLeft
+	hintPadding.Parent = hint
+	meterGui.Parent = playerGui
 
-	-- The aim indicator. Only this screen sees it. It's drawn on the screen over the fixed top-down view:
-	-- 3D line adornments came out broken up and hidden behind balls, and a hollow cylinder shows nothing
-	-- from straight above.
+	-- The aim indicator, the lock icon and the cancel ring. Only this screen sees them. They're drawn on the
+	-- screen over the fixed top-down view: 3D line adornments came out broken up and hidden behind balls, and a
+	-- hollow cylinder shows nothing from straight above.
 	local layout = Geometry.build(Config.Table)
 	local indicatorGui = Instance.new("ScreenGui")
 	indicatorGui.Name = "AimIndicator"
@@ -135,27 +173,28 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		return line
 	end
 	local pathLine, targetLine = indicatorLine(), indicatorLine()
-	-- A ring the size of a ball, where the cue ball will be when it first touches something
+	-- A ball-sized ring where the cue ball will be when it first touches something
 	local ghost = Instance.new("Frame")
 	ghost.AnchorPoint = Vector2.new(0.5, 0.5)
 	ghost.BackgroundTransparency = 1
 	ghost.Visible = false
 	ghost.Parent = indicatorGui
 	roundCorners(ghost)
-	local outline = Instance.new("UIStroke")
-	outline.Color = Theme.Colors.AimLine
-	outline.Thickness = Theme.Ui.AimLineThickness
-	outline.Parent = ghost
-	indicatorGui.Parent = meterGui.Parent
+	local ghostOutline = Instance.new("UIStroke")
+	ghostOutline.Color = Theme.Colors.AimLine
+	ghostOutline.Thickness = Theme.Ui.AimLineThickness
+	ghostOutline.Parent = ghost
+	indicatorGui.Parent = playerGui
 
 	-- Radians in table space: 0 aims along +x, at the rack
 	local aim = 0
-	-- The key turning the aim, which way, and when it went down
-	local turning: { key: Enum.KeyCode, sign: number, since: number }? = nil
+	-- Locked with Space or the Lock button. A pull also holds the aim still, locked or not.
+	local locked = false
 	-- The finger dragging the aim around the cue ball, and its last angle there
 	local drag: { input: InputObject, angle: number? }? = nil
-	-- The mouse button or finger pulling for power, and where it pressed in table space
-	local pulling: { input: InputObject, x: number, y: number }? = nil
+	-- The mouse button or finger pulling for power, where it pressed in table space, and whether it has left
+	-- the cancel ring yet
+	local pulling: { input: InputObject, x: number, y: number, left: boolean }? = nil
 	-- How far the cue is pulled back, 0 to 1: the shot's power
 	local pull = 0
 	local rolling = false
@@ -194,6 +233,13 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		pathLine.Visible, targetLine.Visible, ghost.Visible = false, false, false
 	end
 
+	-- See-through while aiming or about to cancel, solid while the aim is locked
+	local function fadeIndicator(faint: boolean)
+		local transparency = if faint then Theme.Ui.AimFaintTransparency else 0
+		pathLine.BackgroundTransparency, targetLine.BackgroundTransparency = transparency, transparency
+		ghostOutline.Transparency = transparency
+	end
+
 	local function showLine(line: Frame, fromX: number, fromY: number, toX: number, toY: number)
 		local from, to = toScreen(fromX, fromY), toScreen(toX, toY)
 		local middle, along = (from + to) / 2, to - from
@@ -212,7 +258,6 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 			end
 		end
 		local contact = Preview.firstContact(balls, math.cos(aim), math.sin(aim), Config.Table, layout)
-		hideIndicator()
 		if Config.Aim.ShowAimLine then
 			showLine(pathLine, cueX, cueY, contact.x, contact.y)
 			local middle = toScreen(contact.x, contact.y)
@@ -267,7 +312,15 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		return dx * dx + dy * dy <= (Config.Aim.GrabRadius * radius) ^ 2
 	end
 
+	-- Cancels a pull. The lock stays as it was before the pull: on if Space set it, off if not.
 	local function cancelPull()
+		pulling = nil
+	end
+
+	-- Space and the Lock button. Mid-pull, it cancels the pull and unlocks.
+	local function toggleLock()
+		drag = nil
+		locked = not (locked or pulling ~= nil)
 		pulling = nil
 	end
 
@@ -278,39 +331,25 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		if not pulling and pull > 0 then
 			pull = math.max(pull - dt / Config.Shot.MeterSpringSeconds, 0)
 		end
-		if turning and not pulling then
-			local heldFor = os.clock() - turning.since - Config.Aim.HoldDelaySeconds
-			if heldFor > 0 then
-				local ramp = math.min(heldFor / Config.Aim.HoldRampSeconds, 1)
-				local speed = Config.Aim.HoldStartSpeed + (Config.Aim.HoldMaxSpeed - Config.Aim.HoldStartSpeed) * ramp
-				aim += turning.sign * math.rad(speed) * dt
-			end
-		end
 		local hidden = not canShoot()
 		cue.Transparency = if hidden then 1 else 0
 		meterGui.Enabled = not hidden
 		fill.Size = UDim2.fromScale(1, pull)
+		local held = locked or pulling ~= nil
+		-- Back inside the cancel zone after leaving it, where letting go cancels
+		local cancelling = pulling ~= nil and pulling.left and pull == 0
+		hint.Text = if cancelling then CANCEL_HINT elseif held then hints.locked else hints.aiming
+		lockButton.Text = if held then "Unlock" else "Lock"
+		hideIndicator()
 		if hidden then
-			hideIndicator()
-		else
-			local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
-			drawIndicator(cueX, cueY)
-			local back = cueBack + pull * radius * Config.Aim.CuePullBack
-			cue.CFrame = TableSpace.toWorld(felt, cueX - math.cos(aim) * back, cueY - math.sin(aim) * back, cueHeight)
-				* CFrame.Angles(0, -aim, 0)
+			return
 		end
-	end
-
-	local function turnByKey(_, state: Enum.UserInputState, input: InputObject): Enum.ContextActionResult
-		local sign = TURN_KEYS[input.KeyCode]
-		-- The aim is locked while pulling
-		if state == Enum.UserInputState.Begin and not pulling then
-			aim += sign * math.rad(Config.Aim.NudgeDegrees)
-			turning = { key = input.KeyCode, sign = sign, since = os.clock() }
-		elseif turning and turning.key == input.KeyCode then
-			turning = nil
-		end
-		return Enum.ContextActionResult.Sink
+		fadeIndicator(cancelling or not held)
+		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
+		drawIndicator(cueX, cueY)
+		local back = cueBack + pull * radius * Config.Aim.CuePullBack
+		cue.CFrame = TableSpace.toWorld(felt, cueX - math.cos(aim) * back, cueY - math.sin(aim) * back, cueHeight)
+			* CFrame.Angles(0, -aim, 0)
 	end
 
 	local function pointerBegan(input: InputObject, gameProcessed: boolean)
@@ -318,14 +357,15 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 			cancelPull()
 			return
 		end
-		local isMouse = input.UserInputType == Enum.UserInputType.MouseButton1
-		if gameProcessed or pulling or not (isMouse or input.UserInputType == Enum.UserInputType.Touch) then
+		local isTouch = input.UserInputType == Enum.UserInputType.Touch
+		if gameProcessed or pulling or not (isTouch or input.UserInputType == Enum.UserInputType.MouseButton1) then
 			return
 		end
 		local x, y = pointerOnTable(input.Position)
-		if isMouse or nearCue(x, y) then
+		-- Unlocked, a touch away from the cue ball turns the aim instead
+		if locked or not isTouch or nearCue(x, y) then
 			if canShoot() then
-				pulling = { input = input, x = x, y = y }
+				pulling = { input = input, x = x, y = y, left = false }
 				pull = 0
 			end
 		elseif not drag then
@@ -337,9 +377,13 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		if pulling then
 			if movesPointer(input, pulling.input) then
 				local x, y = pointerOnTable(input.Position)
-				local dragged = math.sqrt((x - pulling.x) ^ 2 + (y - pulling.y) ^ 2)
-				-- Any direction counts, so a cue ball against a rail can still get full power
-				pull = math.min(dragged / (Config.Shot.FullPullDistance * Config.Table.Length), 1)
+				-- Any direction counts, so a cue ball against a rail can still get full power. Power counts from
+				-- the cancel ring's edge, so soft shots still work.
+				local beyond = math.sqrt((x - pulling.x) ^ 2 + (y - pulling.y) ^ 2) - cancelRadius
+				if beyond > 0 then
+					pulling.left = true
+				end
+				pull = math.clamp(beyond / fullPull, 0, 1)
 			end
 		elseif drag and input == drag.input then
 			local angle = pointerAngle(input.Position)
@@ -348,24 +392,28 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 				aim += (angle - drag.angle + math.pi) % (2 * math.pi) - math.pi
 			end
 			drag.angle = angle
-		elseif input.UserInputType == Enum.UserInputType.MouseMovement then
-			-- The cue follows the mouse only when it moves, so a key nudge holds until then
+		elseif input.UserInputType == Enum.UserInputType.MouseMovement and not locked then
+			-- Moving the mouse is the only way to aim on PC
 			aim = pointerAngle(input.Position) or aim
 		end
 	end
 
 	local function pointerEnded(input: InputObject)
 		if pulling and input == pulling.input then
-			-- Let go near where you pressed and nothing fires
-			if pull >= Config.Shot.MinPull then
+			-- Letting go inside the cancel ring fires nothing, and the lock stays as it was
+			if pull > 0 then
 				-- ponytail: the test mode's remote, until Match (Phase 2) brings RequestShot and turns
 				Remotes.TestShoot:FireServer(math.cos(aim), math.sin(aim), pull)
+				-- Each new shot starts unlocked
+				locked = false
 			end
 			pulling = nil
 		elseif drag and input == drag.input then
 			drag = nil
 		end
 	end
+
+	lockButton.Activated:Connect(toggleLock)
 
 	local function leaveView()
 		if not saved then
@@ -375,9 +423,9 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		for _, connection in saved.connections do
 			connection:Disconnect()
 		end
-		ContextActionService:UnbindAction(AIM_ACTION)
-		-- Leaving mid-pull cancels the shot
-		turning, drag, pulling, pull = nil, nil, nil, 0
+		ContextActionService:UnbindAction(LOCK_ACTION)
+		-- Leaving mid-pull cancels the shot, and the view starts over unlocked
+		drag, pulling, pull, locked = nil, nil, 0, false
 		cue.Transparency = 1
 		meterGui.Enabled = false
 		hideIndicator()
@@ -409,15 +457,12 @@ function ShotController.start(tableModel: Model, leftReserve: number)
 		frame()
 		characterInput.Enabled = false
 		controls:Disable()
-		ContextActionService:BindAction(
-			AIM_ACTION,
-			turnByKey,
-			false,
-			Enum.KeyCode.A,
-			Enum.KeyCode.D,
-			Enum.KeyCode.Left,
-			Enum.KeyCode.Right
-		)
+		ContextActionService:BindAction(LOCK_ACTION, function(_, state: Enum.UserInputState)
+			if state == Enum.UserInputState.Begin then
+				toggleLock()
+			end
+			return Enum.ContextActionResult.Sink
+		end, false, Enum.KeyCode.Space)
 	end
 
 	ContextActionService:BindAction(VIEW_ACTION, function(_, state: Enum.UserInputState)

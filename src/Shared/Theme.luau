@@ -33,6 +33,8 @@ local Theme = {
 		MeterTrack = 16, -- width of the power meter
 		MeterHeight = 0.45, -- share of the screen's height
 		AimLineThickness = 2, -- pixels, for the aim indicator's lines and circle
+		AimFaintTransparency = 0.6, -- the aim indicator while aiming or about to cancel; solid while locked
+		LockButtonWidth = 80, -- the phones' Lock button, beside the power meter
 	},
 
 	-- By ball id. In the greybox each stripe shares its solid's color.

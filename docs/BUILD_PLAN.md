@@ -7,9 +7,9 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
-- **In progress:** shot controls, follow-ups from my testing, one at a time: (1) an aim lock (Space, or a Lock button on phones) and a cancel ring where you press, with A/D aiming removed; (2) the physics test mode in the published game, for me only, so I can test on my real phone. Steps 1–4 (top-down view, mouse aim, slingshot power, aim indicator) are done and checked on PC and in the phone emulator.
+- **In progress:** owner-only physics test mode in the published game, so I can test on my real phone. All shot controls are done and checked on PC and in the phone emulator: top-down view, mouse and touch aim, the optional aim lock, slingshot power with a cancel zone, and the aim indicator.
 - **Last session:** 2026-10-12. Tuned physics: RollingSlowdown 5 → 1.5 (full power now rolls about 13 table lengths), BallBounce 0.95 → 0.9, Follow 0.29 → 0.25. Built shot controls step 1 in `Client/ShotController.luau`: F toggles a high, narrow (20°) top-down camera that keeps room for the test panel and the meter, and turns off walking. Removed the test panel's C key and Top view button. Built step 2: a cue stick only you see, A/D and arrows (0.25° tap, hold turns after 0.25 s, 15 → 120°/s), and drag-to-rotate around the cue ball by mouse or touch. In the top view, clicks aim instead of shooting. Built a first step 3 (drag a meter icon back, push it forward to shoot), then replaced it with a slingshot design. Removed click-to-shoot and the Power slider. Added the placeholder-models rule and `docs/MODELS.md`, the modeler's brief.
-- **Next up:** my check of the aim lock and cancel ring, then owner-only test mode in the published game
+- **Next up:** owner-only test mode, then tuning the feel on my real phone
 - **Known issues:**
   - None
 
@@ -33,8 +33,8 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [x] Greybox table: 10 × 5 studs of playing surface, 16 balls, and 6 pockets about 20% wider than real (Claude builds it, I adjust)
 - [x] Ball physics: our own simulation on the server for rolling, ball-to-ball hits, rail bounces and pockets, played back smoothly on every screen (Claude)
 - [x] Press F to switch to the top-down view, and F again to go back (Claude)
-- [x] Aim: on PC the cue follows the mouse, and A/D or the arrow keys nudge it (tap to nudge, hold to turn faster). On phones, drag on the table (Claude)
-- [x] Power, like a slingshot: hold the mouse button (phones: touch near the cue ball or cue) and drag; the farther from where you pressed, in any direction, the harder. The aim locks, the cue slides back and a display-only meter fills. Let go to shoot; let go near the start, right-click, Esc or a missed release cancels. You can only aim and shoot from the top-down view: the cue and the meter only show there, and leaving the view mid-pull cancels the shot (Claude)
+- [x] Aim: on PC only the mouse aims (the cue follows it). On phones, drag on the table. Space (phones: a Lock button) locks and unlocks the aim; the aim indicator is see-through while aiming and solid while locked, with a hint (Claude)
+- [x] Power, like a slingshot: hold the mouse button and drag (it locks the aim where it is), or press Space first to lock. Phones: while unlocked, a touch near the cue ball pulls; while locked, anywhere. Power counts from the edge of a small cancel zone around where you pressed, in any direction. The cue slides back and a display-only meter fills. Let go to shoot; let go back inside the cancel zone (the indicator turns see-through and the hint says "Let go to cancel"), right-click, Esc or a missed release cancels back to how you were; Space or Lock mid-pull cancels and unlocks. You can only aim and shoot from the top-down view: the cue and the meter only show there, and leaving the view mid-pull cancels the shot (Claude)
 - [x] Aim indicator, always on: a line from the cue ball to a circle where it first touches a ball (stopping at a rail or pocket), and a short line showing where that ball goes. Two Config switches, no player setting (Claude)
 - [ ] Tune the feel together: friction, power, rail bounce, pocket size (Me + Claude)
 - [ ] Decide the final table size, since the modeler's brief (`docs/MODELS.md`) needs it (Me)

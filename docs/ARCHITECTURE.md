@@ -68,9 +68,8 @@ Starting values for Config (tune by feel):
 | Stop speed / time step / time cap | 0.02 studs/s / 1/960 s / 20 s | 1/960 keeps the test mode's top speed of 40 under a third of a radius per step |
 | Shot clock / warning | 45 s / last 10 s | |
 | Countdown / takeover / open-spot wait / end screen | 5 / 5 / 15 / 10 s | |
-| Aim nudge / hold speed | 0.25° / 15°/s rising to 120°/s over 1 s | |
-| Full-power pull | A quarter of the table length | Measured on the table, so it's the same share of the screen on every device |
-| Shortest pull that shoots | 5% of a full pull | Stops twitches from firing |
+| Cancel zone | 2.5 ball radii | Roughly fingertip size on a phone. Letting go back inside it cancels |
+| Full-power pull | A quarter of the table length past the cancel zone | Measured on the table, so it's the same share of the screen on every device |
 
 ## A shot, end to end
 

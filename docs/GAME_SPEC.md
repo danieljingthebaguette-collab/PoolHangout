@@ -6,7 +6,7 @@ Markers: no marker = decided by me. *(default)* = Claude's proposal I haven't co
 
 ## The game
 
-A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat and play 8-ball at pool tables, 1v1 or 2v2. The heart of it is the shot: a top-down view, the cue following your mouse (or your finger on phones), and a slingshot pull for power. Mechanics come first. The base build has no economy, cosmetics or ranked mode.
+A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat and play 8-ball at pool tables, 1v1 or 2v2. The heart of it is the shot: a top-down view, the cue following your mouse (or your finger on phones), an aim lock, and a slingshot pull for power. Mechanics come first. The base build has no economy, cosmetics or ranked mode.
 
 ## Audience and platform
 
@@ -53,8 +53,10 @@ A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat 
 2. The shooter presses F from anywhere (phones: an on-screen button) to switch to the top-down view. Where they stand doesn't matter. F again goes back to the normal view *(default)*.
 3. The top-down view shows the whole table, fixed and horizontal on screen, the same for everyone *(default)*.
 4. With ball in hand, they drag the cue ball to place it first: behind the head line on the break, anywhere after a foul. It can't overlap another ball.
-5. Aim, on PC: the cue follows the mouse, so the shot points from the cue ball toward the cursor. A/D or the left/right arrow keys nudge it for fine aiming: tap for a tiny nudge, hold to turn faster the longer you hold. A nudge holds until the mouse moves again. W and S do nothing. On phones, a drag that starts away from the cue ball turns the aim around it.
-6. Power, like a slingshot: hold the left mouse button anywhere on the table (phones: touch on or near the cue ball or the cue). The aim locks, and the farther you drag from where you pressed, in any direction, the harder the shot, with full power at a distance set in Config. Any direction counts, so a cue ball against a rail can still get full power. The cue slides back as you drag, and a meter in the bottom-right fills up; the meter only shows power, you don't drag it. Let go to shoot. Drag back near where you started (under the shortest pull) and let go to cancel. Right-clicking, opening the Roblox menu (Esc) or a release the game misses also cancels.
+5. Aim, on PC: only moving the mouse changes the aim. The cue follows it, so the shot points from the cue ball toward the cursor. No keys aim. On phones, dragging on the table turns the aim around the cue ball.
+6. Aim lock (optional): Space locks the aim, and Space again unlocks it and goes back to aiming. On phones, a thumb-sized Lock button next to the power meter does the same. Space never shoots. Locking first lets you move the mouse freely before you pull. The aim indicator (step 7) shows the state: see-through white while aiming, solid white whenever the aim is locked, including during a pull. A small hint reads "Hold and drag to shoot · Space: lock aim" while aiming and "Drag to shoot · Space: unlock" while locked (phones: "Drag from the cue ball to shoot · Tap Lock to lock aim" and "Drag to shoot · Tap Lock to unlock"). Each new shot starts unlocked.
+6a. Power, like a slingshot: on PC, hold the mouse button anywhere and drag. If the aim isn't locked, pressing locks it where it is. On phones, while unlocked a touch on or near the cue ball or the cue starts a pull and a touch anywhere else turns the aim; while locked, a pull can start anywhere. Around where you pressed is a small cancel zone, about fingertip size on a phone, that isn't drawn. Power counts from its edge, so soft shots still work, and the farther you drag, in any direction, the harder, with full power at a distance set in Config. Any direction counts, so a cue ball against a rail can still get full power. The cue slides back as you drag, and a meter in the bottom-right fills up; the meter only shows power, you don't drag it. Let go to shoot.
+6b. Cancelling: drag back into the cancel zone and the cue slides back to rest, the meter empties, the aim indicator turns see-through again and the hint says "Let go to cancel"; let go there to cancel with no shot. Right-clicking, opening the Roblox menu (Esc) or a release the game misses also cancels. These put you back where you were before the pull: still locked if you'd pressed Space first, aiming again if not. Space or the Lock button mid-pull cancels and unlocks, and leaving the view cancels and resets.
 7. Aim indicator, always on: a white line from the cue ball to a white circle where the cue ball will be when it first touches a ball, and a short white line from that ball showing which way it will go. If the cue ball would hit a rail or drop in a pocket first, the line and circle stop there, with no bounce lines. It uses the physics' own geometry, so it's exact. Only the shooter sees it, and it hides while balls roll. `Config.Aim.ShowAimLine` switches the line and circle and `Config.Aim.ShowTargetLine` the target ball's line; there's no player setting.
 8. When shooting at the 8, the shooter clicks or taps the pocket they're calling before they can shoot *(default)*.
 9. The shot fires when they let go, and everyone sees the balls roll.
@@ -131,6 +133,7 @@ Leaving means leaving the server, disconnecting, pressing a Leave button in the 
 - Locking tables in public servers.
 - Where you stand changing your aim, or walking to a spot to shoot or to place the cue ball.
 - W/S controls, or holding Space to shoot.
+- A/D or arrow-key aiming.
 - Alcohol.
 - Shooting from the normal view.
 - My fading aim line (shown only near the end of a forward stroke): the slingshot pull has no forward stroke.
