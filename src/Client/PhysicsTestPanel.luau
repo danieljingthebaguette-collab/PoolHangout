@@ -10,6 +10,7 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Theme = require(ReplicatedStorage.Shared.Theme)
+local Card = require(script.Parent.Card)
 local Slider = require(script.Parent.Slider)
 
 local PhysicsTestPanel = {}
@@ -27,7 +28,7 @@ end
 local function style(item: TextLabel | TextButton, text: string)
 	item.Size = UDim2.new(1, 0, 0, Theme.Ui.ButtonHeight)
 	item.BackgroundTransparency = 1
-	item.Font = Theme.Font
+	item.FontFace = Theme.Font
 	item.TextSize = Theme.TextSize
 	item.TextColor3 = Theme.Colors.Text
 	item.Text = text
@@ -58,21 +59,26 @@ function PhysicsTestPanel.start()
 	gui.DisplayOrder = 2 -- the open panel covers the power meter
 	panelGui = gui
 
-	-- Closed until you open it with the Test button, beside the settings gear, so it doesn't cover the HUD. It
-	-- scrolls when it's taller than the screen, as on a phone held sideways.
+	-- A cream card, closed until you open it with the Test button, beside the settings gear, so it doesn't cover the
+	-- HUD. Its contents scroll when it's taller than the screen, as on a phone held sideways.
+	local card = Instance.new("Frame")
+	card.AnchorPoint = Vector2.new(0, 1)
+	card.Position = UDim2.new(0, Theme.Ui.Padding, 1, -Theme.Ui.ButtonHeight - 2 * Theme.Ui.Padding)
+	card.Visible = false
+	card.Active = true
+	Card.style(card)
+	card.Parent = gui
+	-- The list scrolls in its own frame, so its layout leaves the card's brackets alone
 	local panel = Instance.new("ScrollingFrame")
-	panel.AnchorPoint = Vector2.new(0, 1)
-	panel.Position = UDim2.new(0, Theme.Ui.Padding, 1, -Theme.Ui.ButtonHeight - 2 * Theme.Ui.Padding)
-	panel.Visible = false
+	panel.Size = UDim2.fromScale(1, 1)
+	panel.BackgroundTransparency = 1
 	panel.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	panel.CanvasSize = UDim2.new()
 	panel.ScrollBarThickness = Theme.Ui.Padding
+	panel.ScrollBarImageColor3 = Theme.Colors.Text
 	panel.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
 	panel.BorderSizePixel = 0
-	panel.BackgroundColor3 = Theme.Colors.Panel
-	panel.Active = true
-	panel.Parent = gui
-	addCorner(panel)
+	panel.Parent = card
 	local padding = Instance.new("UIPadding")
 	padding.PaddingTop = UDim.new(0, Theme.Ui.Padding)
 	padding.PaddingBottom = padding.PaddingTop
@@ -87,14 +93,14 @@ function PhysicsTestPanel.start()
 	local function fit()
 		local room = gui.AbsoluteSize.Y - Theme.Ui.ButtonHeight - 3 * Theme.Ui.Padding
 		local height = list.AbsoluteContentSize.Y + 2 * Theme.Ui.Padding
-		panel.Size = UDim2.fromOffset(Theme.Ui.PanelWidth, math.min(height, room))
+		card.Size = UDim2.fromOffset(Theme.Ui.PanelWidth, math.min(height, room))
 	end
 	list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(fit)
 	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 	fit()
 
 	local toggle = button("Test", 0, function()
-		panel.Visible = not panel.Visible
+		card.Visible = not card.Visible
 	end)
 	toggle.AnchorPoint = Vector2.new(0, 1)
 	toggle.Position = UDim2.new(0, Theme.Ui.ButtonHeight + 2 * Theme.Ui.Padding, 1, -Theme.Ui.Padding)

@@ -7,7 +7,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 1. **The server is the referee.** It owns every table's state, seats, turns, clocks, the shot simulation and rule decisions. Clients send intents ("shoot this way with this power") and draw what the server says happened.
 2. **Pure core.** Ball physics (`src/Shared/Physics/`) and 8-ball rules (`src/Shared/Rules/`) are plain Luau with no Roblox APIs. Plain tables and numbers go in and come out, and Lune tests cover them.
 3. **Same simulation everywhere.** The server simulates each shot for the rules. Clients run the same deterministic simulation from the same inputs to animate it, then snap to the server's final positions. No Roblox physics touches the balls.
-4. **One config.** All tuning lives in `src/Shared/Config.luau` as plain numbers, strings and booleans, so Lune can load it too. Colors, fonts and UI sizes go in `src/Shared/Theme.luau`.
+4. **One config.** All tuning lives in `src/Shared/Config.luau` as plain numbers, strings and booleans, so Lune can load it too. Colors, fonts and UI sizes go in `src/Shared/Theme.luau`, in the look `docs/STYLE.md` describes.
 5. **Code finds the world by name.** Tables in the place follow the place contract below.
 
 ## Modules (planned; create each when a task needs it)
@@ -30,8 +30,9 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Client/Main.local.luau` | Starts the controllers |
 | `Client/TableView.luau` | Replays shots on the ball parts, plays their sounds, draws the balls' shadows, and starts the shooter's shot before the server's copy arrives |
 | `Client/ShotController.luau` | F and the top-down camera, placing the cue ball, aim, pocket call, the pull for power, the cue's strike and follow-through |
-| `Client/Hud.luau` | Top bar with player cards, the power meter, the sunk-ball tray, settings (sound volume); later the shot clock, end screen and Leave button |
+| `Client/Hud.luau` | Top bar with player cards, the power meter, the sunk-ball tray, the control hints, settings (sound volume); later the shot clock, end screen and Leave button |
 | `Client/Slider.luau` | A labelled slider row for mouse and touch, for the settings and the test panel |
+| `Client/Card.luau` | The card look from `docs/STYLE.md`: cream or dark, with corner brackets and a faint dot texture |
 | `Client/Spectate.luau` | "Watch from above" |
 | `Client/PhysicsTestPanel.luau` | Physics test mode controls (Studio, or the owner in a published server) |
 
@@ -50,6 +51,7 @@ Pure modules require each other only by relative string path, like `require("./G
 - **Model:** balls travel in straight lines and slow at a constant rate. Ball-to-ball hits are equal-mass collisions with a restitution value, resolved at the exact moment the balls touch. A ball that rolls into a hit keeps `Follow` of the speed the hit takes away, like natural roll. Rails reflect a ball at the angle it came in and cut its speed. The shot ends when every ball is below the stop speed, or at a safety time cap.
 - **Pockets:** one at each corner of the felt and one in the middle of each long side. A ball drops when its center comes within half the pocket's mouth of that point. A corner mouth is measured across its diagonal opening, so the rails stop `CornerPocketMouth / √2` from each corner, and the rails' ends act as the pockets' jaws. Only a pocket's opening lets a ball's center past the edge of the felt, so that drops it too.
 - **Accurate:** no ball moves more than `MaxStepTravel` (a third of its radius) in one step. A normal shot fits the fixed step (a test checks this against Config); while any ball is faster, like on the break, the step splits into equal sub-steps, so nothing passes through a ball or rail.
+- **Tuning:** `tools/BreakStats.luau` runs 20 breaks in Lune and summarizes them (balls sunk, bunched, spread, where the cue ball stops, time to stop), for comparing with 8 Ball Duels.
 - **Fast:** skip pairs where neither ball moves. Time a full break in Lune; if it takes more than about 50 ms, speed it up before building on it. Nobody runs a whole shot in one frame in the game: the server and clients both advance the stepper a slice at a time.
 - **`ShotResult`** holds the final balls, timestamped events (ball hit, rail hit, pocketed) for sounds and rules, the first ball the cue ball touched, pocketed balls in order with their pockets, and the duration.
 
@@ -63,8 +65,9 @@ Starting values for Config (tune by feel):
 | Full-power speed | 25 studs/s | Measured from 8 Ball Duels, like the rows below |
 | Break power | 3 | The break's full power is 3× a normal shot's, about 75 studs/s |
 | Power curve | 1.45 | Speed is pull ^ 1.45: 76% on the meter gives about 67% of full speed |
-| Rolling slowdown | 1.8 studs/s² | Full power rolls about 174 studs, about 11 table lengths |
-| Rail bounce | 0.7 | Keeps about 70% of the speed |
+| Rolling slowdown | 1.84 studs/s² | Full power rolls about 170 studs, about 11 table lengths. Matches 8 Ball Duels' rail-to-rail shot |
+| Speed drag | 0 | Optional extra slowdown per stud/s of speed, so fast balls lose speed quicker while slow rolls barely change. 0 is a steady slowdown, like 8 Ball Duels |
+| Rail bounce | 0.73 | Keeps about 73% of the speed, from 8 Ball Duels' rail-to-rail shot |
 | Ball bounce | 0.94 | A full hit leaves the cue ball 3% of its speed, almost dead |
 | Follow | 0 | No follow, like 8 Ball Duels: a cut sends the cue ball along the tangent line. Natural roll in real pool would be 2/7 |
 | Rack gap | 0.025 studs | A hair apart, so the break spreads |

@@ -28,7 +28,7 @@ A chill hangout game: a cozy, blocky Roblox bar where people talk on voice chat 
 - 16 balls: the cue ball, solids 1–7, the 8, stripes 9–15.
 - 6 pockets about real size: the corners about 2.1 ball widths across, the sides about 2.3.
 - A full-power shot leaves at about 25 studs/s and rolls about 11 table lengths if nothing stops it. Balls slow at a steady rate at every speed.
-- A ball loses about 30% of its speed when it bounces off a rail, and comes off at the same angle it hit.
+- A ball loses about 27% of its speed when it bounces off a rail, and comes off at the same angle it hit.
 - No follow: on a full straight hit the cue ball stops almost dead (it keeps about 3% of its speed), and on a cut it leaves along the tangent line, nudged only slightly forward, with no curve afterwards. The object ball takes about 97% of the speed along the line of centers.
 - Feel: matched to 8 Ball Duels, measured frame by frame from a full match.
 

@@ -14,4 +14,4 @@ paths:
 - For the top-down camera, set `CameraType` to `Scriptable`, and restore the previous camera type and subject afterwards.
 - Show timers from the server's `clockEndsAt` using `workspace:GetServerTimeNow()`, not a local countdown.
 - Disconnect everything a controller made when its game ends or the player respawns; never stack connections.
-- Build UI in code with colors, fonts and sizes from `Theme.luau`.
+- Build UI in code, in the look `docs/STYLE.md` describes, with colors, fonts and sizes from `Theme.luau`. `Theme.Font` is a Font, so set it as `FontFace`, and use `Card.luau` for cards.

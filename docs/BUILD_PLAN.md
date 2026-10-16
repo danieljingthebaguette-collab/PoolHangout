@@ -7,11 +7,13 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
-- **In progress:** nothing. Physics matched to 8 Ball Duels from my frame-by-frame measurements: FullPowerSpeed 30 → 25, RollingSlowdown 2.3 → 1.8, BallBounce 0.9 → 0.94, Follow 0.3 → 0, PowerCurve 1.2 → 1.45, RailBounce stays 0.7, and a new BreakPower 3 (the first shot after a rack in test mode). Fast balls take sub-steps, so the break can reach 75 studs/s with no speed cap. Waiting on my PC test.
-- **Last session:** 2026-10-13. Rescaled the table to 16 × 8. Made shots feel finished (sounds, cue strike, rolling markings, pocket sinks, instant start) and tuned: FullPowerSpeed 30, RollingSlowdown 2.3, RailBounce 0.7, Follow 0.3, PowerCurve 1.2, RackGap 0.025. Restyled the greybox table (slim light wood rails with diamonds, blue felt and cushions, black corner plates, angled cushion ends, real side-pocket holes) and built the HUD in `Client/Hud.luau`: my player card, the sunk-ball tray, ball shadows, settings with sound volume, the power meter on the left with %, and a collapsible test panel. Added Phase 2's two-player top bar and turn pulse, and spin, missions and a coin pot to the Later list.
-- **Next up:** my PC test of the new look, then Phase 1's phone check and the age check
+- **In progress:** nothing. Physics matched to 8 Ball Duels and committed: FullPowerSpeed 25, BreakPower 3, RollingSlowdown 1.84, RailBounce 0.73, BallBounce 0.94, Follow 0, PowerCurve 1.45, RackGap 0.025, SpeedDrag 0 (optional, on a slider). New art direction: `docs/STYLE.md`. The lighting, the test table and floor (placeholders) and the HUD are restyled to it, waiting on my PC test.
+- **Last session:** 2026-10-16. Committed the 8 Ball Duels physics checkpoint. Wrote `docs/STYLE.md` for the new intense, item-based look, set warm golden lighting, rebuilt the test table matte and painted-looking on a painted plank floor, and restyled the HUD: cream cards with corner brackets and a dot texture, RobotoCondensed Bold, dark boxes, sunny gold accent buttons, and control hints as label-and-key rows on the bottom right.
+- **Next up:** my PC test of the physics and the new look, then my item design (it will update GAME_SPEC.md and this plan), then Phase 1's phone check and the age check
 - **Known issues:**
   - Touch hasn't been tried on a real phone yet, only in the emulator; it's covered by Phase 1's phone check
+  - Lighting.Technology has to be set to Future by hand in Studio; scripts can't change it
+  - GAME_SPEC.md, `docs/MODELS.md` and CLAUDE.md's opening line still describe the cozy bar, until the item design is decided
 
 ## Rules that protect quality
 
@@ -30,7 +32,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 - [x] Set up Studio's MCP connection, Script Sync, git and this kit (Me)
 - [x] One config file for every tuning number: table size, pocket size, friction, rail bounce, max power, shot clock (Claude)
-- [x] Greybox table: 16 × 8 studs of playing surface, 16 balls, and 6 pockets about 20% wider than real (Claude builds it, I adjust)
+- [x] Greybox table: 16 × 8 studs of playing surface, 16 balls, and 6 pockets about real size (Claude builds it, I adjust)
 - [x] Ball physics: our own simulation on the server for rolling, ball-to-ball hits, rail bounces and pockets, played back smoothly on every screen (Claude)
 - [x] Press F to switch to the top-down view, and F again to go back (Claude)
 - [x] Aim: on PC only the mouse aims (the cue follows it). On phones, drag on the table. Space (phones: a Lock button) locks and unlocks the aim; the aim indicator is see-through while aiming and solid while locked, with a hint (Claude)

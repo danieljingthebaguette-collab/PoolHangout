@@ -1,11 +1,13 @@
 --!strict
--- The HUD around the top-down view: the top bar with your player card, the power meter on the left, the tray on
--- the right where sunk balls collect, and the settings button bottom-left with the sound volume.
+-- The HUD around the top-down view, in the style of docs/STYLE.md: the top bar with your player card, the power
+-- meter on the left, the tray on the right where sunk balls collect, the control hints on the bottom right, and the
+-- settings button bottom-left with the sound volume.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Theme = require(ReplicatedStorage.Shared.Theme)
+local Card = require(script.Parent.Card)
 local Slider = require(script.Parent.Slider)
 local TableView = require(script.Parent.TableView)
 
@@ -15,6 +17,9 @@ local Hud = {}
 local guis: { ScreenGui } = {}
 -- The power meter, once it's built: its screen, its fill and its % readout
 local meter: { gui: ScreenGui, fill: Frame, percent: TextLabel }? = nil
+-- The control hints' column, once it's built, and the rows it shows
+local hintColumn: Frame? = nil
+local shownHints: { { string } }? = nil
 
 local function roundCorners(item: GuiObject, radius: UDim?)
 	local corner = Instance.new("UICorner")
@@ -25,7 +30,7 @@ end
 local function label(text: string, parent: Instance): TextLabel
 	local item = Instance.new("TextLabel")
 	item.BackgroundTransparency = 1
-	item.Font = Theme.Font
+	item.FontFace = Theme.Font
 	item.TextSize = Theme.TextSize
 	item.TextColor3 = Theme.Colors.Text
 	item.Text = text
@@ -33,14 +38,10 @@ local function label(text: string, parent: Instance): TextLabel
 	return item
 end
 
-local function panel(parent: Instance): Frame
-	local item = Instance.new("Frame")
-	item.BackgroundColor3 = Theme.Colors.Panel
-	item.BackgroundTransparency = Theme.Ui.HudTransparency
-	item.BorderSizePixel = 0
-	item.Parent = parent
-	roundCorners(item)
-	return item
+-- Screen height, in pixels, kept clear along the bottom for the gear (left) and the control hints (right)
+function Hud.bottomBand(): number
+	local hints = Theme.Ui.HintRows * Theme.Ui.HintHeight + (Theme.Ui.HintRows - 1) * Theme.Ui.Padding / 2
+	return math.max(Theme.Ui.ButtonHeight, hints) + 2 * Theme.Ui.Padding
 end
 
 -- Shows the HUD while you're in the top-down view. In the normal view it would sit where phones put the thumbstick.
@@ -62,8 +63,72 @@ function Hud.setPower(share: number?)
 	end
 end
 
--- The power meter on the left with its % readout. It only shows the pull; you don't drag it. Its own screen, below
--- Roblox's top bar, so the phones' Lock button (ShotController) lines up beside it.
+-- One control hint: a label box and its key box, like "Lock aim [Space]"
+local function hintRow(text: string, key: string, order: number): Frame
+	local row = Instance.new("Frame")
+	row.BackgroundTransparency = 1
+	row.Size = UDim2.fromOffset(0, Theme.Ui.HintHeight)
+	row.AutomaticSize = Enum.AutomaticSize.X
+	row.LayoutOrder = order
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	layout.VerticalAlignment = Enum.VerticalAlignment.Center
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, Theme.Ui.Padding / 2)
+	layout.Parent = row
+	for i, part in { { text = text, dark = false }, { text = key, dark = true } } do
+		local box = label(part.text, row)
+		box.LayoutOrder = i
+		box.Size = UDim2.fromOffset(0, Theme.Ui.HintHeight)
+		box.AutomaticSize = Enum.AutomaticSize.X
+		box.BackgroundTransparency = if part.dark then 0 else Theme.Ui.HudTransparency
+		box.BackgroundColor3 = if part.dark then Theme.Colors.Dark else Theme.Colors.Panel
+		box.TextColor3 = if part.dark then Theme.Colors.DarkText else Theme.Colors.Text
+		roundCorners(box)
+		local padding = Instance.new("UIPadding")
+		padding.PaddingLeft = UDim.new(0, Theme.Ui.Padding)
+		padding.PaddingRight = padding.PaddingLeft
+		padding.Parent = box
+	end
+	return row
+end
+
+-- Shows control hints down the bottom right, each a label and its key, or hides them with nil. `rows` is one of a
+-- few fixed lists, so the rows are only rebuilt when a different list comes in.
+function Hud.setHints(rows: { { string } }?)
+	if not hintColumn or rows == shownHints then
+		return
+	end
+	shownHints = rows
+	for _, child in hintColumn:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+	for i, row in rows or {} do
+		hintRow(row[1], row[2], i).Parent = hintColumn
+	end
+end
+
+local function hints(gui: ScreenGui)
+	local column = Instance.new("Frame")
+	column.AnchorPoint = Vector2.new(1, 1)
+	column.Position = UDim2.new(1, -Theme.Ui.Padding, 1, -Theme.Ui.Padding)
+	column.AutomaticSize = Enum.AutomaticSize.XY
+	column.BackgroundTransparency = 1
+	column.Parent = gui
+	local layout = Instance.new("UIListLayout")
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, Theme.Ui.Padding / 2)
+	layout.Parent = column
+	hintColumn = column
+end
+
+-- The power meter on the left with its % readout in a dark box. It only shows the pull; you don't drag it. Its own
+-- screen, below Roblox's top bar, so the phones' Lock button (ShotController) lines up beside it.
 local function powerMeter(playerGui: Instance)
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "PowerMeter"
@@ -74,7 +139,7 @@ local function powerMeter(playerGui: Instance)
 	track.AnchorPoint = Vector2.new(0.5, 0.5)
 	track.Position = UDim2.new(0, Theme.Ui.MeterReserve / 2, 0.5, 0)
 	track.Size = UDim2.new(0, Theme.Ui.MeterTrack, Theme.Ui.MeterHeight, 0)
-	track.BackgroundColor3 = Theme.Colors.Track
+	track.BackgroundColor3 = Theme.Colors.Dark
 	track.BorderSizePixel = 0
 	track.Active = true
 	track.Parent = gui
@@ -91,9 +156,12 @@ local function powerMeter(playerGui: Instance)
 	local percent = label("0%", gui)
 	percent.AnchorPoint = Vector2.new(0.5, 0)
 	percent.Position = UDim2.new(0, Theme.Ui.MeterReserve / 2, 0.5 + Theme.Ui.MeterHeight / 2, Theme.Ui.Padding)
-	percent.Size = UDim2.fromOffset(Theme.Ui.MeterReserve, Theme.Ui.PercentTextSize)
-	percent.TextSize = Theme.Ui.PercentTextSize
-	percent.TextColor3 = Theme.Colors.Subtle
+	percent.Size = UDim2.fromOffset(Theme.Ui.MeterReserve - Theme.Ui.Padding, Theme.Ui.LargeTextSize + Theme.Ui.Padding)
+	percent.TextSize = Theme.Ui.LargeTextSize
+	percent.BackgroundTransparency = 0
+	percent.BackgroundColor3 = Theme.Colors.Dark
+	percent.TextColor3 = Theme.Colors.DarkText
+	roundCorners(percent)
 	gui.Parent = playerGui
 	meter = { gui = gui, fill = fill, percent = percent }
 end
@@ -101,17 +169,19 @@ end
 -- Your card, left of the top bar's center. The other player's card goes right of it in Phase 2.
 local function playerCard(gui: ScreenGui)
 	local player = Players.LocalPlayer
-	local card = panel(gui)
+	local card = Instance.new("Frame")
 	card.AnchorPoint = Vector2.new(1, 0)
 	card.Position = UDim2.new(0.5, -Theme.Ui.Padding, 0, Theme.Ui.Padding)
 	card.Size = UDim2.fromOffset(Theme.Ui.CardWidth, Theme.Ui.CardHeight)
 	card.Active = true -- pressing it doesn't start a shot
+	Card.style(card)
+	card.Parent = gui
 	local avatarSize = Theme.Ui.CardHeight - 2 * Theme.Ui.Padding
 	local avatar = Instance.new("ImageLabel")
 	avatar.AnchorPoint = Vector2.new(1, 0.5)
 	avatar.Position = UDim2.new(1, -Theme.Ui.Padding, 0.5, 0)
 	avatar.Size = UDim2.fromOffset(avatarSize, avatarSize)
-	avatar.BackgroundColor3 = Theme.Colors.Track
+	avatar.BackgroundColor3 = Theme.Colors.Dark
 	avatar.Parent = card
 	roundCorners(avatar)
 	local name = label(player.DisplayName, card)
@@ -120,7 +190,7 @@ local function playerCard(gui: ScreenGui)
 	name.Size = UDim2.new(1, -avatarSize - 4 * Theme.Ui.Padding, 1, 0)
 	name.TextXAlignment = Enum.TextXAlignment.Right
 	name.TextTruncate = Enum.TextTruncate.AtEnd
-	name.TextSize = Theme.Ui.PercentTextSize
+	name.TextSize = Theme.Ui.LargeTextSize
 	-- Asking Roblox for the picture can wait or fail; the card works without it
 	task.spawn(function()
 		local ok, image = pcall(
@@ -145,9 +215,9 @@ local function ballIcon(id: number): Frame
 	local fit = Instance.new("UIAspectRatioConstraint")
 	fit.AspectRatio = 1
 	fit.Parent = icon
-	-- So the 8 shows against the black tray
+	-- So the 8 shows against the dark tray
 	local outline = Instance.new("UIStroke")
-	outline.Color = Theme.Colors.Subtle
+	outline.Color = Theme.Colors.DarkText
 	outline.Thickness = 1
 	outline.Parent = icon
 	if id >= 9 then
@@ -171,28 +241,33 @@ local function ballIcon(id: number): Frame
 	return icon
 end
 
--- The tray on the right. Each object ball joins it when its part is hidden (it dropped) and leaves when it's shown
--- again (a rack). The first ball sunk sits at the bottom.
+-- The tray on the right, a dark box from below the top bar down to the control hints. Each object ball joins it
+-- when its part is hidden (it dropped) and leaves when it's shown again (a rack). The first ball sunk sits at the
+-- bottom.
 local function tray(gui: ScreenGui, tableModel: Model)
-	local frame = Instance.new("Frame")
-	frame.AnchorPoint = Vector2.new(0.5, 0.5)
-	frame.Position = UDim2.new(1, -Theme.Ui.TrayReserve / 2, 0.5, 0)
-	frame.Size = UDim2.new(0, Theme.Ui.TrayWidth, Theme.Ui.TrayHeight, 0)
-	frame.BackgroundColor3 = Theme.Colors.Tray
-	frame.BorderSizePixel = 0
-	frame.Active = true -- pressing it doesn't start a shot
-	frame.Parent = gui
-	roundCorners(frame)
+	local top = Theme.Ui.CardHeight + 2 * Theme.Ui.Padding
+	local box = Instance.new("Frame")
+	box.AnchorPoint = Vector2.new(0.5, 0)
+	box.Position = UDim2.new(1, -Theme.Ui.TrayReserve / 2, 0, top)
+	box.Size = UDim2.new(0, Theme.Ui.TrayWidth, 1, -top - Hud.bottomBand())
+	box.Active = true -- pressing it doesn't start a shot
+	Card.style(box, true)
+	box.Parent = gui
+	-- The stack sits in its own frame, so its layout leaves the brackets alone
+	local stack = Instance.new("Frame")
+	stack.Size = UDim2.fromScale(1, 1)
+	stack.BackgroundTransparency = 1
+	stack.Parent = box
 	local list = Instance.new("UIListLayout")
 	list.VerticalAlignment = Enum.VerticalAlignment.Bottom
 	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Padding = UDim.new(0, 2)
-	list.Parent = frame
+	list.Parent = stack
 	local padding = Instance.new("UIPadding")
-	padding.PaddingBottom = UDim.new(0, Theme.Ui.Padding / 2)
+	padding.PaddingBottom = UDim.new(0, Theme.Ui.Padding)
 	padding.PaddingTop = padding.PaddingBottom
-	padding.Parent = frame
+	padding.Parent = stack
 
 	local icons: { [number]: Frame } = {}
 	local sunk = 0
@@ -206,7 +281,7 @@ local function tray(gui: ScreenGui, tableModel: Model)
 				local icon = ballIcon(id)
 				-- Later balls sort above earlier ones, so the stack grows up from the bottom
 				icon.LayoutOrder = -sunk
-				icon.Parent = frame
+				icon.Parent = stack
 				icons[id] = icon
 			elseif not down and icons[id] then
 				icons[id]:Destroy()
@@ -218,29 +293,29 @@ local function tray(gui: ScreenGui, tableModel: Model)
 	end
 end
 
--- The gear bottom-left, and the panel it opens with the sound volume
+-- The gear bottom-left, a bright accent button, and the card it opens with the sound volume
 local function settings(gui: ScreenGui)
 	local gear = Instance.new("TextButton")
 	gear.AnchorPoint = Vector2.new(0, 1)
 	gear.Position = UDim2.new(0, Theme.Ui.Padding, 1, -Theme.Ui.Padding)
 	gear.Size = UDim2.fromOffset(Theme.Ui.ButtonHeight, Theme.Ui.ButtonHeight)
-	gear.BackgroundColor3 = Theme.Colors.Panel
-	gear.BackgroundTransparency = Theme.Ui.HudTransparency
-	gear.Font = Theme.Font
-	gear.TextSize = Theme.Ui.PercentTextSize
+	gear.BackgroundColor3 = Theme.Colors.Button
+	gear.FontFace = Theme.Font
+	gear.TextSize = Theme.Ui.LargeTextSize
 	gear.TextColor3 = Theme.Colors.Text
 	gear.Text = "⚙"
 	gear.Parent = gui
-	roundCorners(gear, UDim.new(0.5, 0))
+	roundCorners(gear)
 
 	-- Opens beside the gear, clear of the power meter's readout above it
-	local box = panel(gui)
+	local box = Instance.new("Frame")
 	box.AnchorPoint = Vector2.new(0, 1)
 	box.Position = UDim2.new(0, Theme.Ui.ButtonHeight + 2 * Theme.Ui.Padding, 1, -Theme.Ui.Padding)
-	box.Size = UDim2.fromOffset(Theme.Ui.PanelWidth, Theme.Ui.ButtonHeight + Theme.Ui.Padding)
-	box.BackgroundTransparency = 0 -- solid, since it covers the Test button
+	box.Size = UDim2.fromOffset(Theme.Ui.PanelWidth, Theme.Ui.ButtonHeight + 2 * Theme.Ui.Padding)
 	box.Active = true
 	box.Visible = false
+	Card.style(box)
+	box.Parent = gui
 	local row = Slider.new({
 		min = 0,
 		max = 1,
@@ -251,8 +326,8 @@ local function settings(gui: ScreenGui)
 		end,
 		onChange = TableView.setVolume,
 	})
-	row.Position = UDim2.fromOffset(Theme.Ui.Padding, Theme.Ui.Padding / 2)
-	row.Size = UDim2.new(1, -2 * Theme.Ui.Padding, 0, Theme.Ui.ButtonHeight)
+	row.Position = UDim2.fromOffset(2 * Theme.Ui.Padding, Theme.Ui.Padding)
+	row.Size = UDim2.new(1, -4 * Theme.Ui.Padding, 0, Theme.Ui.ButtonHeight)
 	row.Parent = box
 
 	gear.Activated:Connect(function()
@@ -269,6 +344,7 @@ function Hud.start(tableModel: Model)
 	gui.IgnoreGuiInset = true -- the top-down view's reserves are measured from the screen's top
 	gui.Enabled = false
 	playerCard(gui)
+	hints(gui)
 	gui.Parent = playerGui
 	table.insert(guis, gui)
 

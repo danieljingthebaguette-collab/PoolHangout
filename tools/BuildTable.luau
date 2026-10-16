@@ -1,7 +1,8 @@
 --!strict
 -- Rebuilds the greybox Table1 in the place from Config: felt, cushions with angled jaws, slim wooden rails with
 -- diamonds, black corner plates, side pocket holes, body and legs. Keeps Felt (resized to Config), Platforms and
--- the runtime Balls folder; replaces every other part. Placeholder until the commissioned table arrives.
+-- the runtime Balls folder; replaces every other part. Placeholder until the commissioned table arrives. The look
+-- follows docs/STYLE.md: matte, painted-looking flat colors (SmoothPlastic everywhere, no textured materials).
 --
 -- Not synced to Studio. Run it in Studio's command bar in edit mode, or have Claude run it through the MCP's
 -- execute_luau. Undo works (Ctrl+Z). Save the place afterwards.
@@ -31,12 +32,13 @@ local INSET, PLATE_RADIUS = 0.35, 0.5 -- how far corner plates reach onto the fe
 local SIDE_HOLE_RADIUS, SIDE_HOLE_OUT = 0.6, 0.1 -- side pocket holes, and how far past the felt's edge they center
 local CORNER_JAW_SLOPE, SIDE_JAW_SLOPE = 1, math.tan(math.rad(20)) -- how far each cushion's back runs past its nose
 
-local FELT_COLOR = Color3.fromRGB(40, 127, 71)
-local CUSHION_COLOR = Color3.fromRGB(39, 70, 45)
-local WOOD_COLOR = Color3.fromRGB(105, 64, 40)
-local BODY_COLOR = Color3.fromRGB(80, 48, 30)
-local DIAMOND_COLOR = Color3.fromRGB(245, 240, 225)
-local BLACK = Color3.fromRGB(12, 12, 14)
+local FELT_COLOR = Color3.fromRGB(50, 122, 76)
+local CUSHION_COLOR = Color3.fromRGB(34, 88, 52)
+local WOOD_COLOR = Color3.fromRGB(122, 70, 40) -- painted reddish-brown, darker than the honey floor planks
+local BODY_COLOR = Color3.fromRGB(86, 50, 30)
+local DIAMOND_COLOR = Color3.fromRGB(246, 239, 224) -- the HUD's cream
+local BLACK = Color3.fromRGB(20, 16, 14)
+local MATTE = Enum.Material.SmoothPlastic
 
 local recording = ChangeHistoryService:TryBeginRecording("Rebuild Table1")
 
@@ -83,14 +85,7 @@ end
 -- An upright cylinder. Roblox cylinders run along their X axis.
 local function disc(name: string, radius: number, y0: number, y1: number, x: number, z: number, color: Color3): Part
 	local cframe = CFrame.new(world(x, (y0 + y1) / 2, z)) * CFrame.Angles(0, 0, math.rad(90))
-	return part(
-		name,
-		Vector3.new(y1 - y0, 2 * radius, 2 * radius),
-		cframe,
-		color,
-		Enum.Material.Fabric,
-		Enum.PartType.Cylinder
-	)
+	return part(name, Vector3.new(y1 - y0, 2 * radius, 2 * radius), cframe, color, MATTE, Enum.PartType.Cylinder)
 end
 
 -- Unions or subtracts, keeping the first part's name, color and material
@@ -149,7 +144,7 @@ local function cushion(
 		Vector3.new(length, CUSHION_TOP - CUSHION_BOTTOM, CUSHION_WIDTH),
 		CFrame.fromMatrix(world(middle.X, y, middle.Z), along, Vector3.yAxis),
 		CUSHION_COLOR,
-		Enum.Material.Fabric
+		MATTE
 	)
 	local cuts: { BasePart } = {}
 	for _, finish in { { b, along, slopeB }, { a, -along, slopeA } } do
@@ -210,7 +205,7 @@ for _, side in { -1, 1 } do
 		side * (W / 2 + CUSHION_WIDTH),
 		side * OUT_Z,
 		WOOD_COLOR,
-		Enum.Material.Wood
+		MATTE
 	)
 	add(csg(rail, sideHoleCutters(), true))
 	add(
@@ -223,7 +218,7 @@ for _, side in { -1, 1 } do
 			-railEndZ,
 			railEndZ,
 			WOOD_COLOR,
-			Enum.Material.Wood
+			MATTE
 		)
 	)
 end
@@ -248,17 +243,7 @@ for _, sx in { -1, 1 } do
 	for _, sz in { -1, 1 } do
 		local roundX, roundZ = sx * (OUT_X - PLATE_RADIUS), sz * (OUT_Z - PLATE_RADIUS)
 		local plate = csg(
-			block(
-				"CornerPlate",
-				sx * railEndX,
-				roundX,
-				RAIL_BOTTOM,
-				PLATE_TOP,
-				sz * railEndZ,
-				sz * OUT_Z,
-				BLACK,
-				Enum.Material.Fabric
-			),
+			block("CornerPlate", sx * railEndX, roundX, RAIL_BOTTOM, PLATE_TOP, sz * railEndZ, sz * OUT_Z, BLACK, MATTE),
 			{
 				block("P", roundX, sx * OUT_X, RAIL_BOTTOM, PLATE_TOP, sz * railEndZ, roundZ, BLACK),
 				disc("P", PLATE_RADIUS, RAIL_BOTTOM, PLATE_TOP, roundX, roundZ, BLACK),
@@ -289,19 +274,7 @@ for _, side in { -1, 1 } do
 end
 
 -- Body under the rails, set in from the edge, and legs
-add(
-	block(
-		"Body",
-		-OUT_X + 0.2,
-		OUT_X - 0.2,
-		BODY_BOTTOM,
-		RAIL_BOTTOM,
-		-OUT_Z + 0.2,
-		OUT_Z - 0.2,
-		BODY_COLOR,
-		Enum.Material.Wood
-	)
-)
+add(block("Body", -OUT_X + 0.2, OUT_X - 0.2, BODY_BOTTOM, RAIL_BOTTOM, -OUT_Z + 0.2, OUT_Z - 0.2, BODY_COLOR, MATTE))
 for _, sx in { -1, 1 } do
 	for _, sz in { -1, 1 } do
 		add(
@@ -314,7 +287,7 @@ for _, sx in { -1, 1 } do
 				sz * (W / 2 - 1.5),
 				sz * (W / 2 - 0.5),
 				BODY_COLOR,
-				Enum.Material.Wood
+				MATTE
 			)
 		)
 	end
@@ -339,7 +312,7 @@ end
 felt.Size = Vector3.new(L, FELT_THICKNESS, W)
 felt.Position = world(0, FELT_TOP - FELT_THICKNESS / 2, 0)
 felt.Color = FELT_COLOR
-felt.Material = Enum.Material.Fabric
+felt.Material = MATTE
 
 if recording then
 	ChangeHistoryService:FinishRecording(recording, Enum.FinishRecordingOperation.Commit)

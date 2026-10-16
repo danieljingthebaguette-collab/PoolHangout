@@ -2,7 +2,7 @@
 
 A cozy Roblox bar where players hang out, talk on voice chat and play 8-ball pool, 1v1 or 2v2. It's my first Roblox game. You write most of the code; I design, build in Studio, review your changes and playtest. Launch target: Friday, Dec 11, 2026.
 
-The three documents imported at the bottom are the source of truth: what the game is (GAME_SPEC), how the code is built (ARCHITECTURE), and what to build when, plus where we are now (BUILD_PLAN).
+The documents imported at the bottom are the source of truth: what the game is (GAME_SPEC), how it looks (STYLE), how the code is built (ARCHITECTURE), and what to build when, plus where we are now (BUILD_PLAN).
 
 ## Working with me
 
@@ -27,7 +27,7 @@ Studio's Script Sync mirrors these folders both ways.
 | `src/Client` | StarterPlayer/StarterPlayerScripts/Client | Each player |
 | `src/Shared` | ReplicatedStorage/Shared | Both |
 | `tests/`, `docs/` | Not synced | Lune tests, docs |
-| `tools/` | Not synced | Studio scripts Claude runs through the MCP, like `BuildTable.luau` that rebuilds the greybox table from Config |
+| `tools/` | Not synced | Scripts Claude runs: Studio scripts through the MCP, like `BuildTable.luau` that rebuilds the greybox table from Config, and Lune scripts, like `BreakStats.luau` that summarizes 20 breaks |
 
 - File names set the script type: `Name.server.luau` = server Script, `Name.local.luau` = LocalScript, `Name.luau` = ModuleScript, a folder = Folder. Don't use `init.luau` files; use plain folders of modules.
 - Only scripts and folders sync. Parts, models and lighting live only in the place file, which isn't in git. After you build or change anything in the place, remind me to save it (Cmd+S).
@@ -67,5 +67,6 @@ Studio's Script Sync mirrors these folders both ways.
 ## Project documents (loaded every session)
 
 - Game spec: @docs/GAME_SPEC.md
+- Style guide: @docs/STYLE.md
 - Architecture: @docs/ARCHITECTURE.md
 - Build plan and status: @docs/BUILD_PLAN.md

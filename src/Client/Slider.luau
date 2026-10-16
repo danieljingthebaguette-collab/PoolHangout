@@ -29,7 +29,7 @@ function Slider.new(options: Options): (TextButton, (number) -> ())
 	local text = Instance.new("TextLabel")
 	text.Size = UDim2.fromScale(1, 0.5)
 	text.BackgroundTransparency = 1
-	text.Font = Theme.Font
+	text.FontFace = Theme.Font
 	text.TextSize = Theme.TextSize
 	text.TextColor3 = Theme.Colors.Text
 	text.TextXAlignment = Enum.TextXAlignment.Left

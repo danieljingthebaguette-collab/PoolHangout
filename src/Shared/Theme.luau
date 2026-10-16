@@ -1,5 +1,5 @@
 --!strict
--- Colors, fonts and UI sizes for everything built in code.
+-- Colors, fonts and UI sizes for everything built in code. docs/STYLE.md describes the look they make.
 
 local YELLOW = Color3.fromRGB(245, 196, 30)
 local BLUE = Color3.fromRGB(30, 70, 190)
@@ -9,41 +9,52 @@ local ORANGE = Color3.fromRGB(240, 120, 30)
 local GREEN = Color3.fromRGB(20, 120, 60)
 local MAROON = Color3.fromRGB(120, 25, 35)
 
+local CREAM = Color3.fromRGB(246, 239, 224)
+local INK = Color3.fromRGB(36, 28, 22)
+local ACCENT = Color3.fromRGB(255, 196, 46) -- sunny gold
+
 local Theme = {
-	Font = Enum.Font.GothamMedium,
-	TextSize = 16,
+	-- Bold condensed, for every bit of HUD text. It's a Font, so set it as FontFace.
+	Font = Font.new(Font.fromEnum(Enum.Font.RobotoCondensed).Family, Enum.FontWeight.Bold),
+	TextSize = 18,
 
 	Colors = {
-		Panel = Color3.fromRGB(43, 32, 26), -- dark warm wood
-		Button = Color3.fromRGB(122, 84, 52),
-		Text = Color3.fromRGB(248, 236, 218),
-		Track = Color3.fromRGB(84, 62, 48),
-		Fill = Color3.fromRGB(236, 168, 72), -- warm lamp glow
+		Panel = CREAM, -- cards and panels
+		Text = INK, -- text on cards and accent buttons, and the cards' corner brackets and dot texture
+		Dark = Color3.fromRGB(32, 26, 22), -- dark boxes: key boxes, the % readout, the tray
+		DarkText = CREAM, -- text and corner brackets on dark boxes
+		Button = ACCENT, -- bright accent buttons
+		Fill = ACCENT, -- the power meter's and the sliders' fill
+		Track = Color3.fromRGB(214, 200, 176), -- a slider's bar, on a cream card
 		Cue = Color3.fromRGB(214, 170, 112), -- light maple
 		AimLine = Color3.fromRGB(255, 255, 255),
 		BallMark = Color3.fromRGB(245, 242, 230), -- the white on the placeholder balls: stripes and number dots
 		CueBallMark = Color3.fromRGB(200, 35, 35),
-		Subtle = Color3.fromRGB(184, 156, 128), -- quieter text, like the power meter's % readout
-		Tray = Color3.fromRGB(26, 19, 15), -- the sunk-ball tray, darker than the panels so the balls stand out
 		BallShadow = Color3.fromRGB(10, 20, 40),
 	},
 
 	Ui = {
 		Padding = 8,
-		Corner = 8,
+		Corner = 4, -- cards and buttons are nearly square
 		ButtonHeight = 44, -- big enough for a thumb
 		PanelWidth = 240,
 		SliderBar = 6,
+		LargeTextSize = 24, -- the player's name, the % readout and the gear
+		BracketLength = 10, -- the thin corner brackets on cards
+		BracketThickness = 2,
+		BracketInset = 4,
+		DotSize = 10, -- text size of the faint dot texture on cream cards, which sets the dots about 12 px apart
+		DotTransparency = 0.75,
+		HintHeight = 28, -- a control hint on the bottom right: a label and its key box
+		HintRows = 2, -- the most control hints shown at once, so the bottom right keeps room for them
 		MeterReserve = 72, -- screen width the top-down view keeps clear on the left for the power meter
 		MeterTrack = 24, -- width of the power meter
 		MeterHeight = 0.5, -- share of the screen's height
-		PercentTextSize = 22, -- the % under the power meter
 		TrayReserve = 72, -- screen width the top-down view keeps clear on the right for the sunk-ball tray
 		TrayWidth = 36,
-		TrayHeight = 0.6, -- share of the screen's height
 		CardWidth = 260, -- the player card in the top bar
 		CardHeight = 56,
-		HudTransparency = 0.15, -- the top bar's cards and the gear, a touch see-through over the table
+		HudTransparency = 0.2, -- the control hints' label boxes, a touch see-through over the table
 		AimLineThickness = 2, -- pixels, for the aim indicator's lines and circle
 		AimFaintTransparency = 0.6, -- the aim indicator while aiming or about to cancel; solid while locked
 		LockButtonWidth = 80, -- the phones' Lock button, beside the power meter

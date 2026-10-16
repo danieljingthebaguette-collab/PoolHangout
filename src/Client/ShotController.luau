@@ -29,13 +29,18 @@ local TableView = require(script.Parent.TableView)
 
 local VIEW_ACTION = "TopDownView"
 local LOCK_ACTION = "LockAim"
-local CANCEL_HINT = "Let go to cancel"
+-- Control hints, shown on the bottom right as a label and its key, top to bottom. Keep each list within
+-- Theme.Ui.HintRows rows.
 local HINTS = {
-	keyboard = { aiming = "Hold and drag to shoot · Space: lock aim", locked = "Drag to shoot · Space: unlock" },
-	touch = {
-		aiming = "Drag from the cue ball to shoot · Tap Lock to lock aim",
-		locked = "Drag to shoot · Tap Lock to unlock",
+	keyboard = {
+		aiming = { { "Lock aim", "Space" }, { "Shoot", "Hold + drag" } },
+		locked = { { "Unlock", "Space" }, { "Shoot", "Drag" } },
 	},
+	touch = {
+		aiming = { { "Lock aim", "Tap Lock" }, { "Shoot", "Drag from ball" } },
+		locked = { { "Unlock", "Tap Lock" }, { "Shoot", "Drag" } },
+	},
+	cancel = { { "Cancel", "Let go" } },
 }
 
 local ShotController = {}
@@ -63,7 +68,7 @@ local function roundCorners(item: GuiObject, radius: UDim?)
 end
 
 local function styleText(label: TextLabel | TextButton, text: string)
-	label.Font = Theme.Font
+	label.FontFace = Theme.Font
 	label.TextSize = Theme.TextSize
 	label.TextColor3 = Theme.Colors.Text
 	label.Text = text
@@ -110,7 +115,7 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	cue.Transparency = 1
 	cue.Parent = tableModel
 
-	-- The phones' Lock button beside the power meter (which Hud draws), and the hint
+	-- The phones' Lock button, a bright accent button beside the power meter. Hud draws the meter and the hints.
 	local controlsGui = Instance.new("ScreenGui")
 	controlsGui.Name = "ShotControls"
 	controlsGui.ResetOnSpawn = false
@@ -126,19 +131,6 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	lockButton.Parent = controlsGui
 	styleText(lockButton, "Lock")
 	roundCorners(lockButton, UDim.new(0, Theme.Ui.Corner))
-	local hint = Instance.new("TextLabel")
-	hint.AnchorPoint = Vector2.new(0.5, 1)
-	hint.Position = UDim2.new(0.5, 0, 1, -Theme.Ui.Padding)
-	hint.Size = UDim2.fromOffset(0, Theme.TextSize + Theme.Ui.Padding)
-	hint.AutomaticSize = Enum.AutomaticSize.X
-	hint.BackgroundColor3 = Theme.Colors.Panel
-	hint.Parent = controlsGui
-	styleText(hint, hints.aiming)
-	roundCorners(hint, UDim.new(0, Theme.Ui.Corner))
-	local hintPadding = Instance.new("UIPadding")
-	hintPadding.PaddingLeft = UDim.new(0, Theme.Ui.Padding)
-	hintPadding.PaddingRight = hintPadding.PaddingLeft
-	hintPadding.Parent = hint
 	controlsGui.Parent = playerGui
 
 	-- The aim indicator, the lock icon and the cancel ring. Only this screen sees them. They're drawn on the
@@ -194,13 +186,14 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		nil
 
 	-- Screen space, in pixels, the view keeps clear around the table for the HUD: the meter (and on phones the Lock
-	-- button) on the left, the sunk-ball tray on the right, the top bar's cards above and the hint below
+	-- button) on the left, the sunk-ball tray on the right, the top bar's cards above, and the gear and the control
+	-- hints below
 	local reserve = {
 		left = Theme.Ui.MeterReserve
 			+ (if UserInputService.TouchEnabled then Theme.Ui.LockButtonWidth + Theme.Ui.Padding else 0),
 		right = Theme.Ui.TrayReserve,
 		top = Theme.Ui.CardHeight + 2 * Theme.Ui.Padding,
-		bottom = Theme.TextSize + 3 * Theme.Ui.Padding,
+		bottom = Hud.bottomBand(),
 	}
 
 	local function frame()
@@ -402,7 +395,9 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		local held = locked or pulling ~= nil or strike ~= nil
 		-- Back inside the cancel zone after leaving it, where letting go cancels
 		local cancelling = pulling ~= nil and pulling.left and pull == 0
-		hint.Text = if cancelling then CANCEL_HINT elseif held then hints.locked else hints.aiming
+		Hud.setHints(
+			if hidden then nil elseif cancelling then HINTS.cancel elseif held then hints.locked else hints.aiming
+		)
 		lockButton.Text = if held then "Unlock" else "Lock"
 		hideIndicator()
 		if hidden then
