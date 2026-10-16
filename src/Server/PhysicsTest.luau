@@ -119,7 +119,17 @@ function PhysicsTest.start()
 		Remotes.TestTune:SetAttribute(slider.name, (Config :: any)[slider.group][slider.name])
 	end
 
+	-- The first shot after a rack is the break, with BreakPower times the power. The table's BreakNext attribute
+	-- tells the shooter's screen, which starts the shot before the server's copy arrives. Display only: the server
+	-- decides from its own flag.
+	local breakNext = false
+	local function setBreakNext(value: boolean)
+		breakNext = value
+		tableModel:SetAttribute("BreakNext", value)
+	end
+
 	local function rack()
+		setBreakNext(true)
 		local layout = Geometry.build(PhysicsTestAccess.params().Table)
 		balls = { { id = 0, x = layout.headLineX, y = 0, vx = 0, vy = 0 } }
 		for id, spot in layout.rack do
@@ -173,7 +183,8 @@ function PhysicsTest.start()
 
 		rolling = true
 		local params = PhysicsTestAccess.params()
-		local shot: Simulate.Shot = { dirX = dirX / length, dirY = dirY / length, power = power }
+		local shot: Simulate.Shot = { dirX = dirX / length, dirY = dirY / length, power = power, isBreak = breakNext }
+		setBreakNext(false)
 		local sim = Simulate.start(balls, shot, params)
 		Remotes.ShotStarted:FireAllClients(tableModel, balls, shot, params)
 		local startedAt = workspace:GetServerTimeNow()
@@ -193,7 +204,11 @@ function PhysicsTest.start()
 				end
 			end
 			print(
-				`[PhysicsTest] shot ({string.format("%.3f, %.3f", shot.dirX, shot.dirY)}) at power`,
+				`[PhysicsTest] {if shot.isBreak then "break" else "shot"} ({string.format(
+					"%.3f, %.3f",
+					shot.dirX,
+					shot.dirY
+				)}) at power`,
 				`{string.format("%.2f", power)}: rolled {string.format("%.2f", duration)} s, sunk:`,
 				if #sunk > 0 then table.concat(sunk, ", ") else "nothing"
 			)

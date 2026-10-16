@@ -23,20 +23,23 @@ return function(test, check)
 		end
 	end)
 
-	test("the fastest ball moves under a third of its radius per step, even at the speed slider's top", function()
+	-- Faster balls split a step into sub-steps, which costs time, so only the break should need them. The step
+	-- measures speed as |vx| + |vy|, up to √2 times the speed on a diagonal.
+	test("a normal full-power shot fits in one step, even at the speed slider's top", function()
 		local fastest = Config.Physics.FullPowerSpeed
 		for _, slider in Config.Debug.TestSliders do
 			if slider.name == "FullPowerSpeed" then
 				fastest = math.max(fastest, slider.max)
 			end
 		end
-		local perStep = fastest * Config.Physics.TimeStep
-		check.truthy(perStep < Config.Table.BallRadius / 3, "moves " .. perStep .. " per step")
+		local perStep = fastest * math.sqrt(2) * Config.Physics.TimeStep
+		local limit = Config.Physics.MaxStepTravel * Config.Table.BallRadius
+		check.truthy(perStep <= limit, `moves {perStep} per step, over {limit}`)
 	end)
 
-	test("full power rolls about 12 table lengths", function()
+	test("full power rolls about 11 table lengths", function()
 		local speed = Config.Physics.FullPowerSpeed
 		local distance = speed * speed / (2 * Config.Physics.RollingSlowdown)
-		check.near(distance / Config.Table.Length, 12, 1)
+		check.near(distance / Config.Table.Length, 11, 1)
 	end)
 end

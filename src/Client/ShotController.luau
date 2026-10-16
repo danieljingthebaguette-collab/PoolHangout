@@ -296,7 +296,9 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		local power = (strike :: { power: number, t: number }).power
 		strike = nil
 		pull = 0
-		local shot = { dirX = math.cos(aim), dirY = math.sin(aim), power = power }
+		-- The server says whether this is the break; this screen only needs it to start the same shot
+		local isBreak = tableModel:GetAttribute("BreakNext") == true
+		local shot = { dirX = math.cos(aim), dirY = math.sin(aim), power = power, isBreak = isBreak }
 		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
 		followThrough = { t = 0, x = cueX, y = cueY, aim = aim }
 		-- ponytail: the test mode's remote, until Match (Phase 2) brings RequestShot and turns

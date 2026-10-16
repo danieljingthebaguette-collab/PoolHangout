@@ -7,7 +7,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
-- **In progress:** nothing. Back to the classic table colors with the slim rails, a solid power meter, the corner-pocket clipping fixed, and the aim fixed to stay on the cursor after a shot. Waiting on my PC test and my picks from the cleanup list.
+- **In progress:** nothing. Physics matched to 8 Ball Duels from my frame-by-frame measurements: FullPowerSpeed 30 → 25, RollingSlowdown 2.3 → 1.8, BallBounce 0.9 → 0.94, Follow 0.3 → 0, PowerCurve 1.2 → 1.45, RailBounce stays 0.7, and a new BreakPower 3 (the first shot after a rack in test mode). Fast balls take sub-steps, so the break can reach 75 studs/s with no speed cap. Waiting on my PC test.
 - **Last session:** 2026-10-13. Rescaled the table to 16 × 8. Made shots feel finished (sounds, cue strike, rolling markings, pocket sinks, instant start) and tuned: FullPowerSpeed 30, RollingSlowdown 2.3, RailBounce 0.7, Follow 0.3, PowerCurve 1.2, RackGap 0.025. Restyled the greybox table (slim light wood rails with diamonds, blue felt and cushions, black corner plates, angled cushion ends, real side-pocket holes) and built the HUD in `Client/Hud.luau`: my player card, the sunk-ball tray, ball shadows, settings with sound volume, the power meter on the left with %, and a collapsible test panel. Added Phase 2's two-player top bar and turn pulse, and spin, missions and a coin pot to the Later list.
 - **Next up:** my PC test of the new look, then Phase 1's phone check and the age check
 - **Known issues:**

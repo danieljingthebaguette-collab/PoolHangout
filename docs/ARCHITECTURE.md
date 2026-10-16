@@ -49,7 +49,7 @@ Pure modules require each other only by relative string path, like `require("./G
 - **Deterministic:** the same balls and shot give the same result on every machine. Fixed time step, balls processed in id order, no `math.random`, no clock reads, no `--!native`.
 - **Model:** balls travel in straight lines and slow at a constant rate. Ball-to-ball hits are equal-mass collisions with a restitution value, resolved at the exact moment the balls touch. A ball that rolls into a hit keeps `Follow` of the speed the hit takes away, like natural roll. Rails reflect a ball at the angle it came in and cut its speed. The shot ends when every ball is below the stop speed, or at a safety time cap.
 - **Pockets:** one at each corner of the felt and one in the middle of each long side. A ball drops when its center comes within half the pocket's mouth of that point. A corner mouth is measured across its diagonal opening, so the rails stop `CornerPocketMouth / √2` from each corner, and the rails' ends act as the pockets' jaws. Only a pocket's opening lets a ball's center past the edge of the felt, so that drops it too.
-- **Accurate:** the step is small enough that the fastest ball moves less than a third of its radius per step (a test checks this against Config).
+- **Accurate:** no ball moves more than `MaxStepTravel` (a third of its radius) in one step. A normal shot fits the fixed step (a test checks this against Config); while any ball is faster, like on the break, the step splits into equal sub-steps, so nothing passes through a ball or rail.
 - **Fast:** skip pairs where neither ball moves. Time a full break in Lune; if it takes more than about 50 ms, speed it up before building on it. Nobody runs a whole shot in one frame in the game: the server and clients both advance the stepper a slice at a time.
 - **`ShotResult`** holds the final balls, timestamped events (ball hit, rail hit, pocketed) for sounds and rules, the first ball the cue ball touched, pocketed balls in order with their pockets, and the duration.
 
@@ -60,14 +60,16 @@ Starting values for Config (tune by feel):
 | Table length × width | 16 × 8 studs | 2:1 like a real table; about 18.2 × 10.2 with the cushions and rails |
 | Ball radius | 0.24 studs | Real ball-to-table proportion |
 | Pocket mouth, corner / side | 1.0 / 1.1 studs | About real size: 2.1 and 2.3 ball widths |
-| Full-power speed | 30 studs/s | Tuned by feel |
-| Power curve | 1.2 | Speed is pull ^ 1.2, so soft shots get more of the drag |
-| Rolling slowdown | 2.3 studs/s² | Full power rolls about 196 studs, about 12 table lengths |
+| Full-power speed | 25 studs/s | Measured from 8 Ball Duels, like the rows below |
+| Break power | 3 | The break's full power is 3× a normal shot's, about 75 studs/s |
+| Power curve | 1.45 | Speed is pull ^ 1.45: 76% on the meter gives about 67% of full speed |
+| Rolling slowdown | 1.8 studs/s² | Full power rolls about 174 studs, about 11 table lengths |
 | Rail bounce | 0.7 | Keeps about 70% of the speed |
-| Ball bounce | 0.9 | |
-| Follow | 0.3 | Natural roll in real pool is 2/7; with ball bounce 0.9 a straight hit keeps about 34% |
+| Ball bounce | 0.94 | A full hit leaves the cue ball 3% of its speed, almost dead |
+| Follow | 0 | No follow, like 8 Ball Duels: a cut sends the cue ball along the tangent line. Natural roll in real pool would be 2/7 |
 | Rack gap | 0.025 studs | A hair apart, so the break spreads |
-| Stop speed / time step / time cap | 0.032 studs/s / 1/960 s / 20 s | 1/960 keeps the test mode's top speed of 64 under a third of a radius per step |
+| Stop speed / time step / time cap | 0.032 studs/s / 1/960 s / 20 s | 1/960 keeps any normal shot under a third of a radius per step |
+| Max step travel | 1/3 ball radius | A faster ball, like on the break, splits the step into equal sub-steps, so hits stay exact at any speed |
 | Shot clock / warning | 45 s / last 10 s | |
 | Countdown / takeover / open-spot wait / end screen | 5 / 5 / 15 / 10 s | |
 | Cancel zone | 2.5 ball radii | Roughly fingertip size on a phone. Letting go back inside it cancels |
@@ -93,7 +95,7 @@ Starting values for Config (tune by feel):
 - Every state change goes through one function that updates the sign and fires `TableChanged`.
 - Timers (countdown, shot clock, takeover window, end screen) carry the game id and the step they were made for, and do nothing if that step is over. This is what keeps tables from getting stuck.
 - One `Match` object holds everything about a game. Resetting the table destroys it and disconnects everything it made.
-- **Debug, Studio only:** with `Config.Debug.SoloTables` on and one player in the server, standing on one platform starts the table and that player takes every turn. `Config.Debug.LogShots` prints each shot's input and outcome. `Config.Debug.PhysicsTest` turns on the physics test mode on Table1: R or the Rack button racks, anyone can shoot with the real shot controls while the balls are still, and sliders tune the settings in `Config.Debug.TestSliders` live for everyone. The server keeps the slider values and sends them with each shot; Print values prints them to Output. All of them check `RunService:IsStudio()`, so they can never run in a live server, with one exception: `Config.Debug.PhysicsTestLive` also runs the physics test mode in published servers, for the place's owner only, so I can test on my real phone. `Shared/PhysicsTestAccess.luau` decides who may use it, and the server checks it on every test request. It's turned off before launch.
+- **Debug, Studio only:** with `Config.Debug.SoloTables` on and one player in the server, standing on one platform starts the table and that player takes every turn. `Config.Debug.LogShots` prints each shot's input and outcome. `Config.Debug.PhysicsTest` turns on the physics test mode on Table1: R or the Rack button racks, anyone can shoot with the real shot controls while the balls are still, and sliders tune the settings in `Config.Debug.TestSliders` live for everyone. The server keeps the slider values and sends them with each shot; Print values prints them to Output. The first shot after a rack is the break; the server sets Table1's `BreakNext` attribute so the shooter's screen starts it at break power. All of them check `RunService:IsStudio()`, so they can never run in a live server, with one exception: `Config.Debug.PhysicsTestLive` also runs the physics test mode in published servers, for the place's owner only, so I can test on my real phone. `Shared/PhysicsTestAccess.luau` decides who may use it, and the server checks it on every test request. It's turned off before launch.
 
 ## Place contract
 

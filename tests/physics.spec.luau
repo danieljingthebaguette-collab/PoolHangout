@@ -34,10 +34,13 @@ local function shotRolling(dx: number, dy: number, distance: number): Simulate.S
 	}
 end
 
--- Config with no rolling slowdown, so speeds right after a hit can be checked exactly.
-local function frictionless(): Simulate.Params
-	local physics = table.clone(PHYSICS)
+-- Config with no rolling slowdown, so speeds right after a hit can be checked exactly, plus any other changes.
+local function frictionless(changes: { [string]: number }?): Simulate.Params
+	local physics = table.clone(PHYSICS) :: any
 	physics.RollingSlowdown = 0
+	for name, value in changes or {} do
+		physics[name] = value
+	end
 	return { Table = Config.Table, Physics = physics }
 end
 
@@ -78,13 +81,16 @@ return function(test, check)
 	end)
 
 	test("Follow: a ball rolling into another keeps some of its forward roll", function()
-		local keep = 1 - (1 - PHYSICS.Follow) * (1 + PHYSICS.BallBounce) / 2
+		-- Config has no follow, like 8 Ball Duels, so this tests the setting at natural roll
+		local follow = 0.29
+		local params = frictionless({ Follow = follow })
+		local keep = 1 - (1 - follow) * (1 + PHYSICS.BallBounce) / 2
 		local speed = PHYSICS.FullPowerSpeed * 0.5 ^ PHYSICS.PowerCurve
 
 		local sim = Simulate.start(
 			{ ball(0, layout.headLineX, 0), ball(1, 0, 0) },
 			{ dirX = 1, dirY = 0, power = 0.5 },
-			frictionless()
+			params
 		)
 		local cue, object = sim.balls[1], sim.balls[2]
 		stepUntil(sim, function()
@@ -95,12 +101,89 @@ return function(test, check)
 
 		-- With no follow a half-ball hit sends the cue ball off almost square to the object ball; follow bends it forward
 		local balls, dirX, dirY = cutShot(30, WIDTH / 4)
-		sim = Simulate.start(balls, { dirX = dirX, dirY = dirY, power = 0.5 }, frictionless())
+		sim = Simulate.start(balls, { dirX = dirX, dirY = dirY, power = 0.5 }, params)
 		cue, object = sim.balls[1], sim.balls[2]
 		stepUntil(sim, function()
 			return object.vx ~= 0
 		end)
 		check.near(degrees(cue.vx, cue.vy), degrees(keep * dirX, dirY), 0.01, "half-ball hit, cue ball")
+	end)
+
+	test("a full straight hit stops the cue ball almost dead", function()
+		local sim = Simulate.start(
+			{ ball(0, layout.headLineX, 0), ball(1, 0, 0) },
+			{ dirX = 1, dirY = 0, power = 1 },
+			frictionless()
+		)
+		local cue, object = sim.balls[1], sim.balls[2]
+		stepUntil(sim, function()
+			return object.vx ~= 0
+		end)
+		-- With no follow it keeps only what BallBounce leaves: (1 - 0.94) / 2, 3% of its speed
+		check.near(cue.vx / PHYSICS.FullPowerSpeed, (1 - PHYSICS.BallBounce) / 2, 1e-9, "cue ball's share kept")
+		check.truthy(cue.vx / PHYSICS.FullPowerSpeed <= 0.05, "almost dead")
+	end)
+
+	test("a cut sends the cue ball along the tangent line, with no curve after", function()
+		-- Exactly along the tangent with a perfectly elastic hit; Config's BallBounce leaves a small nudge forward
+		for _, bounce in { 1, PHYSICS.BallBounce } do
+			for _, cut in { 15, 30, 45, 60, 75 } do
+				local balls, dirX, dirY = cutShot(cut, WIDTH / 4)
+				local sim = Simulate.start(
+					balls,
+					{ dirX = dirX, dirY = dirY, power = 1 },
+					frictionless({ BallBounce = bounce })
+				)
+				local cue, object = sim.balls[1], sim.balls[2]
+				stepUntil(sim, function()
+					return object.vx ~= 0
+				end)
+				-- The object ball leaves along +x, the line of centers; the tangent line is square to it
+				local speed = PHYSICS.FullPowerSpeed
+				check.near(cue.vy, speed * dirY, 1e-9, `{cut}° cut, bounce {bounce}: along the tangent`)
+				check.near(cue.vx, speed * dirX * (1 - bounce) / 2, 1e-9, `{cut}° cut, bounce {bounce}: nudge`)
+				-- No curve: still heading the same way a while later
+				local heading = degrees(cue.vx, cue.vy)
+				Simulate.step(sim, 100)
+				if not cue.pocket and cue.vx ~= 0 then
+					check.near(degrees(cue.vx, cue.vy), heading, 1e-6, `{cut}° cut: no curve`)
+				end
+			end
+		end
+	end)
+
+	test("the break gets BreakPower times a normal shot's full power", function()
+		local sim = Simulate.start({ ball(0, 0, 0) }, { dirX = 1, dirY = 0, power = 1, isBreak = true })
+		check.near(sim.balls[1].vx, PHYSICS.FullPowerSpeed * PHYSICS.BreakPower, 1e-9, "break")
+		check.truthy(sim.balls[1].vx >= 74, "about 75 studs/s, like 8 Ball Duels")
+	end)
+
+	test("fast balls can't pass through a ball or a rail", function()
+		-- Twice the fastest break the sliders allow
+		local top = {}
+		for _, slider in Config.Debug.TestSliders do
+			top[slider.name] = slider.max
+		end
+		local fastest = 2 * top.FullPowerSpeed * top.BreakPower
+		local params = frictionless({ FullPowerSpeed = fastest, RollingSlowdown = PHYSICS.RollingSlowdown })
+
+		local sim = Simulate.run(
+			{ ball(0, layout.headLineX, 0), ball(1, 0, 0) },
+			{ dirX = 1, dirY = 0, power = 1 },
+			params
+		)
+		check.equal(sim.events[1].kind, "ball", "the cue ball hits ball 1 first")
+		check.equal(sim.events[1].id, 0, "the cue ball hits ball 1 first")
+
+		-- Straight at the long rail, well away from the pockets
+		sim = Simulate.run({ ball(0, LENGTH / 4, 0) }, { dirX = 0, dirY = 1, power = 1 }, params)
+		check.equal(sim.events[1].kind, "rail", "bounces off the rail")
+		for _, b in sim.balls do
+			check.truthy(
+				math.abs(b.x) <= LENGTH / 2 and math.abs(b.y) <= WIDTH / 2 or b.pocket ~= nil,
+				"stays on the table"
+			)
+		end
 	end)
 
 	test("a rail bounce mirrors the angle and keeps RailBounce of the speed", function()
@@ -171,14 +254,15 @@ return function(test, check)
 		check.equal(spots[1].x, LENGTH / 4, "apex on the foot spot")
 	end)
 
-	test("over 100 breaks, no ball leaves the table and none end up overlapping", function()
+	test("over 100 breaks at break power, no ball leaves the table and none end up overlapping", function()
 		local apex = layout.rack[1]
 		for i = 0, 99 do
 			local cueY = (i % 10 / 9 - 0.5) * WIDTH / 2
 			local dx, dy = apex.x - layout.headLineX, apex.y - cueY
 			local length = math.sqrt(dx * dx + dy * dy)
 			local power = 0.4 + 0.6 * (i // 10) / 9
-			local sim = Simulate.run(rack(cueY), { dirX = dx / length, dirY = dy / length, power = power })
+			local shot = { dirX = dx / length, dirY = dy / length, power = power, isBreak = true }
+			local sim = Simulate.run(rack(cueY), shot)
 			for j, a in sim.balls do
 				if a.pocket then
 					continue
@@ -226,12 +310,54 @@ return function(test, check)
 			end
 			return table.concat(kinds, ", ")
 		end
-		-- Straight into ball 1, which drops in the +y side pocket, and the cue ball follows it in
-		local potted = events({ ball(0, 0, -WIDTH / 4), ball(1, 0, 0) }, shotRolling(0, 1, WIDTH), frictionless())
+		-- Straight into ball 1, which drops in the +y side pocket, and with some follow the cue ball rolls in after it
+		local potted =
+			events({ ball(0, 0, -WIDTH / 4), ball(1, 0, 0) }, shotRolling(0, 1, WIDTH), frictionless({ Follow = 0.29 }))
 		check.equal(potted, "ball 0, pocket 1, pocket 0", "pot")
 		-- Just reaches the +y long rail, comes off it and stops
 		local banked = events({ ball(0, -LENGTH / 4, 0) }, shotRolling(0, 1, WIDTH / 2 - RADIUS + WIDTH / 8))
 		check.equal(banked, "rail 0", "rail")
+	end)
+
+	test("8 Ball Duels' rail-to-rail shot: same timings and stopping spot", function()
+		-- Measured from a recording: a ball leaves a long rail straight across at 12.6 studs/s, reaches the far rail
+		-- after 0.62 s, comes back to the first rail 1.02 s later, and stops 2.57 s after that, 6.2 studs out
+		local physics = table.clone(PHYSICS) :: any
+		physics.FullPowerSpeed = 12.6
+		local startY = -WIDTH / 2 + RADIUS
+		local sim = Simulate.run(
+			{ ball(0, LENGTH / 4, startY) },
+			{ dirX = 0, dirY = 1, power = 1 },
+			{ Table = Config.Table, Physics = physics }
+		)
+		local rails = {}
+		for _, event in sim.events do
+			if event.kind == "rail" then
+				table.insert(rails, event.time)
+			end
+		end
+		check.equal(#rails, 2, "rail hits")
+		local stopped = sim.steps * PHYSICS.TimeStep
+		check.near(rails[1], 0.62, 0.02, "reaches the far rail")
+		check.near(rails[2] - rails[1], 1.02, 0.03, "back to the first rail")
+		check.near(stopped - rails[2], 2.57, 0.05, "then stops")
+		check.near(sim.balls[1].y - startY, 6.2, 0.25, "studs out from the rail")
+	end)
+
+	test("SpeedDrag: fast balls lose speed quicker, slow rolls barely change", function()
+		local drag = 0.05
+		local physics = table.clone(PHYSICS) :: any
+		physics.SpeedDrag = drag
+		for _, speed in { 20, 1 } do
+			physics.FullPowerSpeed = speed
+			local sim = Simulate.start({ ball(0, 0, 0) }, { dirX = 1, dirY = 0, power = 1 }, {
+				Table = Config.Table,
+				Physics = physics,
+			})
+			Simulate.step(sim, 1)
+			local lost = (speed - sim.balls[1].vx) / PHYSICS.TimeStep
+			check.near(lost, PHYSICS.RollingSlowdown + drag * speed, 1e-6, `slowdown at {speed} studs/s`)
+		end
 	end)
 
 	test("PowerCurve: half a pull gives half ^ PowerCurve of full speed", function()
@@ -250,7 +376,7 @@ return function(test, check)
 		local fastest = math.huge
 		for _ = 1, 3 do
 			local started = os.clock()
-			Simulate.run(rack(0), { dirX = 1, dirY = 0, power = 1 })
+			Simulate.run(rack(0), { dirX = 1, dirY = 0, power = 1, isBreak = true })
 			fastest = math.min(fastest, os.clock() - started)
 		end
 		check.truthy(fastest < 0.05, `took {math.round(fastest * 1000)} ms`)

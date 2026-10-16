@@ -15,14 +15,22 @@ local Config = {
 	},
 
 	Physics = {
-		FullPowerSpeed = 30,
-		RollingSlowdown = 2.3, -- studs/s², so full power rolls about 196 studs, about 12 table lengths
-		RailBounce = 0.7, -- fraction of speed kept after a rail hit
-		BallBounce = 0.9,
-		Follow = 0.3, -- forward roll a ball keeps after running into another: 0 stops it dead, 0.29 is natural roll
-		PowerCurve = 1.2, -- shot speed is pull ^ PowerCurve of full power: 1 is even, above 1 gives soft shots more pull
+		-- Measured from 8 Ball Duels, frame by frame
+		FullPowerSpeed = 25,
+		BreakPower = 3, -- the break's full power, as a multiple of a normal shot's
+		RollingSlowdown = 1.84, -- studs/s², so full power rolls about 170 studs, about 11 table lengths
+		-- Extra slowdown per stud/s of speed: slowdown = RollingSlowdown + SpeedDrag × speed. Fast balls lose speed
+		-- quicker while slow rolls barely change. 0 is a steady slowdown at every speed, like 8 Ball Duels.
+		SpeedDrag = 0,
+		RailBounce = 0.73, -- fraction of speed kept after a rail hit
+		BallBounce = 0.94, -- a full hit leaves the cue ball (1 - BallBounce) / 2 of its speed: 3%, almost dead
+		Follow = 0, -- forward roll a ball keeps after running into another: 0 stops it dead, 0.29 is natural roll
+		PowerCurve = 1.45, -- shot speed is pull ^ PowerCurve of full power: 1 is even, above 1 gives soft shots more pull
 		StopSpeed = 0.032,
 		TimeStep = 1 / 960,
+		-- Ball radii the fastest ball may move in one step. A faster ball, like on the break, splits the step into
+		-- smaller ones, so hits stay exact and nothing passes through a ball or rail at any speed.
+		MaxStepTravel = 1 / 3,
 		TimeCap = 20,
 	},
 
@@ -93,8 +101,10 @@ local Config = {
 		PhysicsTestLive = true,
 		-- The physics test mode's live sliders: the Config value each one sets, its range and its step
 		TestSliders = {
-			{ group = "Physics", name = "RollingSlowdown", min = 1.6, max = 24, step = 0.1 },
-			{ group = "Physics", name = "FullPowerSpeed", min = 8, max = 64, step = 0.5 },
+			{ group = "Physics", name = "RollingSlowdown", min = 1, max = 24, step = 0.01 },
+			{ group = "Physics", name = "SpeedDrag", min = 0, max = 0.1, step = 0.001 },
+			{ group = "Physics", name = "FullPowerSpeed", min = 8, max = 50, step = 0.5 },
+			{ group = "Physics", name = "BreakPower", min = 1, max = 5, step = 0.1 },
 			{ group = "Physics", name = "RailBounce", min = 0.3, max = 1, step = 0.01 },
 			{ group = "Physics", name = "BallBounce", min = 0.5, max = 1, step = 0.01 },
 			{ group = "Physics", name = "Follow", min = 0, max = 0.6, step = 0.01 },
