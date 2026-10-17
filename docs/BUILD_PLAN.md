@@ -64,7 +64,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] Automatic rule tests: 25+ scenarios, like sinking the cue ball on the 8, that rerun after every change (Claude)
 - [ ] Earning items: one item bar per player that gives a random item at 12 points: +3 at the start of your turn, +4 for each of your balls you sink, +2 for each ball the other side sinks (in 2v2, all to the opponent who shoots next). When the bar fills with both slots full, it glows and the item arrives as soon as a slot frees. The bar sits under each card's 2 slots, with a small pop like "+4" for each fill. Test-panel buttons to give myself any item (Claude)
 - [ ] Using items: press 1 or 2 (phones: tap the slot), on your own turn, one per shot, with the item's name shown big to everyone at the table. Slot icons drawn in code. Plain placeholder looks until Phase 4 (Claude)
-- [ ] Power Shot (for the rest of the turn the meter keeps filling past 100%, up to 150% at 1.5× the full pull) and Blast Ball (one shot), with Lune tests for the blast (Claude)
+- [ ] Power Shot (for the rest of the turn the meter keeps filling past 100%, up to 150% at 1.5× the full pull) and Blast Ball (one shot), with Lune tests for the blast. Check that a 150% pull fits on screen for a cue ball against a long rail shooting straight across, on a 1920×1080 PC and a phone; if it doesn't, make the extra 50% take less pull (Claude)
 - [ ] Arena blockout: `tools/BuildArena.luau` builds the walls, floor, 8 table spots and the counter in plain parts (Claude builds it, I adjust)
 - [ ] Playtest with 2 friends on a friends-only test version (Me)
 - [ ] End-of-phase check on my real phone: everything built this phase works by touch (Me)
