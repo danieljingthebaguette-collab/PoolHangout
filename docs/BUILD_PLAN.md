@@ -7,11 +7,12 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
-- **In progress:** nothing being built. The item design and the switch to models Claude builds are in the docs and committed. Waiting on my PC test: the 8 Ball Duels physics with a 3× break, the new art direction (`docs/STYLE.md`) on the lighting, test table, floor and HUD, the 8 Ball Duels aim indicator (center dot, white and yellow lines, dark outlines), and the 8 Ball Duels pull (free cursor, power straight back from where I pressed, full power 6 studs past the cancel zone, with a slider). STYLE.md's timer and item slots come in Phase 2; its effects, player ring and lodge in Phase 4.
-- **Last session:** 2026-10-16. Matched the physics to my 8 Ball Duels measurements (FullPowerSpeed 25, BreakPower 3, RollingSlowdown 1.84, RailBounce 0.73, BallBounce 0.94, Follow 0, PowerCurve 1.45, sub-steps for fast balls, optional SpeedDrag). Moved to the new art direction in `docs/STYLE.md`: warm golden lighting, a matte painted table on a plank floor, a cream-card HUD. Rebuilt the aim indicator and the pull to work like 8 Ball Duels. Wrote the item design (with my lock-out rules) and the switch to models Claude builds into every doc, ARCHITECTURE.md included. On 2026-10-17, replaced item boxes with earned items, then the earning rules with one item bar per player, in every doc.
-- **Next up:** my PC test of the Phase 1 work (restart the playtest first, so it runs the new code), then Phase 1's age check (answering the questionnaire for the item version) and phone check
+- **In progress:** nothing being built. Waiting on my PC test of the work from 2026-10-16: the 8 Ball Duels physics with a 3× break, the new art direction (`docs/STYLE.md`) on the lighting, test table, floor and HUD, the 8 Ball Duels aim indicator (center dot, white and yellow lines, dark outlines), and the 8 Ball Duels pull (free cursor, power straight back from where I pressed, full power 6 studs past the cancel zone, with a slider). STYLE.md's timer and item slots come in Phase 2; its effects, player ring and lodge in Phase 4.
+- **Last session:** 2026-10-17 (started 2026-10-16). Docs only, no code. The game is now intense and item-based: an item bar per player (+3 a turn, +4 per own ball, +2 per opponent ball, 12 per item), 5 items with lock-out rules, and Power Shot taking the meter past 100% to 150%. There's no modeler: Claude builds every model with builder scripts and writes Studio AI prompts for organic shapes. Items fill Phases 2–4, and the avatar lean and quick phrases moved to the Later list.
+- **Next up:** my PC test of the Phase 1 work (restart the playtest first, so it runs the current code), then Phase 1's age check (answering the questionnaire for the item version)
 - **Known issues:**
-  - Touch and the new HUD layout haven't been tried on a real phone yet, only in the emulator; it's covered by Phase 1's phone check
+  - Touch and the new HUD layout haven't been tried on a real phone yet, only in the emulator; it's covered by the Mobile phase
+  - The existing touch code isn't tested or extended until the Mobile phase, so it will fall behind the PC features built before then
   - Lighting.Technology has to be set to Future by hand in Studio; scripts can't change it
   - Three code comments still mention commissioned models (`Config.luau`, `BuildTable.luau`, `PhysicsTest.luau`); fix them the next time those files change
   - The GUI needs tweaking. Leave it as it is until I say we'll get to it
@@ -24,14 +25,14 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 2. **Gates.** Each phase ends with something playable and a "Done when" test. Don't start the next phase until it passes.
 3. **One config file.** Every tuning number lives there, so changing the feel never means rewriting code.
 4. **Tested rules.** Physics and 8-ball rules are plain Luau modules with automatic tests, so a fix can't quietly break another rule.
-5. **PC every step, my phone every phase.** I test each step on PC. Most Roblox players are on phones, so every feature works by touch as it's built, kept simple, and I test on my real phone once at the end of each phase.
+5. **PC only until the Mobile phase.** I test every step and every "Done when" on PC. The touch code that's already there stays, but isn't tested or extended until Phase 5, the Mobile phase. Most Roblox players are on phones, so that phase makes everything work by touch before launch.
 6. **Save often.** Commit to git every session, and save a place version before big changes.
 7. **A Later list.** New ideas go on the Later list in GAME_SPEC.md, not into the current phase.
 8. **Feature freeze Dec 4.** The last week is only for fixing.
 
 ## Phase 1, Oct 12–25: the shot on one table
 
-**Goal:** one table where sinking a ball feels great on PC and on my phone.
+**Goal:** one table where sinking a ball feels great on PC.
 
 - [x] Set up Studio's MCP connection, Script Sync, git and this kit (Me)
 - [x] One config file for every tuning number: table size, pocket size, friction, rail bounce, max power, shot clock (Claude)
@@ -45,9 +46,8 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [x] Restyle the table (slim rails with diamonds, real-size pockets, classic green and warm wood) and add a HUD laid out like 8 Ball Duels: power meter with %, sunk-ball tray, ball shadows, my player card, settings with sound volume, a collapsible test panel (Claude)
 - [x] Decide the final table size, since `docs/MODELS.md` needs it (Me)
 - [ ] Complete the age check and the Maturity & Compliance Questionnaire, so friends can test from Phase 2 (Me)
-- [ ] End-of-phase check on my real phone: everything built this phase works by touch (Me)
 
-**Done when:** I take 30 shots in a row on PC and on my phone with no bugs, and sinking a ball feels satisfying. If it doesn't, keep tuning before Phase 2.
+**Done when:** I take 30 shots in a row on PC with no bugs, and sinking a ball feels satisfying. If it doesn't, keep tuning before Phase 2.
 
 ## Phase 2, Oct 26–Nov 8: 8-ball rules, 1v1 turns and earning items
 
@@ -63,13 +63,12 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] Your group's balls pulse white briefly when your turn starts (Claude)
 - [ ] Automatic rule tests: 25+ scenarios, like sinking the cue ball on the 8, that rerun after every change (Claude)
 - [ ] Earning items: one item bar per player that gives a random item at 12 points: +3 at the start of your turn, +4 for each of your balls you sink, +2 for each ball the other side sinks (in 2v2, all to the opponent who shoots next). When the bar fills with both slots full, it glows and the item arrives as soon as a slot frees. The bar sits under each card's 2 slots, with a small pop like "+4" for each fill. Test-panel buttons to give myself any item (Claude)
-- [ ] Using items: press 1 or 2 (phones: tap the slot), on your own turn, one per shot, with the item's name shown big to everyone at the table. Slot icons drawn in code. Plain placeholder looks until Phase 4 (Claude)
-- [ ] Power Shot (for the rest of the turn the meter keeps filling past 100%, up to 150% at 1.5× the full pull) and Blast Ball (one shot), with Lune tests for the blast. Check that a 150% pull fits on screen for a cue ball against a long rail shooting straight across, on a 1920×1080 PC and a phone; if it doesn't, make the extra 50% take less pull (Claude)
+- [ ] Using items: press 1 or 2, on your own turn, one per shot, with the item's name shown big to everyone at the table. Slot icons drawn in code. Plain placeholder looks until Phase 4 (Claude)
+- [ ] Power Shot (for the rest of the turn the meter keeps filling past 100%, up to 150% at 1.5× the full pull) and Blast Ball (one shot), with Lune tests for the blast. Check that a 150% pull fits on screen for a cue ball against a long rail shooting straight across, on a 1920×1080 PC; if it doesn't, make the extra 50% take less pull. The phone check is in the Mobile phase (Claude)
 - [ ] Arena blockout: `tools/BuildArena.luau` builds the walls, floor, 8 table spots and the counter in plain parts (Claude builds it, I adjust)
 - [ ] Playtest with 2 friends on a friends-only test version (Me)
-- [ ] End-of-phase check on my real phone: everything built this phase works by touch (Me)
 
-**Done when:** every rule and item test passes, and 2 friends finish 3 full games, items included, without me explaining anything.
+**Done when:** every rule and item test passes, and 2 friends finish 3 full games on PC, items included, without me explaining anything.
 
 ## Phase 3, Nov 9–22: tables, joining, 2v2, leaving and the last 3 items
 
@@ -85,11 +84,10 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] Leaving: the empty platform lights up, and anyone who stands on it for 5 seconds takes over. After 15 seconds with nobody, the other player wins a 1v1, or the teammate plays on alone in 2v2. Disconnects count as leaving, and 2 timeouts in a row removes a player (Claude)
 - [ ] Freeze, Oil Slick and Pocket Block: frozen balls and pocket lids bounce balls like rails, oil patches slow balls less, and the aim indicator knows about frozen balls and lids. The lock-out rules: no freezing the 8, no Pocket Block against a side shooting at the 8, and no side targeting the same ball or pocket two turns running. With Lune tests (Claude)
 - [ ] Playtest with 4 friends: 1v1 and 2v2, with people leaving mid-game on purpose and every item used (Me)
-- [ ] End-of-phase check on my real phone: everything built this phase works by touch (Me)
 
-**Done when:** 4 friends play for 30 minutes straight, including leaving mid-game, every item gets used, and no table ever gets stuck.
+**Done when:** 4 friends play on PC for 30 minutes straight, including leaving mid-game, every item gets used, and no table ever gets stuck.
 
-## Phase 4, Nov 23–Dec 4: the arena, effects and polish
+## Phase 4, Nov 23–29: the arena, effects and polish
 
 **Goal:** it looks, sounds and feels big and punchy, and people want to stay.
 
@@ -100,17 +98,28 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] Server size 30 and voice chat turned on (Me)
 - [ ] Upbeat music and sounds: ball clicks, rail thuds, pocket drops and a sound for each item (I pick them, Claude wires them in)
 - [ ] Item balance pass: the item bar's points, blast strength, oil, item odds, all in Config. Aim for about one item every 2 turns per player. Try raising `OpponentBallPoints` to 3 for a stronger comeback, and `SinkItemsWaitForTurnEnd` if item runs get out of hand (Me + Claude)
-- [ ] Phone pass: button sizes, readable text, 30+ fps on a mid-range phone (I test, Claude fixes)
 - [ ] Analytics: joined → first game started → first game finished → second game (Claude)
 - [ ] Store page: name, icon, 3–5 thumbnails, and a description (Me)
-- [ ] Big playtest over Thanksgiving weekend, Nov 26–29, with as many friends as I can get (Me)
-- [ ] End-of-phase check on my real phone: everything built this phase works by touch (Me)
+- [ ] Big playtest over Thanksgiving weekend, Nov 26–29, with as many friends as I can get, on PC (Me)
 
-**Done when:** Thanksgiving testers stay 20+ minutes without being asked, and I have a written bug and balance list.
+**Done when:** Thanksgiving testers on PC stay 20+ minutes without being asked, and I have a written bug and balance list.
+
+## Phase 5, Nov 30–Dec 4: Mobile
+
+**Goal:** everything built so far works by touch on my phone, held sideways.
+
+- [ ] Touch controls: bring the existing touch code (drag to aim, a touch near the cue ball to pull, the Lock button, the F button) up to date with everything built since Phase 1 (Claude)
+- [ ] Touch for items: tap a slot to use an item, and tap a ball, a spot on the felt or a pocket to pick a target, choosing the nearest one within a finger's reach (Claude)
+- [ ] Phone HUD layout: the power meter with the Lock button beside it, the item slots, the cards with their item bars, the hints and the top bar all fit a phone held sideways, with touch targets of at least 44 px (Claude)
+- [ ] Power Shot near-rail check on a phone: a 150% pull fits on screen for a cue ball against a long rail shooting straight across; if it doesn't, make the extra 50% take less pull (Claude)
+- [ ] Phone pass: button sizes, readable text, 30+ fps on a mid-range phone (I test, Claude fixes)
+- [ ] Check on my real phone: everything works by touch (Me)
+
+**Done when:** on my real phone I take 30 shots in a row and finish a full game with items, with no bugs, at 30+ fps.
 
 **Feature freeze Dec 4:** nothing new gets added after this date, items included.
 
-## Phase 5, Dec 5–10: fix and launch prep
+## Phase 6, Dec 5–10: fix and launch prep
 
 **Goal:** launch Friday, Dec 11 with no known game-breaking bugs.
 
@@ -118,10 +127,9 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] Turn off `Config.Debug.PhysicsTestLive` before launch, so the test mode can't run in public servers (Claude)
 - [ ] Final test with friends on PC and phones (Me)
 - [ ] Edit 6 short videos from playtest clips (Me)
-- [ ] End-of-phase check on my real phone: everything built this phase works by touch (Me)
 - [ ] Launch day: set the audience to Public, post the first videos, and share the link (Me)
 
-**If my Nov 1 application eats late October, or the items run long,** slide Phases 2–5 back one week and launch Dec 18. Don't cut the fix week.
+**If my Nov 1 application eats late October, or the items run long,** slide Phases 2–6 back one week and launch Dec 18. Don't cut the fix week.
 
 ## After launch
 

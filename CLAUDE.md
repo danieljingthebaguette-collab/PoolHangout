@@ -7,7 +7,7 @@ The documents imported at the bottom are the source of truth: what the game is (
 ## Working with me
 
 - I'm new to Roblox scripting. After each change, explain what it does in a sentence or two of plain English. When I need to do something in Studio, give me the exact clicks.
-- PC first. I test each step on PC only, so don't ask me to check the phone emulator. Keep every new feature working by touch as you build it, but keep the touch version simple, and don't hold a step waiting on a phone check. I test on my real phone once at the end of each phase.
+- PC only for now. I test every step and every phase's "Done when" on PC. Leave the existing touch code in place, but don't test it, extend it or add touch versions of new features until the Mobile phase in BUILD_PLAN.md, and don't ask me to check a phone or the phone emulator before then.
 - Work on the current phase in BUILD_PLAN.md, one task at a time. Don't build anything from a later phase or the Later list early, even if it's quick.
 - For anything bigger than a small fix, plan first and wait for my OK before writing code.
 - Keep changes small. Don't rename, restructure or refactor code the task doesn't need.

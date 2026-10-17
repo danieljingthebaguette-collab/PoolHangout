@@ -66,7 +66,7 @@ Every value lives in `src/Shared/Theme.luau`, and UI is built in code. `src/Clie
 - **Bottom left:** the settings gear and, in test mode, the Test button.
 - **Bottom center:** the item slots.
 
-Touch targets stay at least 44 px, and everything fits a phone held sideways.
+Touch targets stay at least 44 px, and everything fits a phone held sideways. Both are checked in the Mobile phase; until then the UI is built and tested on PC.
 
 **Built so far:** cards, the font, dark boxes, control hints and accent buttons. **Not built yet:** the timer, item slots and the ring at players' feet.
 
