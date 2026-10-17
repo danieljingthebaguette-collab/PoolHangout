@@ -141,16 +141,19 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	indicatorGui.Name = "AimIndicator"
 	indicatorGui.ResetOnSpawn = false
 	indicatorGui.IgnoreGuiInset = true -- so the camera's viewport points place it directly
-	local function indicatorLine(): Frame
+	local function indicatorLine(color: Color3): Frame
 		local line = Instance.new("Frame")
 		line.AnchorPoint = Vector2.new(0.5, 0.5)
-		line.BackgroundColor3 = Theme.Colors.AimLine
+		line.BackgroundColor3 = color
 		line.BorderSizePixel = 0
 		line.Visible = false
 		line.Parent = indicatorGui
 		return line
 	end
-	local pathLine, targetLine = indicatorLine(), indicatorLine()
+	-- The line to the circle, the cue ball's line after the hit, and the hit ball's yellow line
+	local pathLine = indicatorLine(Theme.Colors.AimLine)
+	local cueLine = indicatorLine(Theme.Colors.AimLine)
+	local targetLine = indicatorLine(Theme.Colors.TargetLine)
 	-- A ball-sized ring where the cue ball will be when it first touches something
 	local ghost = Instance.new("Frame")
 	ghost.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -162,6 +165,15 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	ghostOutline.Color = Theme.Colors.AimLine
 	ghostOutline.Thickness = Theme.Ui.AimLineThickness
 	ghostOutline.Parent = ghost
+	-- A small dot at the circle's center, where the line ends and the cue ball's line starts
+	local dot = Instance.new("Frame")
+	dot.AnchorPoint = Vector2.new(0.5, 0.5)
+	dot.Size = UDim2.fromOffset(Theme.Ui.AimDotSize, Theme.Ui.AimDotSize)
+	dot.BackgroundColor3 = Theme.Colors.AimLine
+	dot.BorderSizePixel = 0
+	dot.Visible = false
+	dot.Parent = indicatorGui
+	roundCorners(dot)
 	indicatorGui.Parent = playerGui
 
 	-- Radians in table space: 0 aims along +x, at the rack
@@ -231,13 +243,16 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	end
 
 	local function hideIndicator()
-		pathLine.Visible, targetLine.Visible, ghost.Visible = false, false, false
+		pathLine.Visible, cueLine.Visible, targetLine.Visible = false, false, false
+		ghost.Visible, dot.Visible = false, false
 	end
 
 	-- See-through while aiming or about to cancel, solid while the aim is locked
 	local function fadeIndicator(faint: boolean)
 		local transparency = if faint then Theme.Ui.AimFaintTransparency else 0
-		pathLine.BackgroundTransparency, targetLine.BackgroundTransparency = transparency, transparency
+		for _, part in { pathLine, cueLine, targetLine, dot } do
+			part.BackgroundTransparency = transparency
+		end
 		ghostOutline.Transparency = transparency
 	end
 
@@ -258,24 +273,47 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 				table.insert(balls, { id = id, x = x, y = y })
 			end
 		end
-		local contact = Preview.firstContact(balls, math.cos(aim), math.sin(aim), Config.Table, layout)
+		-- The hit uses the physics the shot will use, sliders and all
+		local physics = PhysicsTestAccess.params().Physics
+		local contact = Preview.firstContact(balls, math.cos(aim), math.sin(aim), Config.Table, layout, physics)
 		if Config.Aim.ShowAimLine then
+			-- The line runs to the circle's center, which the dot marks
 			showLine(pathLine, cueX, cueY, contact.x, contact.y)
 			local middle = toScreen(contact.x, contact.y)
 			local diameter = 2 * (toScreen(contact.x + radius, contact.y) - middle).Magnitude
 			ghost.Position = UDim2.fromOffset(middle.X, middle.Y)
 			ghost.Size = UDim2.fromOffset(diameter, diameter)
 			ghost.Visible = true
+			dot.Position = ghost.Position
+			dot.Visible = true
 		end
-		if Config.Aim.ShowTargetLine and contact.ball then
+		local hit = contact.hit
+		if not (contact.ball and hit) then
+			return
+		end
+		-- Each line is its longest times the share of the speed its ball gets, but never shorter than the minimum
+		local function length(share: number, longest: number): number
+			return math.max(Config.Aim.LineMinLength, share * longest) * radius
+		end
+		if Config.Aim.ShowCueLine then
+			local afterLength = length(hit.cueShare, Config.Aim.CueLineLength)
+			showLine(
+				cueLine,
+				contact.x,
+				contact.y,
+				contact.x + hit.cueX * afterLength,
+				contact.y + hit.cueY * afterLength
+			)
+		end
+		if Config.Aim.ShowTargetLine then
 			local hitX, hitY = TableSpace.toTable(felt, ballParts[contact.ball].Position)
-			local length = Config.Aim.TargetLineLength * radius
+			local ballLength = length(hit.ballShare, Config.Aim.TargetLineLength)
 			showLine(
 				targetLine,
 				hitX,
 				hitY,
-				hitX + (contact.pushX :: number) * length,
-				hitY + (contact.pushY :: number) * length
+				hitX + (contact.pushX :: number) * ballLength,
+				hitY + (contact.pushY :: number) * ballLength
 			)
 		end
 	end

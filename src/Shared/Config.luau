@@ -52,9 +52,17 @@ local Config = {
 	},
 
 	Aim = {
-		ShowAimLine = true, -- the aim indicator's line from the cue ball and the circle where it first touches something
-		ShowTargetLine = true, -- the aim indicator's short line showing which way the hit ball goes
-		TargetLineLength = 6, -- ball radii
+		-- The aim indicator's parts: the line from the cue ball to the circle where it first touches something, with a
+		-- dot at the circle's center; the white line from that dot showing where the cue ball goes after the hit; and
+		-- the yellow line from the hit ball showing where it goes
+		ShowAimLine = true,
+		ShowCueLine = true,
+		ShowTargetLine = true,
+		-- Ball radii. Each after-hit line is its longest times the share of the speed its ball gets, so a full hit
+		-- draws a long yellow line and a short white one, but never shorter than LineMinLength.
+		TargetLineLength = 6,
+		CueLineLength = 6,
+		LineMinLength = 1.5,
 		DragDeadZone = 2, -- ball radii: a pointer this close to the cue ball doesn't turn the aim, where it would jump
 		GrabRadius = 4, -- ball radii: on phones, an unlocked touch this close to the cue ball or the cue pulls instead of aiming
 		CueLength = 0.6, -- share of the table length

@@ -1,13 +1,18 @@
 --!strict
 -- Where a shot's cue ball first touches something, for the aim indicator. It follows the cue ball's straight
 -- path with the same contacts Simulate uses (balls, rails with their ends as jaws, pockets, and the felt's
--- edge), worked out exactly instead of step by step.
+-- edge), worked out exactly instead of step by step. For a ball, it also works out where each ball goes after the
+-- hit with Simulate's own rule, so the indicator shows the cue ball's slight drift forward too.
 
 local Geometry = require("./Geometry")
 
 export type Ball = { id: number, x: number, y: number, pocket: number? }
--- `x, y` is the cue ball's center at the contact. For a ball, `ball` is its id and `pushX, pushY` the unit
--- direction it gets sent: along the line between the centers, as in Simulate's equal-mass hit.
+-- What a hit sends each ball. `cueX, cueY` is the unit direction the cue ball leaves in, and `cueShare` and
+-- `ballShare` the shares of the cue ball's speed at the contact that the cue ball keeps and the hit ball gets.
+export type Hit = { cueX: number, cueY: number, cueShare: number, ballShare: number }
+-- `x, y` is the cue ball's center at the contact. For a ball, `ball` is its id, `pushX, pushY` the unit
+-- direction it gets sent (along the line between the centers, as in Simulate's equal-mass hit), and `hit` what
+-- each ball gets.
 export type Contact = {
 	kind: "ball" | "rail" | "pocket",
 	x: number,
@@ -15,7 +20,10 @@ export type Contact = {
 	ball: number?,
 	pushX: number?,
 	pushY: number?,
+	hit: Hit?,
 }
+-- The physics settings a hit depends on: Config.Physics, or the params a shot will use
+export type HitParams = { BallBounce: number, Follow: number }
 
 local Preview = {}
 
@@ -65,13 +73,29 @@ local function reachRail(x: number, y: number, dx: number, dy: number, rail: Geo
 	return best
 end
 
+-- What a cue ball heading along the unit direction (dirX, dirY) sends each ball when it hits a still ball, which
+-- leaves along the unit direction (pushX, pushY). Simulate's rule for a ball rolling into a still one: the hit
+-- ball takes (1 + BallBounce) / 2 of the speed along the line between the centers, and the cue ball keeps the
+-- rest, plus Follow of what the hit takes away. Shares don't depend on speed, so neither does this.
+function Preview.hit(dirX: number, dirY: number, pushX: number, pushY: number, physics: HitParams): Hit
+	local push = (1 + physics.BallBounce) / 2 * (dirX * pushX + dirY * pushY)
+	local taken = push * (1 - physics.Follow)
+	local cueVX, cueVY = dirX - taken * pushX, dirY - taken * pushY
+	local cueShare = math.sqrt(cueVX * cueVX + cueVY * cueVY)
+	-- A cue ball stopped dead has no direction; point its line straight on
+	local cueX, cueY = if cueShare > 0 then cueVX / cueShare else dirX, if cueShare > 0 then cueVY / cueShare else dirY
+	return { cueX = cueX, cueY = cueY, cueShare = cueShare, ballShare = push }
+end
+
 -- `dirX, dirY` must be a unit direction. `layout` is Geometry.build(tableParams), built once by the caller.
+-- `physics` decides what a hit sends each ball.
 function Preview.firstContact(
 	balls: { Ball },
 	dirX: number,
 	dirY: number,
 	tableParams: Geometry.TableParams,
-	layout: Geometry.Layout
+	layout: Geometry.Layout,
+	physics: HitParams
 ): Contact
 	local radius = tableParams.BallRadius
 	local cue: Ball = balls[1]
@@ -116,7 +140,16 @@ function Preview.firstContact(
 	if hit then
 		local nx, ny = hit.x - contactX, hit.y - contactY
 		local dist = math.sqrt(nx * nx + ny * ny)
-		return { kind = "ball", x = contactX, y = contactY, ball = hit.id, pushX = nx / dist, pushY = ny / dist }
+		local pushX, pushY = nx / dist, ny / dist
+		return {
+			kind = "ball",
+			x = contactX,
+			y = contactY,
+			ball = hit.id,
+			pushX = pushX,
+			pushY = pushY,
+			hit = Preview.hit(dirX, dirY, pushX, pushY, physics),
+		}
 	end
 	return { kind = kind, x = contactX, y = contactY }
 end

@@ -7,7 +7,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
-- **In progress:** nothing. Physics matched to 8 Ball Duels and committed: FullPowerSpeed 25, BreakPower 3, RollingSlowdown 1.84, RailBounce 0.73, BallBounce 0.94, Follow 0, PowerCurve 1.45, RackGap 0.025, SpeedDrag 0 (optional, on a slider). New art direction: `docs/STYLE.md`. The lighting, the test table and floor (placeholders) and the HUD are restyled to it, waiting on my PC test.
+- **In progress:** nothing. The aim indicator now matches 8 Ball Duels: the line ends at the circle's center with a dot, a white line shows where the cue ball goes after the hit and a yellow line where the hit ball goes, each sized by its share of the speed and worked out with the simulation's own hit rule. Waiting on my PC test, along with the restyle (`docs/STYLE.md`) and the 8 Ball Duels physics.
 - **Last session:** 2026-10-16. Committed the 8 Ball Duels physics checkpoint. Wrote `docs/STYLE.md` for the new intense, item-based look, set warm golden lighting, rebuilt the test table matte and painted-looking on a painted plank floor, and restyled the HUD: cream cards with corner brackets and a dot texture, RobotoCondensed Bold, dark boxes, sunny gold accent buttons, and control hints as label-and-key rows on the bottom right.
 - **Next up:** my PC test of the physics and the new look, then my item design (it will update GAME_SPEC.md and this plan), then Phase 1's phone check and the age check
 - **Known issues:**

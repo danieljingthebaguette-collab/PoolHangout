@@ -20,7 +20,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Shared/TableSpace.luau` | World ↔ table space, from a table's `Felt` |
 | `Shared/Physics/Geometry.luau` | Rails, pockets, head line, foot spot and rack positions, from Config |
 | `Shared/Physics/Simulate.luau` | A stepper: start it from balls, a shot and params (Config by default), advance it N steps at a time, read the `ShotResult` when done. `run()` does it all at once for tests |
-| `Shared/Physics/Preview.luau` | Where the cue ball first touches a ball, rail or pocket, and which way a hit ball goes, for the aim indicator. Same contacts as Simulate, solved exactly |
+| `Shared/Physics/Preview.luau` | Where the cue ball first touches a ball, rail or pocket, for the aim indicator, and after a hit, which way each ball goes and with what share of the speed. Same contacts and hit rule as Simulate, solved exactly |
 | `Shared/Rules/EightBall.luau` | New game, resolve a shot, timeouts, forfeits, per-player game stats |
 | `Server/Main.server.luau` | Starts the services |
 | `Server/TableService.luau` | Finds tables, watches platforms, runs countdowns and signs, starts and resets games |
