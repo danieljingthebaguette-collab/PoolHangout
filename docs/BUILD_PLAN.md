@@ -7,13 +7,14 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
-- **In progress:** nothing. The pull works like 8 Ball Duels: the cursor moves freely, and power is how far it has moved from where you pressed, straight back toward the stick (forward lowers it to 0, sideways does nothing). The aim indicator's lines, circle and dot have thin dark outlines. Waiting on my PC test, along with the 8 Ball Duels aim indicator, the restyle (`docs/STYLE.md`) and the 8 Ball Duels physics.
+- **In progress:** nothing. The pull works like 8 Ball Duels: the cursor moves freely, and power is how far it has moved from where you pressed, straight back toward the stick (forward lowers it to 0, sideways does nothing). Full power now takes 6 studs past the cancel zone (`FullPullDistance`, was a quarter of the table length, 4 studs), with a 2–10 stud slider on the test panel. The aim indicator's lines, circle and dot have thin dark outlines. Waiting on my PC test, along with the 8 Ball Duels aim indicator, the restyle (`docs/STYLE.md`) and the 8 Ball Duels physics.
 - **Last session:** 2026-10-16. Committed the 8 Ball Duels physics checkpoint. Wrote `docs/STYLE.md` for the new intense, item-based look, set warm golden lighting, rebuilt the test table matte and painted-looking on a painted plank floor, and restyled the HUD: cream cards with corner brackets and a dot texture, RobotoCondensed Bold, dark boxes, sunny gold accent buttons, and control hints as label-and-key rows on the bottom right.
 - **Next up:** my PC test of the physics and the new look, then my item design (it will update GAME_SPEC.md and this plan), then Phase 1's phone check and the age check
 - **Known issues:**
   - Touch hasn't been tried on a real phone yet, only in the emulator; it's covered by Phase 1's phone check
   - Lighting.Technology has to be set to Future by hand in Studio; scripts can't change it
   - GAME_SPEC.md, `docs/MODELS.md` and CLAUDE.md's opening line still describe the cozy bar, until the item design is decided
+  - The GUI needs tweaking. Leave it as it is until I say we'll get to it
 
 ## Rules that protect quality
 

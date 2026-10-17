@@ -30,14 +30,27 @@ function PhysicsTestAccess.canTest(player: Player): boolean
 	return ok and rank == 255
 end
 
+-- A fresh copy of one of Config's groups with the sliders' values in it. A slider whose value hasn't reached this
+-- screen yet keeps Config's.
+local function withSliders(group: string): any
+	local values = table.clone((Config :: any)[group])
+	for _, slider in Config.Debug.TestSliders do
+		if slider.group == group then
+			values[slider.name] = Remotes.TestTune:GetAttribute(slider.name) or values[slider.name]
+		end
+	end
+	return values
+end
+
 -- A fresh copy of Config with the sliders' values, so moving a slider mid-shot can't change that shot. The server
 -- shoots with it, and the shooter's screen starts the same shot with it before the server's copy arrives.
 function PhysicsTestAccess.params(): Simulate.Params
-	local params = { Table = table.clone(Config.Table), Physics = table.clone(Config.Physics) }
-	for _, slider in Config.Debug.TestSliders do
-		(params :: any)[slider.group][slider.name] = Remotes.TestTune:GetAttribute(slider.name)
-	end
-	return params
+	return { Table = withSliders("Table"), Physics = withSliders("Physics") }
+end
+
+-- Config.Shot with the sliders' values: the feel of the shot controls, like how far a full pull is
+function PhysicsTestAccess.shot(): typeof(Config.Shot)
+	return withSliders("Shot")
 end
 
 return PhysicsTestAccess

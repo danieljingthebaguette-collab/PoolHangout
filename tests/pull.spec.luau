@@ -5,7 +5,7 @@ local Config = require("../src/Shared/Config")
 local Pull = require("../src/Shared/Pull")
 
 local CANCEL = Config.Shot.CancelRadius * Config.Table.BallRadius
-local FULL = Config.Shot.FullPullDistance * Config.Table.Length
+local FULL = Config.Shot.FullPullDistance
 -- A shot along a diagonal, so nothing leans on one axis
 local DIR_X, DIR_Y = math.sqrt(0.5), math.sqrt(0.5)
 

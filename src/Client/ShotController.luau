@@ -101,7 +101,6 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	local cueBack = tipBack + cueLength / 2
 	local cueHeight = radius * Config.Aim.CueHeight
 	local cancelRadius = Config.Shot.CancelRadius * radius
-	local fullPull = Config.Shot.FullPullDistance * Config.Table.Length
 
 	-- Only this screen sees the cue
 	local cue = Instance.new("Part")
@@ -497,6 +496,8 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		-- Unlocked, a touch away from the cue ball turns the aim instead
 		if locked or not isTouch or nearCue(x, y) then
 			if canShoot() then
+				-- The full pull comes from the test panel's slider when there is one, read fresh for each pull
+				local fullPull = PhysicsTestAccess.shot().FullPullDistance
 				pulling = { input = input, state = Pull.new(x, y, cancelRadius, fullPull) }
 				pull = 0
 			end

@@ -37,6 +37,11 @@ return function(test, check)
 		check.truthy(perStep <= limit, `moves {perStep} per step, over {limit}`)
 	end)
 
+	test("a full pull, counting the cancel zone, is about 41% of the table length", function()
+		local cancel = Config.Shot.CancelRadius * Config.Table.BallRadius
+		check.near((cancel + Config.Shot.FullPullDistance) / Config.Table.Length, 0.41, 0.01)
+	end)
+
 	test("full power rolls about 11 table lengths", function()
 		local speed = Config.Physics.FullPowerSpeed
 		local distance = speed * speed / (2 * Config.Physics.RollingSlowdown)

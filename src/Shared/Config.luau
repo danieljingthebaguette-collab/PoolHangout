@@ -38,7 +38,9 @@ local Config = {
 		ClockSeconds = 45,
 		ClockWarningSeconds = 10,
 		CancelRadius = 2.5, -- ball radii: the first stretch of a pull back, where letting go cancels
-		FullPullDistance = 0.25, -- share of the table length you pull straight back past the cancel zone for full power
+		-- Studs you pull straight back past the cancel zone for full power: 6.6 studs in all with the cancel zone, about
+		-- 41% of the table length
+		FullPullDistance = 6,
 		MeterSpringSeconds = 0.15, -- how long the cue takes to slide back to rest from a full pull
 		StrikeSeconds = 0.08, -- how long the cue takes to strike forward into the cue ball after you let go
 		FollowThroughSeconds = 0.15, -- after the strike, how long the cue carries on forward while it fades out
@@ -118,6 +120,7 @@ local Config = {
 			{ group = "Physics", name = "Follow", min = 0, max = 0.6, step = 0.01 },
 			{ group = "Physics", name = "PowerCurve", min = 0.5, max = 3, step = 0.05 },
 			{ group = "Table", name = "RackGap", min = 0, max = 0.08, step = 0.001 },
+			{ group = "Shot", name = "FullPullDistance", min = 2, max = 10, step = 0.1 },
 		},
 	},
 }
