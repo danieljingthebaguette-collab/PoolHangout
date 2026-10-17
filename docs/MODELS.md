@@ -40,8 +40,8 @@ The rails are slim: the whole table, cushions and wooden rails included, is abou
 
 | Pocket | Center (X, Z) | Mouth |
 | --- | --- | --- |
-| 4 corners | (±8, ±4) | 1.0 studs, measured diagonally across the opening. The cushions on either side end **0.71 studs** from the corner along each edge |
-| 2 sides | (0, ±4) | 1.1 studs. The cushions on either side end **0.55 studs** from the center of the side |
+| 4 corners | (±8, ±4) | 0.85 studs, measured diagonally across the opening. The cushions on either side end **0.60 studs** from the corner along each edge |
+| 2 sides | (0, ±4) | 0.95 studs. The cushions on either side end **0.475 studs** from the center of the side |
 
 The cushion ends are the pockets' jaws. Inside the pocket, anything that looks like a hole works: a ball disappears once its center is over the opening.
 

@@ -7,16 +7,16 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 1, the shot on one table
-- **In progress:** nothing being built. Waiting on my PC test of the work from 2026-10-16: the 8 Ball Duels physics with a 3× break, the new art direction (`docs/STYLE.md`) on the lighting, test table, floor and HUD, the 8 Ball Duels aim indicator (center dot, white and yellow lines, dark outlines), and the 8 Ball Duels pull (free cursor, power straight back from where I pressed, full power 6 studs past the cancel zone, with a slider). STYLE.md's timer and item slots come in Phase 2; its effects, player ring and lodge in Phase 4.
+- **In progress:** nothing being built. Waiting on my PC test of the smaller pockets (corner 0.85, side 0.95, Table1 rebuilt) and of the work from 2026-10-16: the 8 Ball Duels physics with a 3× break, the new art direction (`docs/STYLE.md`) on the lighting, test table, floor and HUD, the 8 Ball Duels aim indicator (center dot, white and yellow lines, dark outlines), and the 8 Ball Duels pull (free cursor, power straight back from where I pressed, full power 6 studs past the cancel zone, with a slider). STYLE.md's timer and item slots come in Phase 2; its effects, player ring and lodge in Phase 4.
 - **Last session:** 2026-10-17 (started 2026-10-16). Docs only, no code. The game is now intense and item-based: an item bar per player (+3 a turn, +4 per own ball, +2 per opponent ball, 12 per item), 5 items with lock-out rules, and Power Shot taking the meter past 100% to 150%. There's no modeler: Claude builds every model with builder scripts and writes Studio AI prompts for organic shapes. Items fill Phases 2–4, and the avatar lean and quick phrases moved to the Later list.
 - **Next up:** my PC test of the Phase 1 work (restart the playtest first, so it runs the current code), then Phase 1's age check (answering the questionnaire for the item version)
 - **Known issues:**
   - Touch and the new HUD layout haven't been tried on a real phone yet, only in the emulator; it's covered by the Mobile phase
   - The existing touch code isn't tested or extended until the Mobile phase, so it will fall behind the PC features built before then
   - Lighting.Technology has to be set to Future by hand in Studio; scripts can't change it
-  - Three code comments still mention commissioned models (`Config.luau`, `BuildTable.luau`, `PhysicsTest.luau`); fix them the next time those files change
+  - A code comment in `PhysicsTest.luau` still mentions commissioned balls; fix it the next time that file changes
   - The GUI needs tweaking. Leave it as it is until I say we'll get to it
-  - Our break sinks about 2.5 balls and the cue ball rebounds further than in 8 Ball Duels' break (0 sunk, cue ball near the middle); no RackGap or BreakPower setting fixed both. `tools/BreakStats.luau` compares
+  - Our break sinks about 2.35 balls (2.5 before the smaller pockets) and the cue ball rebounds further than in 8 Ball Duels' break (0 sunk, cue ball near the middle); no RackGap or BreakPower setting fixed both. `tools/BreakStats.luau` compares
   - Not yet checked that a slider change reaches both the server and the shooter's screen (part 4 of my physics check)
 
 ## Rules that protect quality

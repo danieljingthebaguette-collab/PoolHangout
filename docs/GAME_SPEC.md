@@ -29,7 +29,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 
 - Playing surface 16 × 8 studs, 2:1 like a real table. With its cushions and slim wooden rails the whole table is about 18.2 × 10.2 studs: black plates over the corner pockets, the side pockets set into the rails, cushions angled at the pocket mouths, and white diamonds on the rails. The playing surface is about an avatar's hip height.
 - 16 balls: the cue ball, solids 1–7, the 8, stripes 9–15.
-- 6 pockets about real size: the corners about 2.1 ball widths across, the sides about 2.3.
+- 6 pockets, a little tighter than real: the corners about 1.8 ball widths across, the sides about 2.0.
 - A full-power shot leaves at about 25 studs/s and rolls about 11 table lengths if nothing stops it. Balls slow at a steady rate at every speed.
 - A ball loses about 27% of its speed when it bounces off a rail, and comes off at the same angle it hit.
 - No follow: on a full straight hit the cue ball stops almost dead (it keeps about 3% of its speed), and on a cut it leaves along the tangent line, nudged only slightly forward, with no curve afterwards. The object ball takes about 97% of the speed along the line of centers.

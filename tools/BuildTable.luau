@@ -1,7 +1,7 @@
 --!strict
 -- Rebuilds the greybox Table1 in the place from Config: felt, cushions with angled jaws, slim wooden rails with
 -- diamonds, black corner plates, side pocket holes, body and legs. Keeps Felt (resized to Config), Platforms and
--- the runtime Balls folder; replaces every other part. Placeholder until the commissioned table arrives. The look
+-- the runtime Balls folder; replaces every other part. Built to docs/MODELS.md until Phase 4's final looks. The look
 -- follows docs/STYLE.md: matte, painted-looking flat colors (SmoothPlastic everywhere, no textured materials).
 --
 -- Not synced to Studio. Run it in Studio's command bar in edit mode, or have Claude run it through the MCP's
@@ -28,8 +28,12 @@ local FELT_THICKNESS = 0.4
 local CUSHION_BOTTOM, CUSHION_TOP = FELT_TOP - FELT_THICKNESS, FELT_TOP + 0.3
 local RAIL_BOTTOM, WOOD_TOP, PLATE_TOP = FELT_TOP - 0.6, FELT_TOP + 0.35, FELT_TOP + 0.37
 local BODY_BOTTOM = FELT_TOP - 0.9
-local INSET, PLATE_RADIUS = 0.35, 0.5 -- how far corner plates reach onto the felt; their outer corner's rounding
-local SIDE_HOLE_RADIUS, SIDE_HOLE_OUT = 0.6, 0.1 -- side pocket holes, and how far past the felt's edge they center
+-- How far corner plates reach onto the felt, so the plate's inner corner sits on the pocket's edge; their outer
+-- corner's rounding
+local INSET, PLATE_RADIUS = CORNER_MOUTH / (2 * math.sqrt(2)), 0.5
+-- Side pocket holes, a touch wider than the mouth so the cushions' jaws stay where the physics puts them, and how
+-- far past the felt's edge they center
+local SIDE_HOLE_RADIUS, SIDE_HOLE_OUT = SIDE_MOUTH / 2 + 0.05, 0.1
 local CORNER_JAW_SLOPE, SIDE_JAW_SLOPE = 1, math.tan(math.rad(20)) -- how far each cushion's back runs past its nose
 
 local FELT_COLOR = Color3.fromRGB(50, 122, 76)

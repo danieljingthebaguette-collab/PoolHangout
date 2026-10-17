@@ -2,15 +2,15 @@
 -- Every tuning number lives here. Plain numbers, strings, booleans and lists of them, so Lune can load it too.
 -- Distances are in studs, times in seconds, speeds in studs/s.
 -- The 30-player server size is set in Studio's Game Settings, not by this file.
--- The modeler's brief, docs/MODELS.md, repeats the table, ball, pocket and cue numbers: change both together.
+-- The models guide, docs/MODELS.md, repeats the table, ball, pocket and cue numbers: change both together.
 
 local Config = {
 	Table = {
 		Length = 16,
 		Width = 8,
 		BallRadius = 0.24,
-		CornerPocketMouth = 1.0,
-		SidePocketMouth = 1.1,
+		CornerPocketMouth = 0.85,
+		SidePocketMouth = 0.95,
 		RackGap = 0.025, -- space between neighboring balls in the rack: 0 is a tight rack
 	},
 

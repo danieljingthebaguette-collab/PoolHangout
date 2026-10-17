@@ -64,7 +64,7 @@ Starting values for Config (tune by feel):
 | --- | --- | --- |
 | Table length × width | 16 × 8 studs | 2:1 like a real table; about 18.2 × 10.2 with the cushions and rails |
 | Ball radius | 0.24 studs | Real ball-to-table proportion |
-| Pocket mouth, corner / side | 1.0 / 1.1 studs | About real size: 2.1 and 2.3 ball widths |
+| Pocket mouth, corner / side | 0.85 / 0.95 studs | A little tighter than real: about 1.8 and 2.0 ball widths |
 | Full-power speed | 25 studs/s | Measured from 8 Ball Duels, like the rows below |
 | Break power | 3 | The break's full power is 3× a normal shot's, about 75 studs/s |
 | Power curve | 1.45 | Speed is pull ^ 1.45: 76% on the meter gives about 67% of full speed |
