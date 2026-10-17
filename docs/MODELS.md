@@ -1,28 +1,40 @@
-# Pool! — model brief
+# Models guide
 
-Pool! is a cozy, blocky Roblox bar where players hang out on voice chat and play 8-ball pool. Every model in the game today is a grey placeholder. This brief covers what the final models need so they drop straight into the place with no code changes.
+How we build every model in Pool!. There's no modeler. Claude builds each model from parts with a script. For shapes parts can't do well, Claude writes prompts for Studio's AI model and texture tools, and I run them. Every model follows `docs/STYLE.md`.
 
-**Style:** blocky Roblox look, cozy and warm. Tables in classic green felt and warm wood: dark green cushions, slim warm brown rails with white diamonds, black pockets.
+## The rules
 
-**Content rule:** no alcohol anywhere: no bottles, taps, beer signs, wine glasses or drink names. The bar serves sodas, milkshakes and coffee.
+- **Config is the source of truth.** Anything the game measures (the felt, cushions, pockets, balls, cue and item box) gets its size from `Config.luau`, never from a model, and the physics never reads a model's shape. When Config's table, ball, pocket or cue numbers change, rebuild with the builder script and update this file in the same change.
+- **Found by name.** The game finds parts by exact name, so the names below must match, including capitals.
+- **Place models come from builder scripts.** Tables, platforms and the arena are built by scripts in `tools/`, like `BuildTable.luau`. Each one reads Config, rebuilds its model from scratch so running it twice gives the same result, keeps the parts the game owns (like `Felt` and `Platforms`), and supports Undo. Claude runs them through the MCP's `execute_luau` in edit mode, then I save the place (Cmd+S). The place file isn't in git but the scripts are, so the place can always be rebuilt.
+- **Spawned models come from game code.** Balls, the cue, the item box, the pocket lid and item effects are built at runtime by the game's own modules, like the balls and the cue today, so they live in git and the place holds no copy.
+- **Organic shapes come from Studio's AI tools.** For plants and other shapes parts can't do well, Claude writes a prompt (see AI prompts below), I run it, and the result goes in `ServerStorage/Props` under the prompt's name *(default)*. The arena builder copies props from there into place. They live only in the place file, so their prompts are kept here, so we can generate one again if it's lost. Never use these tools for anything the game measures.
 
-## How the models connect to the game
+## The look
 
-- The game finds parts **by exact name**, so the names below must match, including capitals.
-- Sizes and pocket positions come from the game's settings, not from the models. A table can look however you like, but its playing surface, cushions and pockets must line up with the numbers below, or balls will bounce off empty air.
-- Units are Roblox studs. Every number below is final.
+`docs/STYLE.md`, applied to parts:
+
+- SmoothPlastic with flat, warm colors everywhere. Detail comes from shape and color, not textured materials. No Glass, Foil, Metal, DiamondPlate or Ice. Neon only for small accents inside effects.
+- Chunky shapes that read from straight above, since players aim from a top-down view.
+- Wood as strips or planks in two or three close tones with dark seams between them, like the test floor and the table's rails.
+- Rock and crystal low-poly: wedges and blocks at angles, flat colors, and a lighter tone on the faces that point up. Crystals in one saturated hue with a soft glow.
+- Reuse the colors in `BuildTable.luau` and `Theme.luau`, so everything matches.
+- **Content:** no alcohol: no bottles, taps, beer signs, wine glasses or drink names; the counter serves sodas, milkshakes and coffee. No guns or weapons. Illegal Soccer is a mood reference only: never copy its models, textures or art, and never name it or any other game in an AI prompt.
 
 ## Table
 
-A Model containing the items below. The rails are slim: the whole table, cushions and wooden rails included, is about **18.2 × 10.2 studs** (about 1.1 studs on every side of the playing surface) and must stay within 20 × 12. Black plates cover the corner pockets, the side pockets are set into the rails, the cushions are angled at each pocket mouth, and white diamonds sit on the rails: 6 on each long rail, every eighth of the length, and 3 on each end. The felt's top sits about **2.5 studs** above the floor, about an avatar's hip height.
+Built by `tools/BuildTable.luau` from `Config.Table`. Today it rebuilds Table1; in Phase 3 it builds all 8.
+
+The rails are slim: the whole table, cushions and wooden rails included, is about **18.2 × 10.2 studs** (about 1.1 studs on every side of the playing surface) and must stay within 20 × 12. Black plates cover the corner pockets, the side pockets are set into the rails, the cushions are angled at each pocket mouth, and white diamonds sit on the rails: 6 on each long rail, every eighth of the length, and 3 on each end. The felt's top sits about **2.5 studs** above the floor, about an avatar's hip height.
 
 | Name | What it is | Must have |
 | --- | --- | --- |
-| `Felt` | The playing surface | A single flat Part or MeshPart, exactly **16 × 8 studs** on top (its X axis along the length, Z across). Its top face is where the balls sit. Its center is the table's center. Any thickness |
+| `Felt` | The playing surface | A single flat Part, exactly **16 × 8 studs** on top (its X axis along the length, Z across). Its top face is where the balls sit. Its center is the table's center. Any thickness |
 | `Platforms` | A Folder | The platforms below |
+| `Balls` | A Folder | Made by the game at runtime; the builder keeps it |
 | Anything else | Rails, pockets, body, legs, trim | Any names and any number of parts |
 
-**Cushions:** the face the balls bounce off must sit exactly on the felt's edges: 8 studs either side of the center along the length, and 4 studs either side across it. Keep the rail tops no more than **0.8 studs** above the felt, because the cue is drawn just above them.
+**Cushions:** the face the balls bounce off sits exactly on the felt's edges: 8 studs either side of the center along the length, and 4 studs either side across it. Rail tops stay no more than **0.8 studs** above the felt, because the cue is drawn just above them.
 
 **Pockets:** 6 of them, measured from the felt's center at its top face (X along the length, Z across):
 
@@ -33,39 +45,71 @@ A Model containing the items below. The rails are slim: the whole table, cushion
 
 The cushion ends are the pockets' jaws. Inside the pocket, anything that looks like a hole works: a ball disappears once its center is over the opening.
 
-**1v1 and 2v2 tables are the same size.** One table model serves both.
+**1v1 and 2v2 tables are the same size.** One builder serves both.
 
 ## Platforms
 
 Players stand on a platform to join a table, and the game lights a platform up when a spot opens mid-game.
 
-- Each platform is **a single Part or MeshPart**, named `A1`, `B1`, and on 2v2 tables also `A2` and `B2`, inside the table's `Platforms` folder.
+- Each platform is **a single Part**, named `A1`, `B1`, and on 2v2 tables also `A2` and `B2`, inside the table's `Platforms` folder.
 - `A` platforms go on one long side of the table (the felt's −Z side), `B` platforms on the other. On 2v2 tables, A1 and A2 sit side by side along their long side, and so do B1 and B2.
-- Current placeholder: 4 × 3 studs, 0.2 thick, about 7 studs from the table's center, just clear of the rails. The game checks whether a player is standing within the platform's footprint, so make its top the area a player stands on.
-- The game may change the platform's color or material to light it up, so keep the part you stand on plain enough to tint.
+- 4 × 3 studs, 0.2 thick, about 7 studs from the table's center, just clear of the rails. The game checks whether a player is standing within the platform's footprint, so its top is the area a player stands on.
+- The game changes the platform's color or material to light it up, so keep it plain enough to tint.
 
 ## Cue
 
-- A Model named `Cue` whose PrimaryPart's **X axis runs from the butt to the tip**.
-- An Attachment named `Tip` at the very center of the tip's end face. The game places it just behind the cue ball.
-- Length about **9.6 studs**, and a tip about **0.24 studs** across.
-- No collisions needed; the game anchors the cue and moves it.
+Built in code by `src/Client/ShotController.luau`, on the shooter's screen only: a cylinder Part named `Cue`, `Config.Aim.CueLength` of the table length long (**9.6 studs**) and `CueThickness` of a ball's width thick (**0.24 studs**), drawn `CueHeight` ball radii (**0.96 studs**) above the felt.
 
 ## Balls
 
-- 16 spheres named `Ball0` (the cue ball) to `Ball15`, each exactly **0.3 studs** across, centered on its origin.
-- 1–7 solids, 8 black, 9–15 stripes. Standard colors: 1 and 9 yellow, 2 and 10 blue, 3 and 11 red, 4 and 12 purple, 5 and 13 orange, 6 and 14 green, 7 and 15 maroon. Numbers on the balls are welcome.
-- The game creates, moves and hides them, so they need no collisions.
+Built at runtime by the server (today in `src/Server/PhysicsTest.luau`): 16 spheres named `Ball0` (the cue ball) to `Ball15`, `2 × Config.Table.BallRadius` across (**0.48 studs**), in the table's `Balls` folder. They're anchored and don't collide; the game moves them.
 
-## The bar
+- 1–7 solids, 8 black, 9–15 stripes. Standard colors, flat and matte: 1 and 9 yellow, 2 and 10 blue, 3 and 11 red, 4 and 12 purple, 5 and 13 orange, 6 and 14 green, 7 and 15 maroon.
+- Today's welded-on marks are placeholders, so you can see a ball roll.
+
+## Item box
+
+Built in code at runtime when a box appears *(default)*. A glowing "?" hexagon on the felt. The cue ball collects it by rolling through it, so it isn't solid. These numbers may change while we tune the items.
+
+- A hexagon about **0.96 studs** across, corner to corner (2 ball widths), from Config once the items are built, and no taller than a ball (**0.48 studs**). Nothing sticks out past that footprint: it's the area that collects, so anything outside it would look like a touch that didn't count.
+- A big "?" readable from straight above, upright in the top-down view.
+- Low or see-through enough that a ball rolling through still reads. At most one see-through part.
+- A part named `Glow` (the "?" or the rim) that the effects tint and make glow.
+- Anchored, with collisions, touches and queries off: the physics decides who collects it, not Roblox.
+
+## Pocket lid
+
+Built in code with the item effects while Pocket Block covers a pocket. It spans the pocket's mouth from jaw to jaw, where the Pockets table above puts the cushion ends, because the physics bounces balls off that line. Its top stays below the rail tops, so the cue still clears it. Plain and chunky, in a color that reads as "closed" against the black pocket.
+
+## The arena
 
 - A Folder named `Tables` in Workspace holding `Table1` to `Table8`. Each is a table model with an attribute **`Mode`** set to `"1v1"` (4 tables) or `"2v2"` (4 tables).
+- `tools/BuildArena.luau` *(default name)* builds everything else into a Workspace folder named `Arena` *(default)*. In Phase 2 it's a blockout in plain parts: walls, the floor, 8 table spots and the counter. In Phase 4 it gets the full look: timber arches and beams, a plank floor, lanterns that throw warm pools of light over each table, places to sit, the counter, and the plants and rocks.
+- Mostly warm reds, oranges and browns, with some green from the plants. The felt stays the strongest color in the room.
 - 30 players per server. Leave room around each table for its platforms and for people to walk past and watch. Voices fade with distance, so spread the tables out enough that each one has its own conversation.
-- A counter serving sodas, milkshakes and coffee, places to sit, and warm lamps over each table.
-- Don't build signs over the tables, arrows, buttons or screens; the game makes those.
+- The builders don't make signs over the tables, arrows, buttons, screens or item effects; the game makes those.
+
+## AI prompts
+
+For shapes parts can't do well: plants, leaves, and rounded or organic props. Claude writes each prompt as a block I can paste:
+
+- **Name:** what it's called in `ServerStorage/Props`, like `FernPot`.
+- **Prompt:** what it is, then the look: low-poly and chunky, stylized, not realistic, with flat, matte, hand-painted colors, no shine and the warm palette.
+- **Size:** in studs, for the tool's bounding box.
+- **Budget:** a triangle limit if the tool asks for one, about 2,000 for a small prop *(default)*, so phones hold 30 fps.
+
+For the texture tool, the same look words: "flat, matte, hand-painted colors, no shine, no realistic texture".
+
+Example:
+
+> **Name:** `FernPot` · **Size:** 3 × 4 × 3 studs · **Budget:** 2,000 triangles
+>
+> A potted fern for a warm wooden lodge. Low-poly and chunky, stylized, not realistic. Flat, matte, hand-painted colors with no shine: leaves in two or three close greens, a terracotta pot. One piece.
+
+Before a prop is used, check that it's the right size, matte, anchored and within its triangle budget. The arena's prompt list gets added here in Phase 4.
 
 ## For every model
 
-- Anchored, with no scripts inside.
-- Light enough for phones: reuse meshes and textures, and avoid lots of transparent parts and lights. The game has to hold 30 fps on a mid-range phone.
-- Send the source files (.fbx or .obj, plus textures) and an .rbxm of each model. I'll upload the assets to my account.
+- Anchored, with no scripts inside. Builder scripts live in `tools/`.
+- Light enough for phones: keep part counts low and merge static decoration where you can, avoid lots of transparent parts, and keep lights few, with only a few casting shadows. The game has to hold 30 fps on a mid-range phone.
+- After a builder runs or a prop goes in, Claude reminds me to save the place (Cmd+S).

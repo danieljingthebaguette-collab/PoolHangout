@@ -19,19 +19,21 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Shared/Remotes.luau` | Creates (server) or finds (client) every remote. Remote names appear nowhere else |
 | `Shared/TableSpace.luau` | World ↔ table space, from a table's `Felt` |
 | `Shared/Physics/Geometry.luau` | Rails, pockets, head line, foot spot and rack positions, from Config |
-| `Shared/Physics/Simulate.luau` | A stepper: start it from balls, a shot and params (Config by default), advance it N steps at a time, read the `ShotResult` when done. `run()` does it all at once for tests |
-| `Shared/Physics/Preview.luau` | Where the cue ball first touches a ball, rail or pocket, for the aim indicator, and after a hit, which way each ball goes and with what share of the speed. Same contacts and hit rule as Simulate, solved exactly |
+| `Shared/Physics/Simulate.luau` | A stepper: start it from balls, a shot, the item effects and params (Config by default), advance it N steps at a time, read the `ShotResult` when done. `run()` does it all at once for tests |
+| `Shared/Physics/Preview.luau` | Where the cue ball first touches a ball, rail or pocket, for the aim indicator, and after a hit, which way each ball goes and with what share of the speed. Same contacts and hit rule as Simulate, solved exactly, with frozen balls and pocket lids as walls |
 | `Shared/Pull.luau` | The slingshot pull's power: how far the pointer has moved from where it pressed, straight back toward the stick. Forward lowers it to 0, sideways does nothing. Pure, so Lune tests it |
+| `Shared/Items.luau` | A game's items as plain tables: slots, the box, active effects, and what each side targeted last. Checks every item rule and builds the simulation's `effects`. Pure, so Lune tests it (see Items) |
 | `Shared/Rules/EightBall.luau` | New game, resolve a shot, timeouts, forfeits, per-player game stats |
 | `Server/Main.server.luau` | Starts the services |
 | `Server/TableService.luau` | Finds tables, watches platforms, runs countdowns and signs, starts and resets games |
-| `Server/Match.luau` | One game: seats, turn order, shot clock, ball in hand, takeovers, end-screen data |
+| `Server/Match.luau` | One game: seats, turn order, shot clock, ball in hand, items (through `Items.luau`), takeovers, end-screen data |
 | `Server/StatsService.luau` | Lifetime stats. The only module that touches DataStores |
 | `Server/PhysicsTest.luau` | Physics test mode on Table1 (Studio, or the owner in a published server): ball parts, rack, test shots |
 | `Client/Main.local.luau` | Starts the controllers |
 | `Client/TableView.luau` | Replays shots on the ball parts, plays their sounds, draws the balls' shadows, and starts the shooter's shot before the server's copy arrives |
-| `Client/ShotController.luau` | F and the top-down camera, placing the cue ball, aim, pocket call, the pull for power, the cue's strike and follow-through |
-| `Client/Hud.luau` | Top bar with player cards, the power meter, the sunk-ball tray, the control hints, settings (sound volume); later the shot clock, end screen and Leave button |
+| `Client/ShotController.luau` | F and the top-down camera, placing the cue ball, aim, pocket call, using items (keys 1 and 2, slot taps, picking a target), the pull for power, the cue's strike and follow-through |
+| `Client/Hud.luau` | Top bar with player cards, the power meter, the sunk-ball tray, the control hints, settings (sound volume); later the shot clock, item slots with icons drawn in code, held items on every card, the item's name shown big, end screen and Leave button |
+| `Client/Effects.luau` | Item effects and screen shake: flame trail, blast, frozen balls, oil patches, pocket lids. Built in code once per effect and destroyed when it ends |
 | `Client/Slider.luau` | A labelled slider row for mouse and touch, for the settings and the test panel |
 | `Client/Card.luau` | The card look from `docs/STYLE.md`: cream or dark, with corner brackets and a faint dot texture |
 | `Client/Spectate.luau` | "Watch from above" |
@@ -81,16 +83,46 @@ Starting values for Config (tune by feel):
 
 ## A shot, end to end
 
-1. `Match` starts a turn: it sets the shooter, `clockEndsAt` from `workspace:GetServerTimeNow()`, the ball-in-hand area and whether a pocket must be called, then fires `TurnStarted` to everyone.
-2. The shooter's `ShotController` runs the camera, placement, aim, pocket call and power meter locally, then fires `RequestShot` with the aim direction, power (0–1), cue ball placement and called pocket.
+1. `Match` starts a turn: it sets the shooter, `clockEndsAt` from `workspace:GetServerTimeNow()`, the ball-in-hand area, whether a pocket must be called, the item box, everyone's held items and the active effects, then fires `TurnStarted` to everyone.
+2. The shooter's `ShotController` runs the camera, placement, aim, pocket call, any item use and power meter locally, then fires `RequestShot` with the aim direction, power (0–1), cue ball placement and called pocket. An item goes first, through `UseItem` (see Items).
 3. The server validates the request (see `.claude/rules/server.md`) and normalizes the direction.
-4. It fires `ShotStarted` with the exact start balls, the shot and the physics params it used, so every client simulates with the server's numbers even while test mode changes them live. Then it simulates the shot in slices of a couple of milliseconds per frame, so even a break never stalls the server. It finishes long before the replay does.
+4. It fires `ShotStarted` with the exact start balls, the shot, the item effects and the physics params it used, so every client simulates with the server's numbers even while test mode changes them live. Then it simulates the shot in slices of a couple of milliseconds per frame, so even a break never stalls the server. It finishes long before the replay does.
 5. Each client steps the same simulation as it plays the shot back in real time, so every client sees the same shot and no frame does much work.
-6. Once the server's simulation is done and the shot's duration plus a short buffer has passed, the server runs `EightBall.resolveShot`, moves the ball parts to their final positions and fires `ShotResolved` with the final balls and the outcome. Clients snap to those positions, which also corrects any drift.
+6. Once the server's simulation is done and the shot's duration plus a short buffer has passed, the server runs `EightBall.resolveShot`, moves the ball parts to their final positions and fires `ShotResolved` with the final balls, the outcome and any item collected. Clients snap to those positions, which also corrects any drift.
 7. Then the next turn, or the end of the game.
 
 - **Ball parts** are anchored, non-colliding parts the server creates for each table and moves only between shots. During a replay each client moves them locally. Players who join later get the resting positions through normal replication.
 - **Live aim for watchers (Phase 3):** while aiming, the shooter's client sends `AimUpdate` over an UnreliableRemoteEvent at most 10 times a second. The server checks the sender is the shooter and relays it.
+
+## Items
+
+- **State:** `Shared/Items.luau` holds a game's items as plain tables, and `Match` owns that state: each player's slots, the box (where it is and the shots since the last one), the active effects and the turn each one ends on, and what each side targeted on its last turn. Its checks cover every item rule in GAME_SPEC, lock-outs included. It never calls `math.random`: the server passes in random numbers for the box's spot and the item rolled, so tests can choose them.
+- **The rules stay out of it:** `EightBall.luau` never sees items, because items only change how balls move. The one check that touches a rule, that nobody can call a blocked pocket, lives in `Items.luau`, and the server checks it when validating `RequestShot`.
+- **Using an item:** the shooter's client fires `UseItem` with a slot and a target. The server checks it with `Items.luau`: it's their turn, before the shot, no item used yet this turn, the slot holds that item, and the target is allowed. Then it updates the state and fires `ItemUsed` to everyone, for the big name and the effect.
+- **Into the simulation:** `Items.luau` turns the active effects into an `effects` table that goes with the shot in `ShotStarted`, so every client simulates the same shot. An empty table is a normal shot.
+  - `powerScale`: the server multiplies the shot's speed by it. The client never sends it.
+  - `blast`: at the cue ball's first ball contact, every other ball within the reach is pushed away from the hit ball's center, at a speed that fades to nothing at the edge. Not the cue ball, the hit ball or frozen balls.
+  - `frozen`: ids of balls that never move. Other balls hit them as a fixed circle and keep `RailBounce` of their speed along the line of centers.
+  - `oil`: circles where a ball whose center is inside slows at `OilSlowdown` × the normal rate.
+  - `blocked`: ids of pockets whose mouth becomes a rail from jaw to jaw.
+  - `box`: a circle that isn't solid. The first time the cue ball overlaps it, the result gets a `boxTouched` event. `Match` only passes it when the shooter can still collect one this turn.
+- **Still exact and deterministic:** no randomness or clock reads inside the simulation. A cap on contacts in one step stops a ball wedged between a frozen ball and a rail from looping forever. Each effect gets Lune tests, and every existing test still passes with empty `effects`.
+- **Aim preview:** `Preview.luau` takes the same `effects`. Frozen balls and pocket lids are walls that stop the line, and with `blast` it reports the ring around the ball it would hit. It ignores oil, because oil changes how far balls roll, not where the cue ball first touches anything.
+- **Client:** `ShotController` handles keys 1 and 2, slot taps and target picking; on phones, the nearest ball or pocket to the finger, within a tolerance. `Hud` draws the slots, their icons and the cards. `Effects.luau` draws each effect when it starts and destroys it when it ends, so nothing is created every frame.
+
+Starting values for `Config.Items` (tune by feel; every distance in ball radii or table lengths, every speed as a share of full power):
+
+| Setting | Start | Why |
+| --- | --- | --- |
+| Box every | 2 shots with no box on the table | GAME_SPEC |
+| Box size | 2 ball radii from its center (2 ball widths across) | Easy to see from above, still a real aim |
+| Box spot | 1 ball width clear of balls, rails and pockets, and a quarter of the table length from the cue ball | No free item for the next shooter |
+| Ball in hand near a box | No closer than a quarter of the table length | GAME_SPEC |
+| Power Shot | 1.5× full-power speed | GAME_SPEC |
+| Blast reach / push | 6 ball radii (3 ball widths) / 40% of full-power speed for a touching ball, fading to 0 at the edge | Clears a cluster without emptying the table |
+| Oil patch / slowdown | 5 ball radii from its center (5 ball widths across) / 0.25 × normal | "Much less", while balls still stop |
+| Item name on screen | 1.5 s | Long enough to read, short enough to keep play moving |
+| Screen shake | Hits and rail bounces faster than 60% of full-power speed | The break, blasts and Power Shots shake; normal shots don't |
 
 ## Tables
 
@@ -103,7 +135,7 @@ Starting values for Config (tune by feel):
 
 ## Place contract
 
-What the code expects in the place. Claude builds greybox versions through MCP. Every model is a placeholder until the commissioned art arrives, built to `docs/MODELS.md` with the same names, so it swaps in without code changes.
+What the code expects in the place. Claude builds it with builder scripts in `tools/`, following `docs/MODELS.md`. Code finds everything by these names, so any model can be rebuilt or restyled without code changes.
 
 ```text
 Workspace
@@ -125,11 +157,13 @@ Workspace
 | `RequestShot` | client → server | Aim direction, power, cue ball placement, called pocket |
 | `AimUpdate` | client → server, unreliable | Live aim for watchers |
 | `LeaveTable` | client → server | The Leave button |
-| `SayPhrase` | client → server | A quick phrase, by index |
+| `SayPhrase` | client → server | A quick phrase, by index (Later list) |
+| `UseItem` | client → server | Slot, and a target: a ball id, a point on the felt or a pocket id |
 | `TableChanged` | server → clients | Sign text, state, seats |
-| `TurnStarted` | server → clients | Shooter, clock end time, ball in hand, pocket call needed |
-| `ShotStarted` | server → clients | Start balls, shot and physics params to replay |
-| `ShotResolved` | server → clients | Final balls and the outcome |
+| `TurnStarted` | server → clients | Shooter, clock end time, ball in hand, pocket call needed, the item box, held items, active effects |
+| `ItemUsed` | server → clients | Who used which item, and its target |
+| `ShotStarted` | server → clients | Start balls, shot, item effects and physics params to replay |
+| `ShotResolved` | server → clients | Final balls, the outcome and any item collected |
 | `GameOver` | server → clients | Winner and each player's stats |
 | `AimRelay` | server → clients, unreliable | Live aim for watchers |
 | `TestRack` | client → server | Physics test mode: rack Table1 |

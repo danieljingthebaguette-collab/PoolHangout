@@ -2,9 +2,9 @@
 
 How Pool! looks. Every task that adds or changes something players see follows this file. Written 2026-10-16, when the art direction moved from a chill bar to an intense, item-based look in the spirit of the Roblox game Illegal Soccer.
 
-- **A guide, not a source.** Screenshots of Illegal Soccer show the style we're after. Never copy their models, textures, images, UI art or effects. Everything in Pool! is made by us, in code or in Studio, or by the modeler I commission.
-- **Spec vs style.** GAME_SPEC.md still describes a chill bar until I finish the item design. Where the two disagree about how things look, this file wins. For how the game plays, GAME_SPEC.md wins.
-- **Placeholders.** The table and floor in the place are placeholders in this style until the commissioned art arrives.
+- **A guide, not a source.** Screenshots of Illegal Soccer show the style we're after. Never copy their models, textures, images, UI art or effects. Everything in Pool! is made by us: in code, in Studio, or with Studio's AI tools from our own prompts, which never name another game.
+- **Spec vs style.** Where GAME_SPEC.md and this file disagree about how things look, this file wins. For how the game plays, GAME_SPEC.md wins.
+- **Placeholders.** The table and floor in the place are early versions in this style until Phase 4's final-look pass. `docs/MODELS.md` covers how models are built.
 
 ## In one line
 

@@ -1,6 +1,6 @@
 # Pool!
 
-A cozy Roblox bar where players hang out, talk on voice chat and play 8-ball pool, 1v1 or 2v2. It's my first Roblox game. You write most of the code; I design, build in Studio, review your changes and playtest. Launch target: Friday, Dec 11, 2026.
+An intense, item-based Roblox pool game: 8-ball, 1v1 or 2v2, in a big warm wooden arena, where the cue ball rolls through item boxes on the felt for gadgets that bend the physics but never the rules, and players talk on voice chat between turns. It's my first Roblox game. You write most of the code; I design, build in Studio, review your changes and playtest. Launch target: Friday, Dec 11, 2026.
 
 The documents imported at the bottom are the source of truth: what the game is (GAME_SPEC), how it looks (STYLE), how the code is built (ARCHITECTURE), and what to build when, plus where we are now (BUILD_PLAN).
 
@@ -46,7 +46,7 @@ Studio's Script Sync mirrors these folders both ways.
 - Every connection and timer belongs to a table, a game or a player, and is cleaned up when that ends.
 - Names: PascalCase for modules and types, camelCase for functions and variables, UPPER_SNAKE_CASE for constants.
 - Comments explain why, not what.
-- Every model is a placeholder until the art I commission arrives: the table, platforms, cue, balls, the bar and the rest of the map. Keep code independent of models, so a commissioned model drops in with no code changes: Config is the source of truth for sizes and pocket positions, the physics never reads a model's shape, and scripts find parts by name. `docs/MODELS.md` is the modeler's brief; when Config's table, ball, pocket or cue numbers change, update it in the same change.
+- You build every model; there's no modeler. Models that stay in the place (tables, platforms, the arena) come from builder scripts in `tools/`, like `BuildTable.luau`; models the game spawns (balls, the cue, the item box, effects) come from game code. For shapes parts can't do well, like plants, write me prompts for Studio's AI model and texture tools and I'll run them. Keep code independent of models, so any model can be rebuilt or restyled with no code changes: Config is the source of truth for sizes and pocket positions, the physics never reads a model's shape, and scripts find parts by name. `docs/MODELS.md` is the guide for how we build models; when Config's table, ball, pocket or cue numbers change, update it in the same change.
 
 ## Tools and testing
 
