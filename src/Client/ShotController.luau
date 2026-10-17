@@ -2,9 +2,10 @@
 -- The shooter's controls. F (phones: an on-screen button) switches to a top-down view of the table and back.
 -- You can only aim and shoot from the view: walking is off and a cue stick lies behind the cue ball.
 -- Aim: on PC only the mouse aims; on phones dragging turns the aim around the cue ball. Power is a slingshot
--- pull: hold the mouse button anywhere (phones: touch near the cue ball) and drag. Power counts from the edge
--- of a small cancel zone around where you pressed, and letting go shoots; letting go back inside the zone
--- cancels. Space (phones: the Lock button) optionally locks the aim first, and then a pull can start anywhere.
+-- pull, like 8 Ball Duels: hold the mouse button anywhere (phones: touch near the cue ball), best in front of the
+-- cue ball, and drag back toward it and the stick. Power is how far the pointer has moved straight back from where
+-- it pressed (Shared/Pull has the rule). Letting go shoots; letting go back inside the cancel zone cancels.
+-- Space (phones: the Lock button) optionally locks the aim first, and then a pull can start anywhere.
 -- The aim indicator shows where the cue ball first touches something and which way a hit ball goes. It's
 -- see-through while you aim or when letting go would cancel, and solid while the aim is locked. When you let
 -- go, the cue strikes forward and the shot starts on this screen the moment it reaches the ball.
@@ -21,6 +22,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
 local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Preview = require(ReplicatedStorage.Shared.Physics.Preview)
+local Pull = require(ReplicatedStorage.Shared.Pull)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
@@ -33,12 +35,12 @@ local LOCK_ACTION = "LockAim"
 -- Theme.Ui.HintRows rows.
 local HINTS = {
 	keyboard = {
-		aiming = { { "Lock aim", "Space" }, { "Shoot", "Hold + drag" } },
-		locked = { { "Unlock", "Space" }, { "Shoot", "Drag" } },
+		aiming = { { "Lock aim", "Space" }, { "Shoot", "Hold + drag back" } },
+		locked = { { "Unlock", "Space" }, { "Shoot", "Drag back" } },
 	},
 	touch = {
-		aiming = { { "Lock aim", "Tap Lock" }, { "Shoot", "Drag from ball" } },
-		locked = { { "Unlock", "Tap Lock" }, { "Shoot", "Drag" } },
+		aiming = { { "Lock aim to pull from anywhere", "Tap Lock" }, { "Shoot", "Drag back from ball" } },
+		locked = { { "Unlock", "Tap Lock" }, { "Shoot", "Drag back" } },
 	},
 	cancel = { { "Cancel", "Let go" } },
 }
@@ -141,6 +143,17 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	indicatorGui.Name = "AimIndicator"
 	indicatorGui.ResetOnSpawn = false
 	indicatorGui.IgnoreGuiInset = true -- so the camera's viewport points place it directly
+	-- Every part gets a thin dark edge, so the lines read over white and yellow balls. The edges fade with the
+	-- indicator, so it keeps them all.
+	local outlines: { UIStroke } = {}
+	local function outline(item: GuiObject, thickness: number): UIStroke
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Theme.Colors.AimOutline
+		stroke.Thickness = thickness
+		stroke.Parent = item
+		table.insert(outlines, stroke)
+		return stroke
+	end
 	local function indicatorLine(color: Color3): Frame
 		local line = Instance.new("Frame")
 		line.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -148,12 +161,22 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		line.BorderSizePixel = 0
 		line.Visible = false
 		line.Parent = indicatorGui
+		outline(line, Theme.Ui.AimOutline)
 		return line
 	end
 	-- The line to the circle, the cue ball's line after the hit, and the hit ball's yellow line
 	local pathLine = indicatorLine(Theme.Colors.AimLine)
 	local cueLine = indicatorLine(Theme.Colors.AimLine)
 	local targetLine = indicatorLine(Theme.Colors.TargetLine)
+	-- The circle's dark edge: a thicker dark ring just inside the white one and drawn under it, so a dark line shows
+	-- on both sides of the white
+	local ghostEdge = Instance.new("Frame")
+	ghostEdge.AnchorPoint = Vector2.new(0.5, 0.5)
+	ghostEdge.BackgroundTransparency = 1
+	ghostEdge.Visible = false
+	ghostEdge.Parent = indicatorGui
+	roundCorners(ghostEdge)
+	outline(ghostEdge, Theme.Ui.AimLineThickness + 2 * Theme.Ui.AimOutline)
 	-- A ball-sized ring where the cue ball will be when it first touches something
 	local ghost = Instance.new("Frame")
 	ghost.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -174,6 +197,7 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	dot.Visible = false
 	dot.Parent = indicatorGui
 	roundCorners(dot)
+	outline(dot, Theme.Ui.AimOutline)
 	indicatorGui.Parent = playerGui
 
 	-- Radians in table space: 0 aims along +x, at the rack
@@ -182,9 +206,8 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	local locked = false
 	-- The finger dragging the aim around the cue ball, and its last angle there
 	local drag: { input: InputObject, angle: number? }? = nil
-	-- The mouse button or finger pulling for power, where it pressed in table space, and whether it has left
-	-- the cancel ring yet
-	local pulling: { input: InputObject, x: number, y: number, left: boolean }? = nil
+	-- The mouse button or finger pulling for power, and where it pressed and how far back it has gone
+	local pulling: { input: InputObject, state: Pull.Pull }? = nil
 	-- How far the cue is pulled back, 0 to 1: the shot's power
 	local pull = 0
 	-- After you let go: the shot's power and how far the cue has come forward, 0 to 1, until it reaches the ball
@@ -244,7 +267,7 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 
 	local function hideIndicator()
 		pathLine.Visible, cueLine.Visible, targetLine.Visible = false, false, false
-		ghost.Visible, dot.Visible = false, false
+		ghost.Visible, ghostEdge.Visible, dot.Visible = false, false, false
 	end
 
 	-- See-through while aiming or about to cancel, solid while the aim is locked
@@ -254,6 +277,9 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 			part.BackgroundTransparency = transparency
 		end
 		ghostOutline.Transparency = transparency
+		for _, stroke in outlines do
+			stroke.Transparency = transparency
+		end
 	end
 
 	local function showLine(line: Frame, fromX: number, fromY: number, toX: number, toY: number)
@@ -284,6 +310,10 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 			ghost.Position = UDim2.fromOffset(middle.X, middle.Y)
 			ghost.Size = UDim2.fromOffset(diameter, diameter)
 			ghost.Visible = true
+			local edgeDiameter = diameter - 2 * Theme.Ui.AimOutline
+			ghostEdge.Position = ghost.Position
+			ghostEdge.Size = UDim2.fromOffset(edgeDiameter, edgeDiameter)
+			ghostEdge.Visible = true
 			dot.Position = ghost.Position
 			dot.Visible = true
 		end
@@ -432,7 +462,7 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		Hud.setPower(if hidden then nil else pull)
 		local held = locked or pulling ~= nil or strike ~= nil
 		-- Back inside the cancel zone after leaving it, where letting go cancels
-		local cancelling = pulling ~= nil and pulling.left and pull == 0
+		local cancelling = pulling ~= nil and pulling.state.left and pull == 0
 		Hud.setHints(
 			if hidden then nil elseif cancelling then HINTS.cancel elseif held then hints.locked else hints.aiming
 		)
@@ -467,7 +497,7 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		-- Unlocked, a touch away from the cue ball turns the aim instead
 		if locked or not isTouch or nearCue(x, y) then
 			if canShoot() then
-				pulling = { input = input, x = x, y = y, left = false }
+				pulling = { input = input, state = Pull.new(x, y, cancelRadius, fullPull) }
 				pull = 0
 			end
 		elseif not drag then
@@ -478,14 +508,10 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	local function pointerMoved(input: InputObject)
 		if pulling then
 			if movesPointer(input, pulling.input) then
+				-- Only how far it has moved straight back from where it pressed counts
 				local x, y = pointerOnTable(inputRay(input))
-				-- Any direction counts, so a cue ball against a rail can still get full power. Power counts from
-				-- the cancel ring's edge, so soft shots still work.
-				local beyond = math.sqrt((x - pulling.x) ^ 2 + (y - pulling.y) ^ 2) - cancelRadius
-				if beyond > 0 then
-					pulling.left = true
-				end
-				pull = math.clamp(beyond / fullPull, 0, 1)
+				Pull.moveTo(pulling.state, x, y, math.cos(aim), math.sin(aim))
+				pull = Pull.power(pulling.state)
 			end
 		elseif drag and input == drag.input then
 			local angle = pointerAngle(inputRay(input))

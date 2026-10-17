@@ -21,6 +21,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Shared/Physics/Geometry.luau` | Rails, pockets, head line, foot spot and rack positions, from Config |
 | `Shared/Physics/Simulate.luau` | A stepper: start it from balls, a shot and params (Config by default), advance it N steps at a time, read the `ShotResult` when done. `run()` does it all at once for tests |
 | `Shared/Physics/Preview.luau` | Where the cue ball first touches a ball, rail or pocket, for the aim indicator, and after a hit, which way each ball goes and with what share of the speed. Same contacts and hit rule as Simulate, solved exactly |
+| `Shared/Pull.luau` | The slingshot pull's power: how far the pointer has moved from where it pressed, straight back toward the stick. Forward lowers it to 0, sideways does nothing. Pure, so Lune tests it |
 | `Shared/Rules/EightBall.luau` | New game, resolve a shot, timeouts, forfeits, per-player game stats |
 | `Server/Main.server.luau` | Starts the services |
 | `Server/TableService.luau` | Finds tables, watches platforms, runs countdowns and signs, starts and resets games |
@@ -75,8 +76,8 @@ Starting values for Config (tune by feel):
 | Max step travel | 1/3 ball radius | A faster ball, like on the break, splits the step into equal sub-steps, so hits stay exact at any speed |
 | Shot clock / warning | 45 s / last 10 s | |
 | Countdown / takeover / open-spot wait / end screen | 5 / 5 / 15 / 10 s | |
-| Cancel zone | 2.5 ball radii | Roughly fingertip size on a phone. Letting go back inside it cancels |
-| Full-power pull | A quarter of the table length past the cancel zone | Measured on the table, so it's the same share of the screen on every device |
+| Cancel zone | 2.5 ball radii | The first stretch of pull back, roughly fingertip size on a phone. Letting go back inside it cancels |
+| Full-power pull | A quarter of the table length past the cancel zone, straight back from the shot | Measured on the table, so it's the same share of the screen on every device. About what 8 Ball Duels takes |
 
 ## A shot, end to end
 
