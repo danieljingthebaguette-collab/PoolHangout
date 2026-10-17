@@ -56,6 +56,9 @@ Studio's Script Sync mirrors these folders both ways.
 - A hook runs StyLua on every `.luau` file you edit. Before calling code done, run `selene src` and fix what it reports.
 - `lune run tests/run` runs every `tests/**/*.spec.luau` (add a word to filter, like `lune run tests/run physics`). Run it after any change to physics, rules or Config. Every bug fixed there gets a test.
 - `/playtest` checks gameplay in Studio. The MCP tools control one player, so solo playtests rely on `Config.Debug.SoloTables`. For real multiplayer checks, ask me to run Test → Clients and Servers.
+- The MCP's mouse input uses GUI points below Roblox's top bar, like `InputObject.Position`, not screenshot pixels. A button held across separate `user_mouse_input` calls can get pressed again, so do a whole drag in one call and check it with a per-frame log from `execute_luau`.
+- A playtest started before Script Sync picks up an edit runs the old code. After changing code, restart the playtest and check the change is live.
+- Scripts can't set `Lighting.Technology`; ask me to set it in Studio's Properties.
 - Nothing is done until lint, tests and a playtest pass, or I've tested it myself.
 
 ## Sessions
