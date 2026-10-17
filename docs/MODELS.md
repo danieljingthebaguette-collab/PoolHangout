@@ -4,10 +4,10 @@ How we build every model in Pool!. There's no modeler. Claude builds each model 
 
 ## The rules
 
-- **Config is the source of truth.** Anything the game measures (the felt, cushions, pockets, balls, cue and item box) gets its size from `Config.luau`, never from a model, and the physics never reads a model's shape. When Config's table, ball, pocket or cue numbers change, rebuild with the builder script and update this file in the same change.
+- **Config is the source of truth.** Anything the game measures (the felt, cushions, pockets, balls, cue and pocket lid) gets its size from `Config.luau`, never from a model, and the physics never reads a model's shape. When Config's table, ball, pocket or cue numbers change, rebuild with the builder script and update this file in the same change.
 - **Found by name.** The game finds parts by exact name, so the names below must match, including capitals.
 - **Place models come from builder scripts.** Tables, platforms and the arena are built by scripts in `tools/`, like `BuildTable.luau`. Each one reads Config, rebuilds its model from scratch so running it twice gives the same result, keeps the parts the game owns (like `Felt` and `Platforms`), and supports Undo. Claude runs them through the MCP's `execute_luau` in edit mode, then I save the place (Cmd+S). The place file isn't in git but the scripts are, so the place can always be rebuilt.
-- **Spawned models come from game code.** Balls, the cue, the item box, the pocket lid and item effects are built at runtime by the game's own modules, like the balls and the cue today, so they live in git and the place holds no copy.
+- **Spawned models come from game code.** Balls, the cue, the pocket lid and item effects are built at runtime by the game's own modules, like the balls and the cue today, so they live in git and the place holds no copy.
 - **Organic shapes come from Studio's AI tools.** For plants and other shapes parts can't do well, Claude writes a prompt (see AI prompts below), I run it, and the result goes in `ServerStorage/Props` under the prompt's name *(default)*. The arena builder copies props from there into place. They live only in the place file, so their prompts are kept here, so we can generate one again if it's lost. Never use these tools for anything the game measures.
 
 ## The look
@@ -66,16 +66,6 @@ Built at runtime by the server (today in `src/Server/PhysicsTest.luau`): 16 sphe
 
 - 1–7 solids, 8 black, 9–15 stripes. Standard colors, flat and matte: 1 and 9 yellow, 2 and 10 blue, 3 and 11 red, 4 and 12 purple, 5 and 13 orange, 6 and 14 green, 7 and 15 maroon.
 - Today's welded-on marks are placeholders, so you can see a ball roll.
-
-## Item box
-
-Built in code at runtime when a box appears *(default)*. A glowing "?" hexagon on the felt. The cue ball collects it by rolling through it, so it isn't solid. These numbers may change while we tune the items.
-
-- A hexagon about **0.96 studs** across, corner to corner (2 ball widths), from Config once the items are built, and no taller than a ball (**0.48 studs**). Nothing sticks out past that footprint: it's the area that collects, so anything outside it would look like a touch that didn't count.
-- A big "?" readable from straight above, upright in the top-down view.
-- Low or see-through enough that a ball rolling through still reads. At most one see-through part.
-- A part named `Glow` (the "?" or the rim) that the effects tint and make glow.
-- Anchored, with collisions, touches and queries off: the physics decides who collects it, not Roblox.
 
 ## Pocket lid
 

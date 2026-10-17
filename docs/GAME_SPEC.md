@@ -6,7 +6,7 @@ Markers: no marker = decided by me. *(default)* = Claude's proposal I haven't co
 
 ## The game
 
-An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm wooden arena. Glowing item boxes appear on the felt, and the cue ball collects gadgets by rolling through them. Items bend the physics but never the rules. Between turns players walk around and talk on voice chat. How it looks is in `docs/STYLE.md`, in the spirit of Illegal Soccer's style only. The heart of it is still the shot: a top-down view, the cue following your mouse (or your finger on phones), an aim lock, and a slingshot pull for power. Mechanics come first. The base build has no economy, cosmetics or ranked mode.
+An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm wooden arena. Players earn gadget items by taking turns and sinking their balls, and use them before a shot. Items bend the physics but never the rules. Between turns players walk around and talk on voice chat. How it looks is in `docs/STYLE.md`, in the spirit of Illegal Soccer's style only. The heart of it is still the shot: a top-down view, the cue following your mouse (or your finger on phones), an aim lock, and a slingshot pull for power. Mechanics come first. The base build has no economy, cosmetics or ranked mode.
 
 ## Audience and platform
 
@@ -55,7 +55,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 1. A "Turn" arrow appears over the shooter's head and their shot clock starts.
 2. The shooter presses F from anywhere (phones: an on-screen button) to switch to the top-down view. Where they stand doesn't matter. F again goes back to the normal view *(default)*.
 3. The top-down view shows the whole table, fixed and horizontal on screen, the same for everyone *(default)*.
-4. With ball in hand, they drag the cue ball to place it first: behind the head line on the break, anywhere after a foul. It can't overlap another ball or sit within a quarter of the table length of an item box.
+4. With ball in hand, they drag the cue ball to place it first: behind the head line on the break, anywhere after a foul. It can't overlap another ball.
 5. Aim, on PC: only the mouse aims. The cue always points from the cue ball toward the cursor, even when the cue ball moves under a still mouse, like after a shot. No keys aim. On phones, dragging on the table turns the aim around the cue ball.
 6. Aim lock (optional): Space locks the aim, and Space again unlocks it and goes back to aiming. On phones, a thumb-sized Lock button next to the power meter does the same. Space never shoots. Locking first lets you move the mouse freely before you pull. The aim indicator (step 7) shows the state: see-through white while aiming, solid white whenever the aim is locked, including during a pull. Control hints on the bottom right, each a label and its key, read "Lock aim · Space" and "Shoot · Hold + drag back" while aiming, and "Unlock · Space" and "Shoot · Drag back" while locked (phones: "Lock aim to pull from anywhere · Tap Lock" and "Shoot · Drag back from ball", then "Unlock · Tap Lock" and "Shoot · Drag back"). Each new shot starts unlocked.
 6a. Power, like a slingshot and like 8 Ball Duels: on PC, hold the mouse button anywhere, best in front of the cue ball near where you're aiming, and drag back along the aim line toward the cue ball and the stick. The cursor moves freely the whole time. If the aim isn't locked, pressing locks it where it is. On phones, while unlocked a touch on or near the cue ball or the cue starts a pull and a touch anywhere else turns the aim; while locked, a pull can start anywhere, so tap Lock first to start the pull wherever there's room. Power is how far the pointer has moved from where you pressed, measured only along the line straight back toward the stick. Moving toward the ball lowers it, down to 0, and it stays at 0 however far you keep going; it only comes back once the pointer is behind where you pressed again. Sideways movement neither adds nor removes power. The first stretch back is a small cancel zone, about fingertip size on a phone, that isn't drawn. Power counts from its edge, so soft shots still work, with full power 6 studs past it: 6.6 studs of pull in all, about 41% of the table length (`FullPullDistance` in Config, with a slider on the test panel to tune it). Power rises on a curve (speed is pull^1.45, so 76% on the meter gives about 67% of full speed), so soft shots get more of the drag. The cue slides back as you pull, and the power meter on the left fills up, with the power as a % under it; the meter only shows power, you don't drag it. Let go to shoot.
@@ -65,7 +65,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 9. When they let go, the cue strikes forward and the shot fires the moment it touches the cue ball; the cue carries on a little and fades out. Everyone sees the balls roll.
 10. The shooter stays in the top-down view while it's still their turn. The camera goes back to normal when their turn ends *(default)*.
 
-- **Items:** before shooting, the shooter can use one item a turn (see Items).
+- **Items:** before each shot, the shooter can use one item (see Items).
 - **Top-down only:** you can only aim and shoot from the top-down view. The cue and the power meter only show there, and leaving the view in the middle of a pull cancels it with no shot.
 - **Shot clock:** 45 seconds per shot (I said 30–60). It covers placing and aiming, shows a countdown for the last 10 seconds, and stops when the shot fires. The next shot gets a fresh 45. Running out is a foul, and 2 timeouts in a row remove the player, the same as leaving.
 - **Between turns:** players can walk around, sit or grab a drink.
@@ -113,34 +113,35 @@ Items never change these rules: what counts as a legal shot, a foul or a win is 
 
 Items are gadgets that change how balls move, never the rules. Here a **turn** means one player's visit to the table: every shot they take until the turn passes.
 
-### Item boxes
+### Earning items
 
-- A glowing "?" hexagon appears on the felt every 2 shots, at most one at a time. The count runs only while there's no box, so a new one appears 2 shots after the last was collected, and the break doesn't count *(default)*. It appears between shots, before the next shot's clock starts.
-- It lands at a random free spot: at least a ball's width clear of every ball, rail and pocket, and at least a quarter of the table length from the cue ball, so the next shooter doesn't get it for free *(default)*. If there's no room, it tries again after the next shot *(default)*.
-- It's about 2 ball widths across *(default)* and isn't solid: every ball rolls straight through it. Only the cue ball collects it, the moment it touches the box during a shot. The shooter gets a random item, each of the 5 equally likely *(default)*, and the box disappears.
-- The item counts even if that shot fouls *(default)*. Placing the cue ball with ball in hand doesn't collect a box; only rolling does *(default)*. With ball in hand, the cue ball can't be placed within a quarter of the table length of a box.
-- Each player holds up to 2 items, in slots 1 and 2, and collects at most one box per turn. With both slots full, or once they've collected one this turn, the cue ball rolls through and the box stays *(default)*. A box stays until someone collects it *(default)*.
+- **Taking turns:** at the start of every 3rd turn a player takes, they get an item. If their side has more balls left than the other side (their group's balls still on the table), it's every 2nd turn instead. Each player counts their own turns since their last turn item, and at the start of each turn the count is checked against 3, or 2 when behind *(default)*. The break is the breaker's first turn, and on an open table nobody is behind *(default)*.
+- **Sinking:** every 2 of your own group's balls you sink earns an item when the balls stop. On an open table, any 2 legal pots count. The 8 doesn't count, and neither does a ball that goes in on a foul *(default)*. The count carries over: sinking 3 earns one item and leaves 1 toward the next *(default)*.
+- The two counts are separate, and each earns its own items. Each item is random from the 5, each equally likely *(default)*. Nobody starts with one.
+- Each player holds up to 2 items, in slots 1 and 2. A new item goes in the first empty slot *(default)*. With both slots full, a newly earned item is lost.
+- In 2v2, each player has their own slots and turn count, and balls sunk count for the shooter.
 
 ### Using items
 
-- On your turn, before you shoot, press 1 or 2 (phones: tap the slot). One item per turn. Like shooting, it works only in the top-down view.
-- Power Shot and Blast Ball work on your next shot. Freeze, Oil Slick and Pocket Block then ask for a target: click or tap a ball, a spot on the felt or a pocket. Pressing the same key or tapping the slot again backs out without using it *(default)*. Items can't be used mid-pull.
+- On your own turn, before a shot, press 1 or 2 (phones: tap the slot). One item per shot. Like shooting, it works only in the top-down view.
+- Power Shot and Blast Ball take effect at once. Freeze, Oil Slick and Pocket Block then ask for a target: click or tap a ball, a spot on the felt or a pocket. Pressing the same key or tapping the slot again backs out without using it *(default)*. Items can't be used mid-pull.
 - An item is spent the moment you use it, even if you then foul or the clock runs out. The shot clock keeps running while you pick a target *(default)*.
 - Everyone at the table, players and watchers, sees the item's name big in the middle of the screen for about 1.5 seconds *(default)*, and its effect stays visible on the table while it lasts. Every player's held items show on their card, for everyone to see.
-- Effects that last start the moment you use them, so they also affect your own shots this turn, and they end when the other side's next turn ends. In 2v2, the other side's next turn is the next turn the other team takes.
+- **How long they last:** Power Shot lasts your whole turn: every shot until you miss or foul. Blast Ball lasts one shot. Freeze, Oil Slick and Pocket Block last from when you use them until the end of the other side's next turn, so they also affect your own shots this turn. In 2v2, the other side's next turn is the next turn the other team takes.
+- A second Power Shot can't be used while one is on, since it would do nothing *(default)*.
 - Effects from both sides can be on the table at once. A ball that's already frozen or a pocket that's already blocked can't be picked again *(default)*.
 - **No lock-outs:** Freeze can't pick the 8. Pocket Block can't be used once the other side has cleared their group and is shooting at the 8. A side can't target the same ball or pocket on two of its turns in a row.
-- Items are cleared at the end of a game, and nobody holds any on the break. A player who takes over a leaver's spot gets their items *(default)*.
+- Items and both counts are cleared at the end of a game. A player who takes over a leaver's spot gets their items and counts *(default)*.
 
 ### The 5 items
 
 | Item | What it does | Numbers |
 | --- | --- | --- |
-| **Power Shot** | Your next shot can reach 1.5× normal full power, with a flame trail behind the cue ball. The pull works as usual, but every power on the meter is 1.5× as strong and the meter reads up to 150% *(default)* | 1.5×: about 37.5 studs/s at full pull |
-| **Blast Ball** | On your next shot, the first ball the cue ball hits sends out a blast that pushes nearby balls away from it. The cue ball, the hit ball and frozen balls aren't pushed *(default)*. If the cue ball hits nothing, nothing happens. The aim indicator shows the blast's reach as a ring around the ball it's going to hit *(default)* | Reaches about 3 ball widths from the hit ball's center. A ball right next to it is pushed at about 40% of normal full speed, fading to nothing at the edge *(default)* |
-| **Freeze** | Pick any ball except the cue ball (freezing it would leave nothing to shoot) and the 8. For the other side's next turn it can't move or drop, and balls bounce off it like a wall. It still counts as a ball for the rules, so hitting it first is legal when it's yours to hit. It glows icy blue *(default)* | Balls bounce off it like a rail, keeping about 73% of their speed *(default)* |
-| **Oil Slick** | Place a round patch anywhere on the felt, even under balls. Balls on it slow down much less. It lasts 2 turns: the turn you place it and the next one. Patches don't stack | About 5 ball widths across. Balls on it slow at a quarter of the normal rate *(default)* |
-| **Pocket Block** | Pick a pocket. A lid covers its mouth for the other side's next turn, and balls bounce off it like a rail *(default)*. Can't be used while the other side is shooting at the 8. Nobody can call a blocked pocket for the 8, and the cue ball can't scratch there either. The lid is built in code | Balls keep about 73% of their speed off the lid, like a rail *(default)* |
+| **Power Shot** | Every shot for the rest of your turn can reach 1.5× normal full power, with a flame trail behind the cue ball. The pull works as usual, but every power on the meter is 1.5× as strong and the meter reads up to 150% *(default)* | 1.5×: about 37.5 studs/s at full pull |
+| **Blast Ball** | On this shot, the first ball the cue ball hits sends out a blast that pushes nearby balls away from it. The cue ball, the hit ball and frozen balls aren't pushed *(default)*. If the cue ball hits nothing, nothing happens. The aim indicator shows the blast's reach as a ring around the ball it's going to hit *(default)* | Reaches about 3 ball widths from the hit ball's center. A ball right next to it is pushed at about 40% of normal full speed, fading to nothing at the edge *(default)* |
+| **Freeze** | Pick any ball except the cue ball (freezing it would leave nothing to shoot) and the 8. Until the end of the other side's next turn it can't move or drop, and balls bounce off it like a wall. It still counts as a ball for the rules, so hitting it first is legal when it's yours to hit. It glows icy blue *(default)* | Balls bounce off it like a rail, keeping about 73% of their speed *(default)* |
+| **Oil Slick** | Place a round patch anywhere on the felt, even under balls. Balls on it slow down much less. It lasts until the end of the other side's next turn. Patches don't stack | About 5 ball widths across. Balls on it slow at a quarter of the normal rate *(default)* |
+| **Pocket Block** | Pick a pocket. A lid covers its mouth until the end of the other side's next turn, and balls bounce off it like a rail *(default)*. Can't be used while the other side is shooting at the 8. Nobody can call a blocked pocket for the 8, and the cue ball can't scratch there either. The lid is built in code | Balls keep about 73% of their speed off the lid, like a rail *(default)* |
 
 ### Feedback
 
@@ -204,6 +205,7 @@ Leaving means leaving the server, disconnecting, pressing a Leave button in the 
 - Alcohol.
 - Guns or weapon items.
 - Items that change what counts as a foul or a win.
+- Item boxes on the felt: players earn items instead.
 - Shooting from the normal view.
 - My fading aim line (shown only near the end of a forward stroke): the slingshot pull has no forward stroke.
 - An economy, cosmetics or ranked mode before the mechanics are done.
