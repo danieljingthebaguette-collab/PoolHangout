@@ -84,7 +84,7 @@ Starting values for Config (tune by feel):
 ## A shot, end to end
 
 1. `Match` starts a turn: it sets the shooter, `clockEndsAt` from `workspace:GetServerTimeNow()`, the ball-in-hand area, whether a pocket must be called, any item the shooter earns for the turn, everyone's held items and the active effects, then fires `TurnStarted` to everyone.
-2. The shooter's `ShotController` runs the camera, placement, aim, pocket call, any item use and power meter locally, then fires `RequestShot` with the aim direction, power (0–1), cue ball placement and called pocket. An item goes first, through `UseItem` (see Items).
+2. The shooter's `ShotController` runs the camera, placement, aim, pocket call, any item use and power meter locally, then fires `RequestShot` with the aim direction, power (0–1, or up to `PowerShotMax` while the shooter's Power Shot is on), cue ball placement and called pocket. An item goes first, through `UseItem` (see Items).
 3. The server validates the request (see `.claude/rules/server.md`) and normalizes the direction.
 4. It fires `ShotStarted` with the exact start balls, the shot, the item effects and the physics params it used, so every client simulates with the server's numbers even while test mode changes them live. Then it simulates the shot in slices of a couple of milliseconds per frame, so even a break never stalls the server. It finishes long before the replay does.
 5. Each client steps the same simulation as it plays the shot back in real time, so every client sees the same shot and no frame does much work.
@@ -97,11 +97,11 @@ Starting values for Config (tune by feel):
 ## Items
 
 - **State:** `Shared/Items.luau` holds a game's items as plain tables, and `Match` owns that state: each player's slots and item bar (its points, and whether it's full and waiting for a slot), the active effects and when each one ends, and what each side targeted on its last turn. Its checks cover every item rule in GAME_SPEC, lock-outs included. It never calls `math.random`: the server passes in a random number for each item rolled, so tests can choose them.
-- **Earning:** at the start of each turn, `Match` gives the shooter `TurnPoints`. After `EightBall.resolveShot` it passes the outcome to `Items.luau`. Each legal pot of the shooter's own group (any legal pot on an open table) gives the shooter `OwnBallPoints` and the other side `OpponentBallPoints`, split evenly between that side's players still in the game. Break pots, foul pots and the 8 give nothing. Points are plain numbers, so a split can leave halves. Every `BarPoints` gives a random item into the first empty slot. With both slots full, the bar stops at `BarPoints`, extra points are dropped, and the item arrives when the player uses one. With `SinkItemsWaitForTurnEnd` on, an item the shooter's own pots filled waits for the end of their turn. Every change to a bar is sent with how many points it added, for the pops.
+- **Earning:** at the start of each turn, `Match` gives the shooter `TurnPoints`. After `EightBall.resolveShot` it passes the outcome to `Items.luau`. Each legal pot of the shooter's own group (any legal pot on an open table) gives the shooter `OwnBallPoints` and the other side's player who shoots next `OpponentBallPoints`, all of it, so points stay whole. Break pots, foul pots and the 8 give nothing. Every `BarPoints` gives a random item into the first empty slot. With both slots full, the bar stops at `BarPoints`, extra points are dropped, and the item arrives when the player uses one. With `SinkItemsWaitForTurnEnd` on, an item the shooter's own pots filled waits for the end of their turn. Every change to a bar is sent with how many points it added, for the pops.
 - **The rules stay out of it:** `EightBall.luau` never sees items, because items only change how balls move. `Items.luau` reads its outcomes but never changes them. The one check that touches a rule, that nobody can call a blocked pocket, lives in `Items.luau`, and the server checks it when validating `RequestShot`.
 - **Using an item:** the shooter's client fires `UseItem` with a slot and a target. The server checks it with `Items.luau`: it's their turn, before the shot, no item used yet this shot, the slot holds that item, and the target is allowed. Then it updates the state and fires `ItemUsed` to everyone, for the big name and the effect.
+- **Power Shot isn't a simulation effect:** it only lets the shot's power go past 1. While it's on, `Pull.luau` keeps adding power at the same rate past full, up to `PowerShotMax` at `PowerShotMax` × `FullPullDistance`. Up to 1, speed follows the power curve as today; above 1 it's `FullPowerSpeed` × power, so 1.5 is 1.5× full speed. The server drops any `RequestShot` with power above 1 unless the shooter's Power Shot is on.
 - **Into the simulation:** `Items.luau` turns the active effects into an `effects` table that goes with the shot in `ShotStarted`, so every client simulates the same shot. An empty table is a normal shot.
-  - `powerScale`: the server multiplies the speed of every shot by it while a Power Shot is on, for the rest of that turn. The client never sends it.
   - `blast`: at the cue ball's first ball contact, every other ball within the reach is pushed away from the hit ball's center, at a speed that fades to nothing at the edge. Not the cue ball, the hit ball or frozen balls.
   - `frozen`: ids of balls that never move. Other balls hit them as a fixed circle and keep `RailBounce` of their speed along the line of centers.
   - `oil`: circles where a ball whose center is inside slows at `OilSlowdown` × the normal rate.
@@ -117,11 +117,11 @@ Starting values for `Config.Items`, every one a default to tune by feel. Distanc
 | `BarPoints` | 12 points per item | GAME_SPEC |
 | `TurnPoints` | +3 at the start of each turn | GAME_SPEC |
 | `OwnBallPoints` | +4 for each of your balls you sink | GAME_SPEC |
-| `OpponentBallPoints` | +2 for each ball the other side sinks, split in 2v2 | The comeback: the side being run on still fills up. The balance pass tries 3 |
+| `OpponentBallPoints` | +2 for each ball the other side sinks; in 2v2, all to the opponent who shoots next | The comeback: the side being run on still fills up. The balance pass tries 3 |
 | `SinkItemsWaitForTurnEnd` | false | When true, an item your own sinks fill arrives at the end of your turn |
 | `Slots` | 2 | GAME_SPEC |
 | `Odds` | Equal for all 5 items | GAME_SPEC |
-| `PowerShotScale` | 1.5× full-power speed | GAME_SPEC |
+| `PowerShotMax` | 1.5: the meter reaches 150% at 1.5× `FullPullDistance`, for 1.5× full-power speed | GAME_SPEC |
 | `BlastReach`, `BlastPush` | 6 ball radii (3 ball widths); 40% of full-power speed for a touching ball, fading to 0 at the edge | Clears a cluster without emptying the table |
 | `OilRadius`, `OilSlowdown` | 5 ball radii (5 ball widths across); 0.25 × the normal rate | "Much less", while balls still stop |
 | `NameSeconds` | 1.5 s for the item's name on screen | Long enough to read, short enough to keep play moving |

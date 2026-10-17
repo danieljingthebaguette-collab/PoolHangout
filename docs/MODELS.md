@@ -8,7 +8,7 @@ How we build every model in Pool!. There's no modeler. Claude builds each model 
 - **Found by name.** The game finds parts by exact name, so the names below must match, including capitals.
 - **Place models come from builder scripts.** Tables, platforms and the arena are built by scripts in `tools/`, like `BuildTable.luau`. Each one reads Config, rebuilds its model from scratch so running it twice gives the same result, keeps the parts the game owns (like `Felt` and `Platforms`), and supports Undo. Claude runs them through the MCP's `execute_luau` in edit mode, then I save the place (Cmd+S). The place file isn't in git but the scripts are, so the place can always be rebuilt.
 - **Spawned models come from game code.** Balls, the cue, the pocket lid and item effects are built at runtime by the game's own modules, like the balls and the cue today, so they live in git and the place holds no copy.
-- **Organic shapes come from Studio's AI tools.** For plants and other shapes parts can't do well, Claude writes a prompt (see AI prompts below), I run it, and the result goes in `ServerStorage/Props` under the prompt's name *(default)*. The arena builder copies props from there into place. They live only in the place file, so their prompts are kept here, so we can generate one again if it's lost. Never use these tools for anything the game measures.
+- **Organic shapes come from Studio's AI tools.** For plants and other shapes parts can't do well, Claude writes a prompt (see AI prompts below), I run it, and the result goes in `ServerStorage/Props` under the prompt's name. The arena builder copies props from there into place. They live only in the place file, so their prompts are kept here, so we can generate one again if it's lost. Never use these tools for anything the game measures.
 
 ## The look
 
@@ -74,7 +74,7 @@ Built in code with the item effects while Pocket Block covers a pocket. It spans
 ## The arena
 
 - A Folder named `Tables` in Workspace holding `Table1` to `Table8`. Each is a table model with an attribute **`Mode`** set to `"1v1"` (4 tables) or `"2v2"` (4 tables).
-- `tools/BuildArena.luau` *(default name)* builds everything else into a Workspace folder named `Arena` *(default)*. In Phase 2 it's a blockout in plain parts: walls, the floor, 8 table spots and the counter. In Phase 4 it gets the full look: timber arches and beams, a plank floor, lanterns that throw warm pools of light over each table, places to sit, the counter, and the plants and rocks.
+- `tools/BuildArena.luau` builds everything else into a Workspace folder named `Arena`. In Phase 2 it's a blockout in plain parts: walls, the floor, 8 table spots and the counter. In Phase 4 it gets the full look: timber arches and beams, a plank floor, lanterns that throw warm pools of light over each table, places to sit, the counter, and the plants and rocks.
 - Mostly warm reds, oranges and browns, with some green from the plants. The felt stays the strongest color in the room.
 - 30 players per server. Leave room around each table for its platforms and for people to walk past and watch. Voices fade with distance, so spread the tables out enough that each one has its own conversation.
 - The builders don't make signs over the tables, arrows, buttons, screens or item effects; the game makes those.
@@ -86,7 +86,7 @@ For shapes parts can't do well: plants, leaves, and rounded or organic props. Cl
 - **Name:** what it's called in `ServerStorage/Props`, like `FernPot`.
 - **Prompt:** what it is, then the look: low-poly and chunky, stylized, not realistic, with flat, matte, hand-painted colors, no shine and the warm palette.
 - **Size:** in studs, for the tool's bounding box.
-- **Budget:** a triangle limit if the tool asks for one, about 2,000 for a small prop *(default)*, so phones hold 30 fps.
+- **Budget:** a triangle limit if the tool asks for one, about 2,000 for a small prop, so phones hold 30 fps.
 
 For the texture tool, the same look words: "flat, matte, hand-painted colors, no shine, no realistic texture".
 

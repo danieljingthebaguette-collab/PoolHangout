@@ -121,11 +121,11 @@ Each player has one item bar. At 12 points it gives an item, and leftover points
 | --- | --- |
 | +3 | At the start of each of your turns. The break counts as the breaker's first turn |
 | +4 | For each of your own group's balls you sink, when the balls stop. On an open table, any legal pot counts |
-| +2 | For each ball the other side sinks that earns them +4, when the balls stop. In 2v2 it's split between the other team's players, +1 each; a player left alone gets the full +2 *(default)* |
+| +2 | For each ball the other side sinks that earns them +4, when the balls stop. In 2v2 it all goes to the opponent who shoots next |
 
-- Break pots, foul pots and the 8 give no points to anyone. Neither does a ball from the other side's group that you sink *(default)*.
-- Each item is random from the 5, each equally likely *(default)*. Nobody starts with one.
-- Each player holds up to 2 items, in slots 1 and 2. A new item goes in the first empty slot *(default)*. If the bar fills while both slots are full, it stops at full and glows, and the item arrives as soon as you use one. Points past full are lost.
+- Break pots, foul pots and the 8 give no points to anyone. Neither does a ball from the other side's group that you sink.
+- Each item is random from the 5, each equally likely. Nobody starts with one.
+- Each player holds up to 2 items, in slots 1 and 2. A new item goes in the first empty slot. If the bar fills while both slots are full, it stops at full and glows, and the item arrives as soon as you use one. Points past full are lost.
 - `Config.Items.SinkItemsWaitForTurnEnd` (off by default): when it's on, an item that your own sink fills arrives when your turn ends, not right away.
 - Every player's card shows their 2 slots with the item bar under them, for everyone to see. Each fill shows a small pop on the bar, like "+4", so players learn what fills it. The exact look waits for the GUI pass.
 - In 2v2, each player has their own slots and bar, and balls sunk count for the shooter.
@@ -133,29 +133,30 @@ Each player has one item bar. At 12 points it gives an item, and leftover points
 ### Using items
 
 - On your own turn, before a shot, press 1 or 2 (phones: tap the slot). One item per shot. Like shooting, it works only in the top-down view.
-- Power Shot and Blast Ball take effect at once. Freeze, Oil Slick and Pocket Block then ask for a target: click or tap a ball, a spot on the felt or a pocket. Pressing the same key or tapping the slot again backs out without using it *(default)*. Items can't be used mid-pull.
-- An item is spent the moment you use it, even if you then foul or the clock runs out. The shot clock keeps running while you pick a target *(default)*.
-- Everyone at the table, players and watchers, sees the item's name big in the middle of the screen for about 1.5 seconds *(default)*, and its effect stays visible on the table while it lasts. Every player's held items show on their card, for everyone to see.
+- Power Shot and Blast Ball take effect at once. Freeze, Oil Slick and Pocket Block then ask for a target: click or tap a ball, a spot on the felt or a pocket. Pressing the same key or tapping the slot again backs out without using it. Items can't be used mid-pull.
+- An item is spent the moment you use it, even if you then foul or the clock runs out. The shot clock keeps running while you pick a target.
+- Everyone at the table, players and watchers, sees the item's name big in the middle of the screen for about 1.5 seconds, and its effect stays visible on the table while it lasts. Every player's held items show on their card, for everyone to see.
 - **How long they last:** Power Shot lasts your whole turn: every shot until you miss or foul. Blast Ball lasts one shot. Freeze, Oil Slick and Pocket Block last from when you use them until the end of the other side's next turn, so they also affect your own shots this turn. In 2v2, the other side's next turn is the next turn the other team takes.
-- A second Power Shot can't be used while one is on, since it would do nothing *(default)*.
-- Effects from both sides can be on the table at once. A ball that's already frozen or a pocket that's already blocked can't be picked again *(default)*.
+- A second Power Shot can't be used while one is on, since it would do nothing.
+- Combos are allowed: Power Shot on one shot, then Blast Ball on a later shot in the same turn, since each uses its own slot.
+- Effects from both sides can be on the table at once. A ball that's already frozen or a pocket that's already blocked can't be picked again.
 - **No lock-outs:** Freeze can't pick the 8. Pocket Block can't be used once the other side has cleared their group and is shooting at the 8. A side can't target the same ball or pocket on two of its turns in a row.
-- Items and bars are cleared at the end of a game. A player who takes over a leaver's spot gets their items and bar *(default)*.
+- Items and bars are cleared at the end of a game. A player who takes over a leaver's spot gets their items and bar.
 
 ### The 5 items
 
 | Item | What it does | Numbers |
 | --- | --- | --- |
-| **Power Shot** | Every shot for the rest of your turn can reach 1.5× normal full power, with a flame trail behind the cue ball. The pull works as usual, but every power on the meter is 1.5× as strong and the meter reads up to 150% *(default)* | 1.5×: about 37.5 studs/s at full pull |
-| **Blast Ball** | On this shot, the first ball the cue ball hits sends out a blast that pushes nearby balls away from it. The cue ball, the hit ball and frozen balls aren't pushed *(default)*. If the cue ball hits nothing, nothing happens. The aim indicator shows the blast's reach as a ring around the ball it's going to hit *(default)* | Reaches about 3 ball widths from the hit ball's center. A ball right next to it is pushed at about 40% of normal full speed, fading to nothing at the edge *(default)* |
-| **Freeze** | Pick any ball except the cue ball (freezing it would leave nothing to shoot) and the 8. Until the end of the other side's next turn it can't move or drop, and balls bounce off it like a wall. It still counts as a ball for the rules, so hitting it first is legal when it's yours to hit. It glows icy blue *(default)* | Balls bounce off it like a rail, keeping about 73% of their speed *(default)* |
-| **Oil Slick** | Place a round patch anywhere on the felt, even under balls. Balls on it slow down much less. It lasts until the end of the other side's next turn. Patches don't stack | About 5 ball widths across. Balls on it slow at a quarter of the normal rate *(default)* |
-| **Pocket Block** | Pick a pocket. A lid covers its mouth until the end of the other side's next turn, and balls bounce off it like a rail *(default)*. Can't be used while the other side is shooting at the 8. Nobody can call a blocked pocket for the 8, and the cue ball can't scratch there either. The lid is built in code | Balls keep about 73% of their speed off the lid, like a rail *(default)* |
+| **Power Shot** | For every shot in the rest of your turn, the meter can go past 100%. Up to 100% it works as normal. Pulling further keeps filling it at the same rate, up to 150% at 1.5× `FullPullDistance` (9 studs past the cancel zone today). Past 100%, speed rises in step with the meter, so 125% is 1.25× full speed *(default)*. A flame trail follows the cue ball. The server only accepts power above 100% while the shooter's Power Shot is on | `Config.Items.PowerShotMax` 1.5: 150% sends the cue ball at 1.5× full speed, 37.5 studs/s today |
+| **Blast Ball** | On this shot, the first ball the cue ball hits sends out a blast that pushes nearby balls away from it. The cue ball, the hit ball and frozen balls aren't pushed. If the cue ball hits nothing, nothing happens. The aim indicator shows the blast's reach as a ring around the ball it's going to hit | Reaches about 3 ball widths from the hit ball's center. A ball right next to it is pushed at about 40% of normal full speed, fading to nothing at the edge |
+| **Freeze** | Pick any ball except the cue ball (freezing it would leave nothing to shoot) and the 8. Until the end of the other side's next turn it can't move or drop, and balls bounce off it like a wall. It still counts as a ball for the rules, so hitting it first is legal when it's yours to hit. It glows icy blue | Balls bounce off it like a rail, keeping about 73% of their speed |
+| **Oil Slick** | Place a round patch anywhere on the felt, even under balls. Balls on it slow down much less. It lasts until the end of the other side's next turn. Patches don't stack | About 5 ball widths across. Balls on it slow at a quarter of the normal rate |
+| **Pocket Block** | Pick a pocket. A lid covers its mouth until the end of the other side's next turn, and balls bounce off it like a rail. Can't be used while the other side is shooting at the 8. Nobody can call a blocked pocket for the 8, and the cue ball can't scratch there either. The lid is built in code | Balls keep about 73% of their speed off the lid, like a rail |
 
 ### Feedback
 
-- Chunky, stylized effects as `docs/STYLE.md` describes: a flame trail for Power Shot, a burst and a ring for the blast, an icy glow on a frozen ball, a glossy patch for oil and a lid over a blocked pocket *(default looks)*.
-- Screen shake on big hits: the blast, and any hit or rail bounce faster than about 60% of normal full speed, so the break and Power Shots shake too *(default)*. It's short and small, so the table stays readable.
+- Chunky, stylized effects as `docs/STYLE.md` describes: a flame trail for Power Shot, a burst and a ring for the blast, an icy glow on a frozen ball, a glossy patch for oil and a lid over a blocked pocket.
+- Screen shake on big hits: the blast, and any hit or rail bounce faster than about 60% of normal full speed, so the break and Power Shots shake too. It's short and small, so the table stays readable.
 - The item's name shown big when it's used (above).
 - More items come in the Friday updates after launch.
 
