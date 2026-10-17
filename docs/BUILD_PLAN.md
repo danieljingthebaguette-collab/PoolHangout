@@ -8,7 +8,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 - **Current phase:** Phase 1, the shot on one table
 - **In progress:** nothing being built. The item design and the switch to models Claude builds are in the docs and committed. Waiting on my PC test: the 8 Ball Duels physics with a 3× break, the new art direction (`docs/STYLE.md`) on the lighting, test table, floor and HUD, the 8 Ball Duels aim indicator (center dot, white and yellow lines, dark outlines), and the 8 Ball Duels pull (free cursor, power straight back from where I pressed, full power 6 studs past the cancel zone, with a slider). STYLE.md's timer and item slots come in Phase 2; its effects, player ring and lodge in Phase 4.
-- **Last session:** 2026-10-16. Matched the physics to my 8 Ball Duels measurements (FullPowerSpeed 25, BreakPower 3, RollingSlowdown 1.84, RailBounce 0.73, BallBounce 0.94, Follow 0, PowerCurve 1.45, sub-steps for fast balls, optional SpeedDrag). Moved to the new art direction in `docs/STYLE.md`: warm golden lighting, a matte painted table on a plank floor, a cream-card HUD. Rebuilt the aim indicator and the pull to work like 8 Ball Duels. Wrote the item design (with my lock-out rules) and the switch to models Claude builds into every doc, ARCHITECTURE.md included. On 2026-10-17, replaced item boxes with earned items in every doc.
+- **Last session:** 2026-10-16. Matched the physics to my 8 Ball Duels measurements (FullPowerSpeed 25, BreakPower 3, RollingSlowdown 1.84, RailBounce 0.73, BallBounce 0.94, Follow 0, PowerCurve 1.45, sub-steps for fast balls, optional SpeedDrag). Moved to the new art direction in `docs/STYLE.md`: warm golden lighting, a matte painted table on a plank floor, a cream-card HUD. Rebuilt the aim indicator and the pull to work like 8 Ball Duels. Wrote the item design (with my lock-out rules) and the switch to models Claude builds into every doc, ARCHITECTURE.md included. On 2026-10-17, replaced item boxes with earned items, then the earning rules with one item bar per player, in every doc.
 - **Next up:** my PC test of the Phase 1 work (restart the playtest first, so it runs the new code), then Phase 1's age check (answering the questionnaire for the item version) and phone check
 - **Known issues:**
   - Touch and the new HUD layout haven't been tried on a real phone yet, only in the emulator; it's covered by Phase 1's phone check
@@ -62,8 +62,8 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] Top bar for two: the other player's card, a highlight on whose turn it is, the shot-clock bar under the shooter's name, and each side's balls still left to sink (Claude)
 - [ ] Your group's balls pulse white briefly when your turn starts (Claude)
 - [ ] Automatic rule tests: 25+ scenarios, like sinking the cue ball on the 8, that rerun after every change (Claude)
-- [ ] Earning items: a random item at the start of every 3rd turn a player takes (every 2nd when their side has more balls left), and one for every 2 of their group's balls they sink. 2 slots per player; with both full, a new item is lost. Test-panel buttons to give myself any item (Claude)
-- [ ] Using items: press 1 or 2 (phones: tap the slot), on your own turn, one per shot, with the item's name shown big to everyone at the table. Slot icons drawn in code, and every player's held items on their card. Plain placeholder looks until Phase 4 (Claude)
+- [ ] Earning items: one item bar per player that gives a random item at 12 points: +3 at the start of your turn, +4 for each of your balls you sink, +2 for each ball the other side sinks (split +1 each in 2v2). When the bar fills with both slots full, it glows and the item arrives as soon as a slot frees. The bar sits under each card's 2 slots, with a small pop like "+4" for each fill. Test-panel buttons to give myself any item (Claude)
+- [ ] Using items: press 1 or 2 (phones: tap the slot), on your own turn, one per shot, with the item's name shown big to everyone at the table. Slot icons drawn in code. Plain placeholder looks until Phase 4 (Claude)
 - [ ] Power Shot (lasts the whole turn) and Blast Ball (one shot), with Lune tests for the blast (Claude)
 - [ ] Arena blockout: `tools/BuildArena.luau` builds the walls, floor, 8 table spots and the counter in plain parts (Claude builds it, I adjust)
 - [ ] Playtest with 2 friends on a friends-only test version (Me)
@@ -99,7 +99,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] Item effects in the `docs/STYLE.md` look: flame trail, blast burst and ring, icy frozen balls, oil patch, pocket lids, screen shake on big hits, and the ring at players' feet (Claude)
 - [ ] Server size 30 and voice chat turned on (Me)
 - [ ] Upbeat music and sounds: ball clicks, rail thuds, pocket drops and a sound for each item (I pick them, Claude wires them in)
-- [ ] Item balance pass: how often items are earned, blast strength, oil, item odds, all in Config (Me + Claude)
+- [ ] Item balance pass: the item bar's points, blast strength, oil, item odds, all in Config. Try raising `OpponentBallPoints` to 3 for a stronger comeback (Me + Claude)
 - [ ] Phone pass: button sizes, readable text, 30+ fps on a mid-range phone (I test, Claude fixes)
 - [ ] Analytics: joined → first game started → first game finished → second game (Claude)
 - [ ] Store page: name, icon, 3–5 thumbnails, and a description (Me)

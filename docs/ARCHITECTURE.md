@@ -22,7 +22,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Shared/Physics/Simulate.luau` | A stepper: start it from balls, a shot, the item effects and params (Config by default), advance it N steps at a time, read the `ShotResult` when done. `run()` does it all at once for tests |
 | `Shared/Physics/Preview.luau` | Where the cue ball first touches a ball, rail or pocket, for the aim indicator, and after a hit, which way each ball goes and with what share of the speed. Same contacts and hit rule as Simulate, solved exactly, with frozen balls and pocket lids as walls |
 | `Shared/Pull.luau` | The slingshot pull's power: how far the pointer has moved from where it pressed, straight back toward the stick. Forward lowers it to 0, sideways does nothing. Pure, so Lune tests it |
-| `Shared/Items.luau` | A game's items as plain tables: slots, each player's turn and sinking counts, active effects, and what each side targeted last. Awards earned items, checks every item rule and builds the simulation's `effects`. Pure, so Lune tests it (see Items) |
+| `Shared/Items.luau` | A game's items as plain tables: slots, each player's item bar, active effects, and what each side targeted last. Adds bar points, awards items, checks every item rule and builds the simulation's `effects`. Pure, so Lune tests it (see Items) |
 | `Shared/Rules/EightBall.luau` | New game, resolve a shot, timeouts, forfeits, per-player game stats |
 | `Server/Main.server.luau` | Starts the services |
 | `Server/TableService.luau` | Finds tables, watches platforms, runs countdowns and signs, starts and resets games |
@@ -32,7 +32,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Client/Main.local.luau` | Starts the controllers |
 | `Client/TableView.luau` | Replays shots on the ball parts, plays their sounds, draws the balls' shadows, and starts the shooter's shot before the server's copy arrives |
 | `Client/ShotController.luau` | F and the top-down camera, placing the cue ball, aim, pocket call, using items (keys 1 and 2, slot taps, picking a target), the pull for power, the cue's strike and follow-through |
-| `Client/Hud.luau` | Top bar with player cards, the power meter, the sunk-ball tray, the control hints, settings (sound volume); later the shot clock, item slots with icons drawn in code, held items on every card, the item's name shown big, end screen and Leave button |
+| `Client/Hud.luau` | Top bar with player cards, the power meter, the sunk-ball tray, the control hints, settings (sound volume); later the shot clock, item slots with icons drawn in code, every card's slots and item bar with its "+4" pops, the item's name shown big, end screen and Leave button |
 | `Client/Effects.luau` | Item effects and screen shake: flame trail, blast, frozen balls, oil patches, pocket lids. Built in code once per effect and destroyed when it ends |
 | `Client/Slider.luau` | A labelled slider row for mouse and touch, for the settings and the test panel |
 | `Client/Card.luau` | The card look from `docs/STYLE.md`: cream or dark, with corner brackets and a faint dot texture |
@@ -96,8 +96,8 @@ Starting values for Config (tune by feel):
 
 ## Items
 
-- **State:** `Shared/Items.luau` holds a game's items as plain tables, and `Match` owns that state: each player's slots, turn count and sinking count, the active effects and when each one ends, and what each side targeted on its last turn. Its checks cover every item rule in GAME_SPEC, lock-outs included. It never calls `math.random`: the server passes in a random number for each item rolled, so tests can choose them.
-- **Earning:** at the start of each turn, `Match` asks `Items.luau` whether the shooter earns a turn item. The interval is `TurnInterval`, or `BehindTurnInterval` when their side has more of its group left on the table. After `EightBall.resolveShot`, `Match` passes the outcome in, and every `BallsPerItem` of the shooter's qualifying pots earns an item: their own group's balls, or any legal pot on an open table, never the 8 or a ball on a foul. A new item goes in the first empty slot, or is lost when both are full.
+- **State:** `Shared/Items.luau` holds a game's items as plain tables, and `Match` owns that state: each player's slots and item bar (its points, and whether it's full and waiting for a slot), the active effects and when each one ends, and what each side targeted on its last turn. Its checks cover every item rule in GAME_SPEC, lock-outs included. It never calls `math.random`: the server passes in a random number for each item rolled, so tests can choose them.
+- **Earning:** at the start of each turn, `Match` gives the shooter `TurnPoints`. After `EightBall.resolveShot` it passes the outcome to `Items.luau`. Each legal pot of the shooter's own group (any legal pot on an open table) gives the shooter `OwnBallPoints` and the other side `OpponentBallPoints`, split evenly between that side's players still in the game. Break pots, foul pots and the 8 give nothing. Points are plain numbers, so a split can leave halves. Every `BarPoints` gives a random item into the first empty slot. With both slots full, the bar stops at `BarPoints`, extra points are dropped, and the item arrives when the player uses one. With `SinkItemsWaitForTurnEnd` on, an item the shooter's own pots filled waits for the end of their turn. Every change to a bar is sent with how many points it added, for the pops.
 - **The rules stay out of it:** `EightBall.luau` never sees items, because items only change how balls move. `Items.luau` reads its outcomes but never changes them. The one check that touches a rule, that nobody can call a blocked pocket, lives in `Items.luau`, and the server checks it when validating `RequestShot`.
 - **Using an item:** the shooter's client fires `UseItem` with a slot and a target. The server checks it with `Items.luau`: it's their turn, before the shot, no item used yet this shot, the slot holds that item, and the target is allowed. Then it updates the state and fires `ItemUsed` to everyone, for the big name and the effect.
 - **Into the simulation:** `Items.luau` turns the active effects into an `effects` table that goes with the shot in `ShotStarted`, so every client simulates the same shot. An empty table is a normal shot.
@@ -114,9 +114,11 @@ Starting values for `Config.Items`, every one a default to tune by feel. Distanc
 
 | Setting | Start | Why |
 | --- | --- | --- |
-| `TurnInterval` | 3: an item at the start of every 3rd turn | GAME_SPEC |
-| `BehindTurnInterval` | 2, when your side has more balls left | Helps the side that's behind catch up |
-| `BallsPerItem` | 2 qualifying pots per item | GAME_SPEC |
+| `BarPoints` | 12 points per item | GAME_SPEC |
+| `TurnPoints` | +3 at the start of each turn | GAME_SPEC |
+| `OwnBallPoints` | +4 for each of your balls you sink | GAME_SPEC |
+| `OpponentBallPoints` | +2 for each ball the other side sinks, split in 2v2 | The comeback: the side being run on still fills up. The balance pass tries 3 |
+| `SinkItemsWaitForTurnEnd` | false | When true, an item your own sinks fill arrives at the end of your turn |
 | `Slots` | 2 | GAME_SPEC |
 | `Odds` | Equal for all 5 items | GAME_SPEC |
 | `PowerShotScale` | 1.5× full-power speed | GAME_SPEC |
@@ -161,10 +163,10 @@ Workspace
 | `SayPhrase` | client → server | A quick phrase, by index (Later list) |
 | `UseItem` | client → server | Slot, and a target: a ball id, a point on the felt or a pocket id |
 | `TableChanged` | server → clients | Sign text, state, seats |
-| `TurnStarted` | server → clients | Shooter, clock end time, ball in hand, pocket call needed, any item earned, held items, active effects |
+| `TurnStarted` | server → clients | Shooter, clock end time, ball in hand, pocket call needed, held items, item bars and the points just added, any item earned, active effects |
 | `ItemUsed` | server → clients | Who used which item, and its target |
 | `ShotStarted` | server → clients | Start balls, shot, item effects and physics params to replay |
-| `ShotResolved` | server → clients | Final balls, the outcome and any item earned |
+| `ShotResolved` | server → clients | Final balls, the outcome, item bars and the points just added, and any item earned |
 | `GameOver` | server → clients | Winner and each player's stats |
 | `AimRelay` | server → clients, unreliable | Live aim for watchers |
 | `TestRack` | client → server | Physics test mode: rack Table1 |

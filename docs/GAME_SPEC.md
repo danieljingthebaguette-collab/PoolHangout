@@ -6,7 +6,7 @@ Markers: no marker = decided by me. *(default)* = Claude's proposal I haven't co
 
 ## The game
 
-An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm wooden arena. Players earn gadget items by taking turns and sinking their balls, and use them before a shot. Items bend the physics but never the rules. Between turns players walk around and talk on voice chat. How it looks is in `docs/STYLE.md`, in the spirit of Illegal Soccer's style only. The heart of it is still the shot: a top-down view, the cue following your mouse (or your finger on phones), an aim lock, and a slingshot pull for power. Mechanics come first. The base build has no economy, cosmetics or ranked mode.
+An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm wooden arena. Each player's item bar fills as they take turns and as balls drop, theirs or the other side's, and gives a gadget each time it's full. They use them before a shot. Items bend the physics but never the rules. Between turns players walk around and talk on voice chat. How it looks is in `docs/STYLE.md`, in the spirit of Illegal Soccer's style only. The heart of it is still the shot: a top-down view, the cue following your mouse (or your finger on phones), an aim lock, and a slingshot pull for power. Mechanics come first. The base build has no economy, cosmetics or ranked mode.
 
 ## Audience and platform
 
@@ -87,7 +87,7 @@ Laid out like 8 Ball Duels, in the look `docs/STYLE.md` describes: cream cards, 
   - the shot-clock bar under the shooter's name
   - each side's balls still left to sink
   - your group's balls pulse white briefly when your turn starts
-  - item slots 1 and 2 at the bottom center, with icons drawn in code, and every player's held items on their card
+  - item slots 1 and 2 at the bottom center, with icons drawn in code, and every player's slots and item bar on their card
 
 ## 8-ball rules
 
@@ -115,11 +115,20 @@ Items are gadgets that change how balls move, never the rules. Here a **turn** m
 
 ### Earning items
 
-- **Taking turns:** at the start of every 3rd turn a player takes, they get an item. If their side has more balls left than the other side (their group's balls still on the table), it's every 2nd turn instead. Each player counts their own turns since their last turn item, and at the start of each turn the count is checked against 3, or 2 when behind *(default)*. The break is the breaker's first turn, and on an open table nobody is behind *(default)*.
-- **Sinking:** every 2 of your own group's balls you sink earns an item when the balls stop. On an open table, any 2 legal pots count. The 8 doesn't count, and neither does a ball that goes in on a foul *(default)*. The count carries over: sinking 3 earns one item and leaves 1 toward the next *(default)*.
-- The two counts are separate, and each earns its own items. Each item is random from the 5, each equally likely *(default)*. Nobody starts with one.
-- Each player holds up to 2 items, in slots 1 and 2. A new item goes in the first empty slot *(default)*. With both slots full, a newly earned item is lost.
-- In 2v2, each player has their own slots and turn count, and balls sunk count for the shooter.
+Each player has one item bar. At 12 points it gives an item, and leftover points carry over.
+
+| Points | When |
+| --- | --- |
+| +3 | At the start of each of your turns. The break counts as the breaker's first turn |
+| +4 | For each of your own group's balls you sink, when the balls stop. On an open table, any legal pot counts |
+| +2 | For each ball the other side sinks that earns them +4, when the balls stop. In 2v2 it's split between the other team's players, +1 each; a player left alone gets the full +2 *(default)* |
+
+- Break pots, foul pots and the 8 give no points to anyone. Neither does a ball from the other side's group that you sink *(default)*.
+- Each item is random from the 5, each equally likely *(default)*. Nobody starts with one.
+- Each player holds up to 2 items, in slots 1 and 2. A new item goes in the first empty slot *(default)*. If the bar fills while both slots are full, it stops at full and glows, and the item arrives as soon as you use one. Points past full are lost.
+- `Config.Items.SinkItemsWaitForTurnEnd` (off by default): when it's on, an item that your own sink fills arrives when your turn ends, not right away.
+- Every player's card shows their 2 slots with the item bar under them, for everyone to see. Each fill shows a small pop on the bar, like "+4", so players learn what fills it. The exact look waits for the GUI pass.
+- In 2v2, each player has their own slots and bar, and balls sunk count for the shooter.
 
 ### Using items
 
@@ -131,7 +140,7 @@ Items are gadgets that change how balls move, never the rules. Here a **turn** m
 - A second Power Shot can't be used while one is on, since it would do nothing *(default)*.
 - Effects from both sides can be on the table at once. A ball that's already frozen or a pocket that's already blocked can't be picked again *(default)*.
 - **No lock-outs:** Freeze can't pick the 8. Pocket Block can't be used once the other side has cleared their group and is shooting at the 8. A side can't target the same ball or pocket on two of its turns in a row.
-- Items and both counts are cleared at the end of a game. A player who takes over a leaver's spot gets their items and counts *(default)*.
+- Items and bars are cleared at the end of a game. A player who takes over a leaver's spot gets their items and bar *(default)*.
 
 ### The 5 items
 
