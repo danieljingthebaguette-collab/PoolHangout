@@ -234,6 +234,28 @@ return function(test, check)
 		end
 	end)
 
+	test("balls already down stay down, and only the balls this shot drops are reported", function()
+		local balls = { ball(0, 0, 0), ball(3, -LENGTH / 2, -WIDTH / 2), ball(5, LENGTH / 4, -WIDTH / 4) }
+		balls[2].pocket = 1
+		local cases = {
+			{ name = "a shot that drops the cue ball", shot = shotRolling(0, 1, LENGTH), dropped = { 0 } },
+			{ name = "a shot that drops nothing", shot = shotRolling(0, 1, WIDTH / 4), dropped = {} },
+		}
+		for _, case in cases do
+			local sim = Simulate.run(balls, case.shot)
+			local dropped = Simulate.dropped(sim)
+			check.equal(#dropped, #case.dropped, case.name)
+			for i, id in case.dropped do
+				check.equal(dropped[i].id, id, case.name)
+				check.equal(dropped[i].pocket, 5, case.name)
+			end
+			local three = sim.balls[2]
+			check.equal(three.pocket, 1, `{case.name}: ball 3's pocket`)
+			check.equal(three.x, balls[2].x, `{case.name}: ball 3 stays put`)
+			check.equal(three.y, balls[2].y, `{case.name}: ball 3 stays put`)
+		end
+	end)
+
 	test("a ball that clips the very end of a rail at a pocket stays on the table", function()
 		-- Straight at the +y long rail just past its corner end, so it hits the pocket's jaw
 		local sim = Simulate.run({ ball(0, CORNER_RAIL_END_X + RADIUS / 10, 0) }, shotRolling(0, 1, WIDTH * 3 / 4))
@@ -318,6 +340,16 @@ return function(test, check)
 		local banked = events({ ball(0, -LENGTH / 4, 0) }, shotRolling(0, 1, WIDTH / 2 - RADIUS + WIDTH / 8))
 		check.equal(banked, "rail 0", "rail")
 	end)
+
+	test(
+		"a shot records the first ball the cue ball touches, not a ball that ball hits, and nil if it touches none",
+		function()
+			-- The cue ball hits 5, which runs on into 2
+			local balls = { ball(0, -4, 0), ball(2, 0, 0), ball(5, -2, 0) }
+			check.equal(Simulate.run(balls, shotRolling(1, 0, LENGTH)).firstHit, 5)
+			check.equal(Simulate.run({ ball(0, -4, 0) }, shotRolling(1, 0, 2)).firstHit, nil)
+		end
+	)
 
 	test("8 Ball Duels' rail-to-rail shot: same timings and stopping spot", function()
 		-- Measured from a recording: a ball leaves a long rail straight across at 12.6 studs/s, reaches the far rail

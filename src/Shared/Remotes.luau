@@ -24,6 +24,13 @@ local function remote(name: string): RemoteEvent
 end
 
 return {
+	-- client → server: (dirX, dirY, power, cueX?, cueY?), a direction in table space and power 0–1, and with ball in
+	-- hand where the shooter placed the cue ball (nil leaves it where it is, and is the only choice without it)
+	RequestShot = remote("RequestShot"),
+	-- server → clients: (table model, shooter, ball in hand, seats), ball in hand being true when the shooter may place
+	-- the cue ball anywhere, and seats the game's players in turn order. No shooter (and no seats) means no game is on
+	-- the table: the game just ended, or the physics test mode is saying whether testers have ball in hand.
+	TurnStarted = remote("TurnStarted"),
 	-- server → clients: (table model, starting balls, shot, physics params) to replay
 	ShotStarted = remote("ShotStarted"),
 	-- server → clients: (table model, final balls)
@@ -31,10 +38,11 @@ return {
 
 	-- Physics test mode, Studio and the owner only (PhysicsTestAccess). client → server: ()
 	TestRack = remote("TestRack"),
-	-- client → server: (dirX, dirY, power), a direction in table space and power 0–1
+	-- client → server: (dirX, dirY, power, cueX?, cueY?), like RequestShot
 	TestShoot = remote("TestShoot"),
 	-- client → server: (slider name, value). The server keeps each slider's current value as an attribute on
-	-- this remote, so every screen shows the same numbers, including players who join later.
+	-- this remote, so every screen shows the same numbers, including players who join later. server → client: ()
+	-- when it turned that player's change down, like a pocket size during a game, so their panel shows the kept values.
 	TestTune = remote("TestTune"),
 	-- client → server: (). The server prints the sliders' values, so they show in Studio's Output in any playtest
 	-- and under Server in a published server's console (F9)

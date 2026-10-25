@@ -7,17 +7,21 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current phase:** Phase 2, 8-ball rules, 1v1 turns and earning items
-- **In progress:** planning Phase 2's first task, rack and break, and the 5 items, for my review
-- **Last session:** 2026-10-17. Phase 1 passed its "Done when" on PC in Studio: 30 shots in a row with no bugs, sinking feels good, and a 100% pull from a cue ball against a long rail fits on screen. The smaller pockets (corner 0.85, side 0.95) stay.
-- **Next up:** my OK on the Phase 2 plan, then rack and break. Phase 1's age check is still open and is needed before the friends playtest at the end of Phase 2
+- **In progress:** nothing being built. Rack and break, Groups and Turns are built and passed lint, tests and Claude's playtest; all three are waiting on my PC test, and Turns needs 2 players (Test → Clients and Servers). A game starts once both of Table1's platforms have a player (one in Studio solo), with no sign or countdown until Phase 3. Everyone in it switches to the top-down view on their own and goes back to the normal view when it ends; Claude checked that return only by sending the game-over message by hand, so the 2-player test checks it for real by having one player leave. The cue ball breaks from the middle of the head line with no ball in hand. The table stays open after the break, and the first legal pot sets the shooter's side's group. A legal pot of your own group (any ball on the break, any solid or stripe on an open table) keeps your turn; anything else passes it to the next seat. A temporary label under the name on your card reads like "Open table · Your turn" or "Solids · Their turn" until the top bar task replaces it. Until the Fouls task, a scratch gives the next player ball in hand, and a wrong first ball or nothing hit only passes the turn
+- **Last session:** 2026-10-24. Claude built Turns with 8 new rule tests (64 pass). I changed the camera: players switch to the top-down view when their game starts and stay there until it ends, instead of pressing F (GAME_SPEC steps 2 and 10 updated). Each turn's message now carries the game's players, and the card got a temporary "Your turn" / "Their turn" label
+- **Next up:** my PC test of rack and break, Groups and Turns, then Fouls. Phase 1's age check is still open: I'll do it when we first publish, before the friends playtest at the end of Phase 2
 - **Known issues:**
   - Touch and the new HUD layout haven't been tried on a real phone yet, only in the emulator; it's covered by the Mobile phase
-  - The existing touch code isn't tested or extended until the Mobile phase, so it will fall behind the PC features built before then
+  - The existing touch code isn't tested or extended until the Mobile phase, so it will fall behind the PC features built before then. Ball in hand is mouse-only: on a phone the cue ball can't be moved yet
   - Lighting.Technology has to be set to Future by hand in Studio; scripts can't change it
-  - A code comment in `PhysicsTest.luau` still mentions commissioned balls; fix it the next time that file changes
+  - In Studio solo, once a game starts on Table1 nothing ends it but stopping the playtest, and the test mode stays off until then
+  - An ended game leaves the balls where they stopped; Phase 3's reset re-racks the table
+  - Respawning mid-game drops you back to the normal view; press F to return
+  - A player who joins mid-game hears nothing about the game until the next turn starts; Phase 3's spectating covers watchers
+  - The Output warning about rbxassetid://203785492 ("Pop Close Sound") comes from a Studio plugin or Roblox, not the place: ignore it
   - The GUI needs tweaking. Leave it as it is until I say we'll get to it
-  - Our break sinks about 2.35 balls (2.5 before the smaller pockets) and the cue ball rebounds further than in 8 Ball Duels' break (0 sunk, cue ball near the middle); no RackGap or BreakPower setting fixed both. `tools/BreakStats.luau` compares
-  - Not yet checked that a slider change reaches both the server and the shooter's screen (part 4 of my physics check)
+  - Our break sinks about 2.0 balls with the 0.8 / 0.75 pockets (2.35 at 0.85 / 0.95) and the cue ball rebounds further than in 8 Ball Duels' break (0 sunk, cue ball near the middle); no RackGap or BreakPower setting fixed both. `tools/BreakStats.luau` compares
+  - Not yet checked by me that a slider change reaches both the server and the shooter's screen (part 4 of my physics check). Claude's playtest confirmed it for the pocket sliders
 
 ## Rules that protect quality
 
@@ -53,9 +57,9 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 **Goal:** two players can finish a full, fair game of 8-ball, earning items and using the first 2.
 
-- [ ] Rack and break: a random player places the cue ball behind the head line and breaks (Claude)
-- [ ] Groups: the table stays open after the break, and the first legal pot sets solids or stripes (Claude)
-- [ ] Turns: a legal pot keeps your turn; a miss passes it (Claude)
+- [x] Rack and break: a random player breaks from the middle of the head line; no ball in hand on the break (Claude)
+- [x] Groups: the table stays open after the break, and the first legal pot sets solids or stripes (Claude)
+- [x] Turns: a legal pot keeps your turn; a miss passes it (Claude)
 - [ ] Fouls (cue ball sunk, wrong ball hit first, nothing hit): the next player places the cue ball anywhere (Claude)
 - [ ] The 8: call your pocket. Sinking it early, in the wrong pocket, or along with the cue ball loses (Claude)
 - [ ] "Turn" arrow over the shooter, and a 45-second shot clock that stops while balls roll. Running out counts as a foul (Claude)
@@ -82,7 +86,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] End screen with the winner, shot accuracy, balls sunk, best run and fouls. Then everyone is removed and the table resets (Claude)
 - [ ] Save each player's lifetime stats, so ranked and levels have history later (Claude)
 - [ ] Leaving: the empty platform lights up, and anyone who stands on it for 5 seconds takes over. After 15 seconds with nobody, the other player wins a 1v1, or the teammate plays on alone in 2v2. Disconnects count as leaving, and 2 timeouts in a row removes a player (Claude)
-- [ ] Freeze, Oil Slick and Pocket Block: frozen balls and pocket lids bounce balls like rails, oil patches slow balls less, and the aim indicator knows about frozen balls and lids. The lock-out rules: no freezing the 8, no Pocket Block against a side shooting at the 8, and no side targeting the same ball or pocket two turns running. With Lune tests (Claude)
+- [ ] Freeze, Oil Slick and Pocket Block: frozen balls and pocket lids bounce balls like rails, oil patches slow balls less, and the aim indicator knows about frozen balls and lids. The lock-out rules: no freezing the 8 or a side's last group ball, no Pocket Block against a side shooting at the 8, and no side targeting the same ball or pocket two turns running. With Lune tests (Claude)
 - [ ] Playtest with 4 friends: 1v1 and 2v2, with people leaving mid-game on purpose and every item used (Me)
 
 **Done when:** 4 friends play on PC for 30 minutes straight, including leaving mid-game, every item gets used, and no table ever gets stuck.

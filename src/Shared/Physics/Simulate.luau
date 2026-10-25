@@ -27,6 +27,8 @@ export type Sim = {
 	steps: number,
 	done: boolean,
 	events: { Event },
+	-- The first ball the cue ball touched, for the rules. Nil until it touches one.
+	firstHit: number?,
 }
 
 local Simulate = {}
@@ -125,6 +127,10 @@ function Simulate.step(sim: Sim, count: number): boolean
 					local aInto, bInto = a.vx * nx + a.vy * ny, -(b.vx * nx + b.vy * ny)
 					local push = hitShare * (aInto + bInto)
 					table.insert(events, { time = time, kind = "ball", id = a.id, speed = aInto + bInto })
+					-- The cue ball sorts first, so in any hit it's `a`
+					if a.id == 0 and not sim.firstHit then
+						sim.firstHit = b.id
+					end
 					-- A ball rolling into the hit keeps Follow of the speed the hit takes away, like natural roll.
 					-- Every moving ball counts as rolling, even one that was only just hit.
 					local pushA = if aInto > 0 then push * (1 - physics.Follow) else push
@@ -230,6 +236,24 @@ function Simulate.step(sim: Sim, count: number): boolean
 		end
 	end
 	return sim.done
+end
+
+-- The balls that dropped during this shot, in the order they dropped, with their pockets. Balls that were already
+-- down when the shot started keep their pocket in `sim.balls` but aren't in this list.
+function Simulate.dropped(sim: Sim): { { id: number, pocket: number } }
+	local pockets: { [number]: number } = {}
+	for _, ball in sim.balls do
+		if ball.pocket then
+			pockets[ball.id] = ball.pocket
+		end
+	end
+	local dropped = {}
+	for _, event in sim.events do
+		if event.kind == "pocket" then
+			table.insert(dropped, { id = event.id, pocket = pockets[event.id] :: number })
+		end
+	end
+	return dropped
 end
 
 -- Plays a whole shot at once, for tests. The game steps a shot a slice at a time instead.

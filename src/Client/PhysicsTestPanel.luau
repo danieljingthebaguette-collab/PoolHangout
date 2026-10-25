@@ -127,9 +127,12 @@ function PhysicsTestPanel.start()
 		})
 		row.LayoutOrder = i
 		row.Parent = panel
-		Remotes.TestTune:GetAttributeChangedSignal(range.name):Connect(function()
+		local function showKept()
 			show(Remotes.TestTune:GetAttribute(range.name))
-		end)
+		end
+		Remotes.TestTune:GetAttributeChangedSignal(range.name):Connect(showKept)
+		-- The server turned a change down, like a pocket size during a game
+		Remotes.TestTune.OnClientEvent:Connect(showKept)
 	end
 
 	-- The server prints them, so they show in Studio's Output however the game is running

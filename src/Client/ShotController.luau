@@ -9,6 +9,9 @@
 -- The aim indicator shows where the cue ball first touches something and which way a hit ball goes. It's
 -- see-through while you aim or when letting go would cancel, and solid while the aim is locked. When you let
 -- go, the cue strikes forward and the shot starts on this screen the moment it reaches the ball.
+-- In a game you can only shoot on your turn. With ball in hand the cue ball follows the mouse, stopping at the nearest
+-- spot it's allowed, until a click sets it down; a click on it picks it up again until you shoot. The server checks
+-- the spot when the shot goes. With no game on, the physics test mode lets testers shoot any time.
 
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
@@ -19,6 +22,7 @@ local StarterPlayer = game:GetService("StarterPlayer")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local EightBall = require(ReplicatedStorage.Shared.Rules.EightBall)
 local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
 local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Preview = require(ReplicatedStorage.Shared.Physics.Preview)
@@ -37,10 +41,15 @@ local HINTS = {
 	keyboard = {
 		aiming = { { "Lock aim", "Space" }, { "Shoot", "Hold + drag back" } },
 		locked = { { "Unlock", "Space" }, { "Shoot", "Drag back" } },
+		-- With ball in hand. Space still locks, but there's only room for two hints.
+		-- While the cue ball follows the mouse with ball in hand
+		placing = { { "Place ball", "Click" } },
 	},
 	touch = {
 		aiming = { { "Lock aim to pull from anywhere", "Tap Lock" }, { "Shoot", "Drag back from ball" } },
 		locked = { { "Unlock", "Tap Lock" }, { "Shoot", "Drag back" } },
+		-- ponytail: the same as aiming until the Mobile phase brings ball in hand to phones
+		placing = { { "Lock aim to pull from anywhere", "Tap Lock" }, { "Shoot", "Drag back from ball" } },
 	},
 	cancel = { { "Cancel", "Let go" } },
 }
@@ -76,8 +85,9 @@ local function styleText(label: TextLabel | TextButton, text: string)
 	label.Text = text
 end
 
--- `onView` hears when the top-down view turns on and off, for the HUD and anything else that only shows there
-function ShotController.start(tableModel: Model, onView: (boolean) -> ())
+-- `testMode` lets this player shoot while no game is on the table. `onView` hears when the top-down view turns on
+-- and off, for the HUD and anything else that only shows there.
+function ShotController.start(tableModel: Model, testMode: boolean, onView: (boolean) -> ())
 	local felt = tableModel:WaitForChild("Felt") :: BasePart
 	local ballFolder = tableModel:WaitForChild("Balls")
 	local ballParts: { [number]: BasePart } = {}
@@ -137,7 +147,6 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	-- The aim indicator, the lock icon and the cancel ring. Only this screen sees them. They're drawn on the
 	-- screen over the fixed top-down view: 3D line adornments came out broken up and hidden behind balls, and a
 	-- hollow cylinder shows nothing from straight above.
-	local layout = Geometry.build(Config.Table)
 	local indicatorGui = Instance.new("ScreenGui")
 	indicatorGui.Name = "AimIndicator"
 	indicatorGui.ResetOnSpawn = false
@@ -197,6 +206,18 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	dot.Parent = indicatorGui
 	roundCorners(dot)
 	outline(dot, Theme.Ui.AimOutline)
+	-- A faint ring around the cue ball while it follows the mouse with ball in hand
+	local placeRing = Instance.new("Frame")
+	placeRing.AnchorPoint = Vector2.new(0.5, 0.5)
+	placeRing.BackgroundTransparency = 1
+	placeRing.Visible = false
+	placeRing.Parent = indicatorGui
+	roundCorners(placeRing)
+	local placeRingStroke = Instance.new("UIStroke")
+	placeRingStroke.Color = Theme.Colors.AimLine
+	placeRingStroke.Thickness = Theme.Ui.AimLineThickness
+	placeRingStroke.Transparency = Theme.Ui.AimFaintTransparency
+	placeRingStroke.Parent = placeRing
 	indicatorGui.Parent = playerGui
 
 	-- Radians in table space: 0 aims along +x, at the rack
@@ -214,6 +235,14 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	-- After the strike: the cue carries on a little past where the cue ball was and fades out. How far through, 0 to
 	-- 1, and where the cue ball and aim were when it struck.
 	local followThrough: { t: number, x: number, y: number, aim: number }? = nil
+	-- This table's game, from the server's TurnStarted: whether it's this player's turn, and whether they're playing in
+	-- it at all rather than watching. Nil with no game on.
+	local turn: { mine: boolean, seated: boolean }? = nil
+	-- Whether the cue ball may be placed anywhere before the next shot, from TurnStarted
+	local ballInHand = false
+	-- With ball in hand, whether the cue ball is following the mouse rather than set down
+	local holding = false
+	local placed: { x: number, y: number, from: CFrame }? = nil
 
 	-- The camera's settings from before the view, and everything the view connected, while it's on
 	local saved: { cameraType: Enum.CameraType, cframe: CFrame, fieldOfView: number, connections: { RBXScriptConnection } }? =
@@ -265,6 +294,7 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	end
 
 	local function hideIndicator()
+		placeRing.Visible = false
 		pathLine.Visible, cueLine.Visible, targetLine.Visible = false, false, false
 		ghost.Visible, ghostEdge.Visible, dot.Visible = false, false, false
 	end
@@ -290,7 +320,8 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		line.Visible = true
 	end
 
-	local function drawIndicator(cueX: number, cueY: number)
+	-- The balls on the table as this screen shows them
+	local function shownBalls(): { Preview.Ball }
 		local balls: { Preview.Ball } = {}
 		for id, part in ballParts do
 			if part.Transparency ~= 1 then
@@ -298,9 +329,15 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 				table.insert(balls, { id = id, x = x, y = y })
 			end
 		end
-		-- The hit uses the physics the shot will use, sliders and all
-		local physics = PhysicsTestAccess.params().Physics
-		local contact = Preview.firstContact(balls, math.cos(aim), math.sin(aim), Config.Table, layout, physics)
+		return balls
+	end
+
+	local function drawIndicator(cueX: number, cueY: number)
+		-- The hit uses the table and physics the shot will use, sliders and all
+		local params = PhysicsTestAccess.params()
+		local layout = Geometry.build(params.Table)
+		local contact =
+			Preview.firstContact(shownBalls(), math.cos(aim), math.sin(aim), params.Table, layout, params.Physics)
 		if Config.Aim.ShowAimLine then
 			-- The line runs to the circle's center, which the dot marks
 			showLine(pathLine, cueX, cueY, contact.x, contact.y)
@@ -348,7 +385,13 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 	end
 
 	local function canShoot(): boolean
-		return not TableView.isBusy(tableModel) and cueBall.Transparency ~= 1
+		local allowed = if turn then turn.mine else testMode
+		return allowed and not TableView.isBusy(tableModel) and cueBall.Transparency ~= 1
+	end
+
+	-- Whether this player may place the cue ball now
+	local function canPlace(): boolean
+		return ballInHand and canShoot()
 	end
 
 	-- The cue has reached the ball: the shot goes, here at once and to the server
@@ -361,8 +404,10 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		local shot = { dirX = math.cos(aim), dirY = math.sin(aim), power = power, isBreak = isBreak }
 		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
 		followThrough = { t = 0, x = cueX, y = cueY, aim = aim }
-		-- ponytail: the test mode's remote, until Match (Phase 2) brings RequestShot and turns
-		Remotes.TestShoot:FireServer(shot.dirX, shot.dirY, shot.power)
+		local remote = if turn then Remotes.RequestShot else Remotes.TestShoot
+		remote:FireServer(shot.dirX, shot.dirY, shot.power, placed and placed.x, placed and placed.y)
+		-- Placing ends with the shot, even before the server's next TurnStarted arrives
+		ballInHand, holding, placed = false, false, nil
 		TableView.predict(tableModel, shot, PhysicsTestAccess.params())
 		TableView.playSound(cueBall, "CueStrike", power)
 	end
@@ -401,6 +446,17 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		return dx * dx + dy * dy <= (Config.Aim.GrabRadius * radius) ^ 2
 	end
 
+	-- Ball in hand: moves the cue ball to the allowed spot nearest the pointer. Where none turns up, like over a cluster
+	-- of balls, it stays where it was. Only this screen sees it move until the shot.
+	local function placeAt(ray: Ray)
+		local x, y = pointerOnTable(ray)
+		local spotX, spotY = EightBall.nearestCueSpot(shownBalls(), x, y, PhysicsTestAccess.params().Table)
+		if spotX and spotY then
+			placed = { x = spotX, y = spotY, from = if placed then placed.from else cueBall.CFrame }
+			cueBall.CFrame = cueBall.CFrame.Rotation + TableSpace.toWorld(felt, spotX, spotY, radius).Position
+		end
+	end
+
 	-- Cancels a pull. The lock stays as it was before the pull: on if Space set it, off if not.
 	local function cancelPull()
 		pulling = nil
@@ -417,10 +473,16 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		if pulling and not stillHeld(pulling.input) then
 			cancelPull()
 		end
+		local placing = holding and canPlace()
+		if placing and UserInputService.MouseEnabled then
+			local mouse = UserInputService:GetMouseLocation()
+			placeAt(workspace.CurrentCamera:ViewportPointToRay(mouse.X, mouse.Y))
+		end
+		Hud.setTestMode(testMode and turn == nil)
 		-- On PC the cue points at the mouse, worked out every frame rather than only when the mouse moves, so it stays
 		-- on the cursor when the cue ball moves under a still mouse: after a shot or a rack, or on entering the view.
 		-- GetMouseLocation counts from the screen's very top, so it pairs with ViewportPointToRay.
-		if UserInputService.MouseEnabled and not (locked or pulling or strike or drag) then
+		if UserInputService.MouseEnabled and not (locked or pulling or strike or drag or placing) then
 			local mouse = UserInputService:GetMouseLocation()
 			aim = pointerAngle(workspace.CurrentCamera:ViewportPointToRay(mouse.X, mouse.Y)) or aim
 		end
@@ -455,7 +517,7 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 				followThrough = nil
 			end
 		else
-			cue.Transparency = if hidden then 1 else 0
+			cue.Transparency = if hidden or placing then 1 else 0
 		end
 		controlsGui.Enabled = not hidden
 		Hud.setPower(if hidden then nil else pull)
@@ -463,15 +525,28 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		-- Back inside the cancel zone after leaving it, where letting go cancels
 		local cancelling = pulling ~= nil and pulling.state.left and pull == 0
 		Hud.setHints(
-			if hidden then nil elseif cancelling then HINTS.cancel elseif held then hints.locked else hints.aiming
+			if hidden
+				then nil
+				elseif placing then hints.placing
+				elseif cancelling then HINTS.cancel
+				elseif held then hints.locked
+				else hints.aiming
 		)
 		lockButton.Text = if held then "Unlock" else "Lock"
 		hideIndicator()
 		if hidden then
 			return
 		end
-		fadeIndicator(cancelling or not held)
 		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
+		if placing then
+			local middle = toScreen(cueX, cueY)
+			local diameter = 2 * (toScreen(cueX + Config.Aim.PlaceRingRadius * radius, cueY) - middle).Magnitude
+			placeRing.Position = UDim2.fromOffset(middle.X, middle.Y)
+			placeRing.Size = UDim2.fromOffset(diameter, diameter)
+			placeRing.Visible = true
+			return
+		end
+		fadeIndicator(cancelling or not held)
 		drawIndicator(cueX, cueY)
 		local back = cueBack + (pull + strikeOffset) * radius * Config.Aim.CuePullBack
 		cue.CFrame = TableSpace.toWorld(felt, cueX - math.cos(aim) * back, cueY - math.sin(aim) * back, cueHeight)
@@ -493,6 +568,14 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 			return
 		end
 		local x, y = pointerOnTable(inputRay(input))
+		-- With ball in hand, a click sets the following cue ball down, and a click on it picks it up again
+		if canPlace() then
+			local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
+			if holding or (x - cueX) ^ 2 + (y - cueY) ^ 2 <= (Config.Aim.PlaceGrabRadius * radius) ^ 2 then
+				holding = not holding
+				return
+			end
+		end
 		-- Unlocked, a touch away from the cue ball turns the aim instead
 		if locked or not isTouch or nearCue(x, y) then
 			if canShoot() then
@@ -609,6 +692,30 @@ function ShotController.start(tableModel: Model, onView: (boolean) -> ())
 		return Enum.ContextActionResult.Sink
 	end, true, Enum.KeyCode.F)
 	ContextActionService:SetTitle(VIEW_ACTION, "View")
+
+	Remotes.TurnStarted.OnClientEvent:Connect(
+		function(model: Model?, shooter: Player?, inHand: boolean?, seats: { Player }?)
+			if model ~= tableModel then
+				return
+			end
+			-- A cue ball moved here but never shot goes back where the server has it
+			if placed then
+				cueBall.CFrame = placed.from
+			end
+			local wasSeated = turn ~= nil and turn.seated
+			local seated = shooter ~= nil and table.find(seats or {}, Players.LocalPlayer) ~= nil
+			turn = if shooter then { mine = shooter == Players.LocalPlayer, seated = seated } else nil
+			-- Ball in hand starts with the cue ball following the mouse
+			ballInHand, holding = inHand == true, inHand == true
+			placed, pulling = nil, nil
+			-- Players go to the top-down view when their game starts and back when it ends. F still toggles it.
+			if seated and not wasSeated and not saved then
+				enterView()
+			elseif wasSeated and not seated then
+				leaveView()
+			end
+		end
+	)
 
 	-- A new character gets fresh controls and camera, so start it in the normal view
 	Players.LocalPlayer.CharacterAdded:Connect(leaveView)

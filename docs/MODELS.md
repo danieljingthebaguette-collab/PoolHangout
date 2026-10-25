@@ -23,7 +23,7 @@ How we build every model in Pool!. There's no modeler. Claude builds each model 
 
 ## Table
 
-Built by `tools/BuildTable.luau` from `Config.Table`. Today it rebuilds Table1; in Phase 3 it builds all 8.
+Built by `src/Server/TableBuilder.luau` from table params. `tools/BuildTable.luau` runs it from `Config.Table` in edit mode, and the physics test mode runs it live when a pocket slider moves, without changing the saved place. Today it rebuilds Table1; in Phase 3 it builds all 8.
 
 The rails are slim: the whole table, cushions and wooden rails included, is about **18.2 × 10.2 studs** (about 1.1 studs on every side of the playing surface) and must stay within 20 × 12. Black plates cover the corner pockets, the side pockets are set into the rails, the cushions are angled at each pocket mouth, and white diamonds sit on the rails: 6 on each long rail, every eighth of the length, and 3 on each end. The felt's top sits about **2.5 studs** above the floor, about an avatar's hip height.
 
@@ -40,8 +40,8 @@ The rails are slim: the whole table, cushions and wooden rails included, is abou
 
 | Pocket | Center (X, Z) | Mouth |
 | --- | --- | --- |
-| 4 corners | (±8, ±4) | 0.85 studs, measured diagonally across the opening. The cushions on either side end **0.60 studs** from the corner along each edge |
-| 2 sides | (0, ±4) | 0.95 studs. The cushions on either side end **0.475 studs** from the center of the side |
+| 4 corners | (±8, ±4) | 0.8 studs, measured diagonally across the opening. The cushions on either side end **0.57 studs** from the corner along each edge |
+| 2 sides | (0, ±4) | 0.75 studs. The cushions on either side end **0.375 studs** from the center of the side |
 
 The cushion ends are the pockets' jaws. Inside the pocket, anything that looks like a hole works: a ball disappears once its center is over the opening.
 

@@ -1,7 +1,8 @@
 --!strict
 -- The HUD around the top-down view, in the style of docs/STYLE.md: the top bar with your player card, the power
--- meter on the left, the tray on the right where sunk balls collect, the control hints on the bottom right, and the
--- settings button bottom-left with the sound volume.
+-- meter on the left, the tray on the right where sunk balls collect, the control hints on the bottom right, the
+-- settings button bottom-left with the sound volume, and beside it "TEST MODE" while the physics test mode has the
+-- table.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,6 +21,8 @@ local meter: { gui: ScreenGui, fill: Frame, percent: TextLabel }? = nil
 -- The control hints' column, once it's built, and the rows it shows
 local hintColumn: Frame? = nil
 local shownHints: { { string } }? = nil
+-- The "TEST MODE" box, once it's built
+local testLabel: TextLabel? = nil
 
 local function roundCorners(item: GuiObject, radius: UDim?)
 	local corner = Instance.new("UICorner")
@@ -184,13 +187,37 @@ local function playerCard(gui: ScreenGui)
 	avatar.BackgroundColor3 = Theme.Colors.Dark
 	avatar.Parent = card
 	roundCorners(avatar)
-	local name = label(player.DisplayName, card)
-	name.AnchorPoint = Vector2.new(1, 0.5)
-	name.Position = UDim2.new(1, -avatarSize - 2 * Theme.Ui.Padding, 0.5, 0)
-	name.Size = UDim2.new(1, -avatarSize - 4 * Theme.Ui.Padding, 1, 0)
+	-- The name, with your group under it while you're in a game
+	local text = Instance.new("Frame")
+	text.AnchorPoint = Vector2.new(1, 0.5)
+	text.Position = UDim2.new(1, -avatarSize - 2 * Theme.Ui.Padding, 0.5, 0)
+	text.Size = UDim2.new(1, -avatarSize - 4 * Theme.Ui.Padding, 1, 0)
+	text.BackgroundTransparency = 1
+	text.Parent = card
+	local stack = Instance.new("UIListLayout")
+	stack.VerticalAlignment = Enum.VerticalAlignment.Center
+	stack.SortOrder = Enum.SortOrder.LayoutOrder
+	stack.Parent = text
+	local name = label(player.DisplayName, text)
+	name.Size = UDim2.new(1, 0, 0, Theme.Ui.LargeTextSize)
 	name.TextXAlignment = Enum.TextXAlignment.Right
 	name.TextTruncate = Enum.TextTruncate.AtEnd
 	name.TextSize = Theme.Ui.LargeTextSize
+	-- ponytail: a temporary label from the server's display-only "Group" and "MyTurn" attributes. The top bar task
+	-- replaces it.
+	local group = label("", text)
+	group.LayoutOrder = 1
+	group.Size = UDim2.new(1, 0, 0, Theme.TextSize)
+	group.TextXAlignment = Enum.TextXAlignment.Right
+	local function showGroup()
+		local value = player:GetAttribute("Group")
+		local groupName = if value == "solids" then "Solids" elseif value == "stripes" then "Stripes" else "Open table"
+		group.Text = `{groupName} · {if player:GetAttribute("MyTurn") then "Your turn" else "Their turn"}`
+		group.Visible = value ~= nil
+	end
+	player:GetAttributeChangedSignal("Group"):Connect(showGroup)
+	player:GetAttributeChangedSignal("MyTurn"):Connect(showGroup)
+	showGroup()
 	-- Asking Roblox for the picture can wait or fail; the card works without it
 	task.spawn(function()
 		local ok, image = pcall(
@@ -293,6 +320,37 @@ local function tray(gui: ScreenGui, tableModel: Model)
 	end
 end
 
+-- Shows "TEST MODE" while no game is on the table and the physics test mode has it, so it can't pass for a game
+function Hud.setTestMode(shown: boolean)
+	if testLabel then
+		testLabel.Visible = shown
+	end
+end
+
+-- A small dark box bottom-left, beside the gear and the test panel's Test button
+local function testModeLabel(gui: ScreenGui)
+	local box = label("TEST MODE", gui)
+	box.AnchorPoint = Vector2.new(0, 1)
+	box.Position = UDim2.new(
+		0,
+		Theme.Ui.ButtonHeight + Theme.Ui.TestButtonWidth + 3 * Theme.Ui.Padding,
+		1,
+		-Theme.Ui.Padding - (Theme.Ui.ButtonHeight - Theme.Ui.HintHeight) / 2
+	)
+	box.Size = UDim2.fromOffset(0, Theme.Ui.HintHeight)
+	box.AutomaticSize = Enum.AutomaticSize.X
+	box.BackgroundTransparency = 0
+	box.BackgroundColor3 = Theme.Colors.Dark
+	box.TextColor3 = Theme.Colors.DarkText
+	box.Visible = false
+	roundCorners(box)
+	local padding = Instance.new("UIPadding")
+	padding.PaddingLeft = UDim.new(0, Theme.Ui.Padding)
+	padding.PaddingRight = padding.PaddingLeft
+	padding.Parent = box
+	testLabel = box
+end
+
 -- The gear bottom-left, a bright accent button, and the card it opens with the sound volume
 local function settings(gui: ScreenGui)
 	local gear = Instance.new("TextButton")
@@ -345,6 +403,7 @@ function Hud.start(tableModel: Model)
 	gui.Enabled = false
 	playerCard(gui)
 	hints(gui)
+	testModeLabel(gui)
 	gui.Parent = playerGui
 	table.insert(guis, gui)
 

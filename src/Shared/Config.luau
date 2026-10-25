@@ -9,8 +9,8 @@ local Config = {
 		Length = 16,
 		Width = 8,
 		BallRadius = 0.24,
-		CornerPocketMouth = 0.85,
-		SidePocketMouth = 0.95,
+		CornerPocketMouth = 0.8,
+		SidePocketMouth = 0.75,
 		RackGap = 0.025, -- space between neighboring balls in the rack: 0 is a tight rack
 	},
 
@@ -51,6 +51,7 @@ local Config = {
 		TimeoutsToRemove = 2, -- timeouts in a row that remove a player
 		ServerStepsPerFrame = 480, -- physics steps the server runs per frame: far ahead of the replay, about 1 ms of work
 		ResolveBufferSeconds = 0.25, -- extra wait after a shot's replay ends before the result is sent
+		RequestCooldown = 0.5, -- the server ignores a player's shot requests closer together than this
 	},
 
 	Aim = {
@@ -67,6 +68,8 @@ local Config = {
 		LineMinLength = 1.5,
 		DragDeadZone = 2, -- ball radii: a pointer this close to the cue ball doesn't turn the aim, where it would jump
 		GrabRadius = 4, -- ball radii: on phones, an unlocked touch this close to the cue ball or the cue pulls instead of aiming
+		PlaceGrabRadius = 3, -- ball radii: with ball in hand, clicking this close to the cue ball picks it up again
+		PlaceRingRadius = 1.6, -- ball radii: the faint ring around the cue ball while it follows the mouse with ball in hand
 		CueLength = 0.6, -- share of the table length
 		CueThickness = 0.5, -- share of a ball's width
 		CueTipGap = 1, -- ball radii between the cue ball and the cue's tip
@@ -95,6 +98,12 @@ local Config = {
 		TopDownMargin = 1.3, -- studs of room the top-down view shows around the playing surface: the rails plus a little
 	},
 
+	Platforms = {
+		CheckSeconds = 0.2, -- how often the server checks who stands on each table's platforms
+		-- Studs above a platform's top a player's root part can be and still count as standing on it, jumps included
+		StandHeight = 6,
+	},
+
 	Timers = {
 		CountdownSeconds = 5,
 		TakeoverSeconds = 5,
@@ -120,6 +129,9 @@ local Config = {
 			{ group = "Physics", name = "Follow", min = 0, max = 0.6, step = 0.01 },
 			{ group = "Physics", name = "PowerCurve", min = 0.5, max = 3, step = 0.05 },
 			{ group = "Table", name = "RackGap", min = 0, max = 0.08, step = 0.001 },
+			-- These two rebuild Table1 to match, so they only move while the test mode has the table
+			{ group = "Table", name = "CornerPocketMouth", min = 0.6, max = 1.2, step = 0.01 },
+			{ group = "Table", name = "SidePocketMouth", min = 0.6, max = 1.3, step = 0.01 },
 			{ group = "Shot", name = "FullPullDistance", min = 2, max = 10, step = 0.1 },
 		},
 	},
