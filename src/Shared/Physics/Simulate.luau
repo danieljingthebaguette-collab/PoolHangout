@@ -256,6 +256,20 @@ function Simulate.dropped(sim: Sim): { { id: number, pocket: number } }
 	return dropped
 end
 
+-- Whether any ball, the cue ball too, touched a rail after the cue ball first touched a ball, for the rules. The cue
+-- ball sorts first, so every hit it's in is logged under its id.
+function Simulate.railAfterFirstHit(sim: Sim): boolean
+	local hit = false
+	for _, event in sim.events do
+		if event.kind == "ball" and event.id == 0 then
+			hit = true
+		elseif hit and event.kind == "rail" then
+			return true
+		end
+	end
+	return false
+end
+
 -- Plays a whole shot at once, for tests. The game steps a shot a slice at a time instead.
 function Simulate.run(balls: { Ball }, shot: Shot, params: Params?): Sim
 	local sim = Simulate.start(balls, shot, params)

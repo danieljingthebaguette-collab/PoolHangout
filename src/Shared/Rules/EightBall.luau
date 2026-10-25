@@ -1,7 +1,6 @@
 --!strict
 -- 8-ball rules in table space (see GAME_SPEC.md and ARCHITECTURE.md), in plain Luau so Lune can test them.
 -- Randomness comes in as arguments: the server picks, and tests choose.
--- ponytail: the rack, ball in hand, groups and turns so far. Fouls and the 8 come with the next Phase 2 tasks.
 
 local Geometry = require("../Physics/Geometry")
 local Simulate = require("../Physics/Simulate")
@@ -12,10 +11,29 @@ export type Group = "solids" | "stripes"
 -- The group each side plays. Empty while the table is open; once one side has a group, so does the other.
 export type Groups = { [Side]: Group }
 -- What the rules need from a finished shot: whether it was the break, the first ball the cue ball touched (nil if
--- none), and the balls it dropped, in order
-export type ShotFacts = { isBreak: boolean, firstHit: number?, dropped: { { id: number, pocket: number } } }
--- What a shot decided: the groups after it, and whether the shooter keeps the turn
-export type Outcome = { groups: Groups, keepsTurn: boolean }
+-- none), the balls it dropped in order, whether any ball touched a rail after the cue ball's first hit, the balls as
+-- they stood before it, and the pocket called for the 8 (nil unless the shooter was on the 8)
+export type ShotFacts = {
+	isBreak: boolean,
+	firstHit: number?,
+	dropped: { { id: number, pocket: number } },
+	railAfterHit: boolean,
+	balls: { Ball },
+	calledPocket: number?,
+}
+export type Foul = "scratch" | "nothingHit" | "wrongBall" | "noRail"
+-- How a game ended: the 8 legally in the called pocket wins, and the rest lose
+export type Reason = "eightPotted" | "eightEarly" | "eightWrongPocket" | "eightOnFoul"
+-- What a shot decided: the groups after it, whether the shooter keeps the turn, any foul (the next shooter gets ball
+-- in hand), the winning side and why once the game is over, and whether the 8 goes back on the foot spot
+export type Outcome = {
+	groups: Groups,
+	keepsTurn: boolean,
+	foul: Foul?,
+	winner: Side?,
+	reason: Reason?,
+	respotEight: boolean,
+}
 
 -- Rack spots in Geometry's order, the apex first and then row by row toward the foot rail: the middle of the third
 -- row, and the back row's two ends
@@ -23,7 +41,7 @@ local EIGHT_SPOT = 5
 local BACK_CORNERS = { 11, 15 }
 -- How many times nearestCueSpot pushes the cue ball off what it overlaps before giving up
 local PUSHES = 4
--- Share of a ball radius left clear when the cue ball is pushed off something. Far more than the rounding in the
+-- Share of a ball radius left clear when a ball is placed beside another. Far more than the rounding in the
 -- ball positions a screen sees, so the server, checking exact positions, agrees the spot is clear.
 local CLEARANCE = 1e-3
 
@@ -153,24 +171,100 @@ function EightBall.groupOf(id: number): Group?
 	return nil
 end
 
+-- Whether `side` has a group and none of its balls is left on the table, so it shoots at the 8
+function EightBall.groupCleared(groups: Groups, side: Side, balls: { Ball }): boolean
+	local group = groups[side]
+	if not group then
+		return false
+	end
+	for _, ball in balls do
+		if not ball.pocket and EightBall.groupOf(ball.id) == group then
+			return false
+		end
+	end
+	return true
+end
+
+-- Where the 8 comes back after dropping on the break: the foot spot, or with a ball in the way, the nearest clear
+-- spot behind it on the line down the table's middle, toward the foot rail. With no room there, the nearest in front.
+function EightBall.spotEight(balls: { Ball }, tableParams: Geometry.TableParams): (number, number)
+	local radius = tableParams.BallRadius
+	local diameter = 2 * radius
+	local footX = tableParams.Length / 4
+	local edge = tableParams.Length / 2 - radius
+	for _, direction in { 1, -1 } do
+		local x = footX
+		-- Each move only goes one way, past the ball in the way, so every ball moves it at most once
+		local moved = true
+		while moved and math.abs(x) <= edge do
+			moved = false
+			for _, ball in balls do
+				local reachSq = diameter * diameter - ball.y * ball.y
+				if ball.id ~= 8 and not ball.pocket and reachSq > 0 then
+					local reach = math.sqrt(reachSq)
+					if math.abs(ball.x - x) < reach then
+						x = ball.x + direction * (reach + CLEARANCE * radius)
+						moved = true
+					end
+				end
+			end
+		end
+		if math.abs(x) <= edge then
+			return x, 0
+		end
+	end
+	return footX, 0
+end
+
 -- What a finished shot by `side` decided. Leaves `groups` as it was.
 function EightBall.resolveShot(groups: Groups, side: Side, facts: ShotFacts): Outcome
-	local outcome: Outcome = { groups = table.clone(groups), keepsTurn = false }
-	local scratched = false
+	local outcome: Outcome = { groups = table.clone(groups), keepsTurn = false, respotEight = false }
+	local scratched, eightPocket = false, nil
 	for _, drop in facts.dropped do
-		scratched = scratched or drop.id == 0
+		if drop.id == 0 then
+			scratched = true
+		elseif drop.id == 8 then
+			eightPocket = drop.pocket
+		end
 	end
-	-- Any ball down on the break keeps the turn, unless the cue ball went in too. The table stays open either way.
+	-- Any break counts, so only a scratch fouls it, and a dropped 8 comes back. Any ball down keeps the turn, unless
+	-- the cue ball went in too. The table stays open either way.
 	if facts.isBreak then
+		outcome.foul = if scratched then "scratch" else nil
+		outcome.respotEight = eightPocket ~= nil
 		outcome.keepsTurn = #facts.dropped > 0 and not scratched
 		return outcome
 	end
-	-- A shot is legal when the cue ball stays up and first hits one of the shooter's group, or on an open table any
-	-- ball but the 8.
-	-- ponytail: hitting the 8 first once your group is cleared comes with the 8 task
+
+	-- The cue ball must first hit one of the shooter's group, the 8 once that's cleared, or on an open table any ball
+	-- but the 8. Then a ball must drop or touch a rail.
 	local group = groups[side]
-	local firstGroup = if facts.firstHit then EightBall.groupOf(facts.firstHit) else nil
-	if scratched or firstGroup == nil or (group and firstGroup ~= group) then
+	local onEight = EightBall.groupCleared(groups, side, facts.balls)
+	local first = facts.firstHit
+	local firstGroup = if first then EightBall.groupOf(first) else nil
+	local legalFirst = if onEight then first == 8 elseif group then firstGroup == group else firstGroup ~= nil
+	local foul: Foul? = if scratched
+		then "scratch"
+		elseif first == nil then "nothingHit"
+		elseif not legalFirst then "wrongBall"
+		elseif #facts.dropped == 0 and not facts.railAfterHit then "noRail"
+		else nil
+	outcome.foul = foul
+
+	-- The 8 going in ends the game: a win only on a legal shot, once the group is cleared, into the called pocket.
+	-- Clearing the group on the same shot is too early.
+	if eightPocket then
+		local reason: Reason = if not onEight
+			then "eightEarly"
+			elseif foul then "eightOnFoul"
+			elseif eightPocket ~= facts.calledPocket then "eightWrongPocket"
+			else "eightPotted"
+		outcome.reason = reason
+		outcome.winner = if reason == "eightPotted" then side elseif side == "A" then "B" else "A"
+		return outcome
+	end
+	-- Balls that drop on a foul stay down, but never set a group or keep the turn
+	if foul then
 		return outcome
 	end
 	for _, drop in facts.dropped do

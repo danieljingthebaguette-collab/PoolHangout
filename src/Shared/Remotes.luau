@@ -24,13 +24,18 @@ local function remote(name: string): RemoteEvent
 end
 
 return {
-	-- client → server: (dirX, dirY, power, cueX?, cueY?), a direction in table space and power 0–1, and with ball in
-	-- hand where the shooter placed the cue ball (nil leaves it where it is, and is the only choice without it)
+	-- client → server: (dirX, dirY, power, cueX?, cueY?, calledPocket?), a direction in table space and power 0–1,
+	-- with ball in hand where the shooter placed the cue ball (nil leaves it where it is, and is the only choice
+	-- without it), and on the 8 the pocket id called for it
 	RequestShot = remote("RequestShot"),
-	-- server → clients: (table model, shooter, ball in hand, seats), ball in hand being true when the shooter may place
-	-- the cue ball anywhere, and seats the game's players in turn order. No shooter (and no seats) means no game is on
-	-- the table: the game just ended, or the physics test mode is saying whether testers have ball in hand.
+	-- server → clients: (table model, shooter, ball in hand, seats, call pocket), ball in hand being true when the
+	-- shooter may place the cue ball anywhere, seats the game's players in turn order, and call pocket true when the
+	-- shooter is on the 8. Seats with no shooter: the game is over and its result is showing, so nobody shoots. No
+	-- seats means no game is on the table: the game just ended, or the physics test mode is saying whether testers
+	-- have ball in hand.
 	TurnStarted = remote("TurnStarted"),
+	-- server → clients: (table model, text, seconds), a message for everyone at the table, like a foul or the winner
+	Banner = remote("Banner"),
 	-- server → clients: (table model, starting balls, shot, physics params) to replay
 	ShotStarted = remote("ShotStarted"),
 	-- server → clients: (table model, final balls)

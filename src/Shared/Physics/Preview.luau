@@ -87,6 +87,20 @@ function Preview.hit(dirX: number, dirY: number, pushX: number, pushY: number, p
 	return { cueX = cueX, cueY = cueY, cueShare = cueShare, ballShare = push }
 end
 
+-- The pocket a ball at (x, y) heading along the unit direction (dirX, dirY) points at most directly, by the angle
+-- between its path and the line to each pocket. For calling the 8 from its yellow line.
+function Preview.aimedPocket(layout: Geometry.Layout, x: number, y: number, dirX: number, dirY: number): number
+	local best, bestCos = 1, -math.huge
+	for index, pocket in layout.pockets do
+		local px, py = pocket.x - x, pocket.y - y
+		local cos = (px * dirX + py * dirY) / math.sqrt(px * px + py * py)
+		if cos > bestCos then
+			best, bestCos = index, cos
+		end
+	end
+	return best
+end
+
 -- `dirX, dirY` must be a unit direction. `layout` is Geometry.build(tableParams), built once by the caller.
 -- `physics` decides what a hit sends each ball.
 function Preview.firstContact(

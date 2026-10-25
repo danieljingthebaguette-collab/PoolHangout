@@ -351,6 +351,26 @@ return function(test, check)
 		end
 	)
 
+	test("a rail counts for the rules only after the cue ball's first hit, whichever ball touches it", function()
+		-- The cue ball sends 5 on into the foot rail
+		check.truthy(
+			Simulate.railAfterFirstHit(Simulate.run({ ball(0, -2, 0), ball(5, 0, 0) }, shotRolling(1, 0, LENGTH)))
+		)
+		-- A thin cut: 5 rolls off short of any rail, and the cue ball runs on into the foot rail
+		local cut = Simulate.run({ ball(0, -2, 0), ball(5, 0, 1.875 * RADIUS) }, shotRolling(1, 0, LENGTH))
+		check.equal(cut.firstHit, 5, "thin cut")
+		check.truthy(Simulate.railAfterFirstHit(cut), "the cue ball's own rail")
+		-- A soft nudge in the middle of the table: both stop well short of the rails
+		local nudge = Simulate.run({ ball(0, -4 * RADIUS, 0), ball(5, 0, 0) }, shotRolling(1, 0, 6 * RADIUS))
+		check.equal(nudge.firstHit, 5, "nudge")
+		check.truthy(not Simulate.railAfterFirstHit(nudge), "nudge")
+		-- Off the near long rail first, then gently into 5, which stops short of the far one
+		local banked =
+			Simulate.run({ ball(0, -1, -WIDTH / 2 + 1), ball(5, -1, -WIDTH / 2 + 2.5) }, shotRolling(0, -1, 6))
+		check.equal(banked.firstHit, 5, "banked")
+		check.truthy(not Simulate.railAfterFirstHit(banked), "a rail before the hit")
+	end)
+
 	test("8 Ball Duels' rail-to-rail shot: same timings and stopping spot", function()
 		-- Measured from a recording: a ball leaves a long rail straight across at 12.6 studs/s, reaches the far rail
 		-- after 0.62 s, comes back to the first rail 1.02 s later, and stops 2.57 s after that, 6.2 studs out

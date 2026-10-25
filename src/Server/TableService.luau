@@ -1,9 +1,10 @@
 --!strict
 -- Finds the tables, makes and racks their balls, and starts and ends their games. A few times a second it checks
 -- who stands on each table's platforms, and once every platform has a player a game starts. In Studio with
--- Config.Debug.SoloTables and one player in the server, one platform is enough. A game ends when one of its
--- players leaves the server; walking away from the table doesn't count.
--- ponytail: no sign or countdown, and an ended game leaves the balls where they are. Phase 3 adds them, with the
+-- Config.Debug.SoloTables and one player in the server, one platform is enough. A game ends once its result has
+-- shown, and the table re-racks; players still on the platforms then start a new one. It also ends when one of its
+-- players leaves the server, leaving the balls where they are; walking away from the table doesn't count.
+-- ponytail: no sign, countdown or end screen, and nobody is moved off the platforms. Phase 3 adds them, with the
 -- table's states and its reset.
 
 local Players = game:GetService("Players")
@@ -13,6 +14,7 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local EightBall = require(ReplicatedStorage.Shared.Rules.EightBall)
 local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
+local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Balls = require(script.Parent.Balls)
 local Match = require(script.Parent.Match)
 
@@ -96,13 +98,17 @@ local function pick(n: number): number
 	return random:NextInteger(1, n)
 end
 
+local function rack(tableModel: Model)
+	Balls.place(tableModel, EightBall.rack(Geometry.build(PhysicsTestAccess.params().Table), pick))
+end
+
 function TableService.start()
 	local tables: { Model } = {}
 	for _, child in workspace:WaitForChild("Tables"):GetChildren() do
 		if child:IsA("Model") then
 			child:WaitForChild("Felt")
 			Balls.create(child)
-			Balls.place(child, EightBall.rack(Geometry.build(Config.Table), pick))
+			rack(child)
 			table.insert(tables, child)
 		end
 	end
@@ -125,7 +131,16 @@ function TableService.start()
 				end
 				local seats = seatsFilled(tableModel)
 				if seats then
-					matches[tableModel] = Match.new(tableModel, seats, pick)
+					local match: Match.Match
+					match = Match.new(tableModel, seats, pick, function()
+						-- A player who left while the result showed has already ended this game
+						if matches[tableModel] == match then
+							Match.destroy(match)
+							matches[tableModel] = nil
+							rack(tableModel)
+						end
+					end)
+					matches[tableModel] = match
 				end
 			end
 			task.wait(Config.Platforms.CheckSeconds)

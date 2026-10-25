@@ -1,12 +1,13 @@
 --!strict
--- The HUD around the top-down view, in the style of docs/STYLE.md: the top bar with your player card, the power
--- meter on the left, the tray on the right where sunk balls collect, the control hints on the bottom right, the
--- settings button bottom-left with the sound volume, and beside it "TEST MODE" while the physics test mode has the
--- table.
+-- The HUD around the top-down view, in the style of docs/STYLE.md: the top bar with your player card, the banner
+-- under it naming fouls and the winner, the power meter on the left, the tray on the right where sunk balls collect,
+-- the control hints on the bottom right, the settings button bottom-left with the sound volume, and beside it
+-- "TEST MODE" while the physics test mode has the table.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Card = require(script.Parent.Card)
 local Slider = require(script.Parent.Slider)
@@ -23,6 +24,10 @@ local hintColumn: Frame? = nil
 local shownHints: { { string } }? = nil
 -- The "TEST MODE" box, once it's built
 local testLabel: TextLabel? = nil
+-- The banner's card and text, once it's built, and how many messages it has shown, so an older message's timer
+-- leaves a newer one up
+local banner: { box: Frame, text: TextLabel }? = nil
+local bannersShown = 0
 
 local function roundCorners(item: GuiObject, radius: UDim?)
 	local corner = Instance.new("UICorner")
@@ -233,6 +238,43 @@ local function playerCard(gui: ScreenGui)
 	end)
 end
 
+-- A cream card at the top center, under the top bar, for a message from the server. Hidden until one comes.
+local function bannerCard(gui: ScreenGui)
+	local box = Instance.new("Frame")
+	box.AnchorPoint = Vector2.new(0.5, 0)
+	box.Position = UDim2.new(0.5, 0, 0, Theme.Ui.CardHeight + 2 * Theme.Ui.Padding)
+	box.Size = UDim2.fromOffset(Theme.Ui.BannerWidth, Theme.Ui.BannerHeight)
+	box.Visible = false
+	Card.style(box)
+	box.Parent = gui
+	local text = label("", box)
+	text.Size = UDim2.new(1, -4 * Theme.Ui.Padding, 1, -Theme.Ui.Padding)
+	text.AnchorPoint = Vector2.new(0.5, 0.5)
+	text.Position = UDim2.fromScale(0.5, 0.5)
+	-- Long names shrink the text to fit rather than spill out
+	text.TextScaled = true
+	local fit = Instance.new("UITextSizeConstraint")
+	fit.MaxTextSize = Theme.Ui.LargeTextSize
+	fit.Parent = text
+	banner = { box = box, text = text }
+end
+
+-- Shows a message on the banner for `seconds`, replacing any message still up
+local function showBanner(message: string, seconds: number)
+	if not banner then
+		return
+	end
+	bannersShown += 1
+	local shown = bannersShown
+	banner.text.Text = message
+	banner.box.Visible = true
+	task.delay(seconds, function()
+		if banner and bannersShown == shown then
+			banner.box.Visible = false
+		end
+	end)
+end
+
 -- A small ball for the tray: its color, or white with a band of color for a stripe
 local function ballIcon(id: number): Frame
 	local icon = Instance.new("Frame")
@@ -402,6 +444,7 @@ function Hud.start(tableModel: Model)
 	gui.IgnoreGuiInset = true -- the top-down view's reserves are measured from the screen's top
 	gui.Enabled = false
 	playerCard(gui)
+	bannerCard(gui)
 	hints(gui)
 	testModeLabel(gui)
 	gui.Parent = playerGui
@@ -417,6 +460,12 @@ function Hud.start(tableModel: Model)
 	table.insert(guis, settingsGui)
 
 	powerMeter(playerGui)
+
+	Remotes.Banner.OnClientEvent:Connect(function(model: Model?, message: string, seconds: number)
+		if model == tableModel then
+			showBanner(message, seconds)
+		end
+	end)
 
 	-- Waits for the table's balls, so it goes last
 	tray(gui, tableModel)

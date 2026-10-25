@@ -168,13 +168,38 @@ return function(test, check)
 		check.truthy(EightBall.canPlaceCue(balls, cueX, cueY, tableParams))
 	end)
 
-	-- A shot's facts: the first ball hit and the ids that dropped, in order, each in pocket 1
+	-- Every ball on the table but `down`, which are in pocket 1. Where they stand doesn't matter to resolveShot.
+	local function tableWith(down: { number }): { EightBall.Ball }
+		local balls: { EightBall.Ball } = {}
+		for id = 0, 15 do
+			table.insert(balls, { id = id, x = 0, y = 0, pocket = if table.find(down, id) then 1 else nil })
+		end
+		return balls
+	end
+	local SOLIDS = { 1, 2, 3, 4, 5, 6, 7 }
+
+	-- A shot's facts: the first ball hit and the ids that dropped, in order, each in pocket 1. Every ball was up
+	-- before it, and a ball touched a rail after the first hit.
 	local function facts(firstHit: number?, dropped: { number }, isBreak: boolean?): EightBall.ShotFacts
 		local drops = {}
 		for _, id in dropped do
 			table.insert(drops, { id = id, pocket = 1 })
 		end
-		return { isBreak = isBreak == true, firstHit = firstHit, dropped = drops }
+		return {
+			isBreak = isBreak == true,
+			firstHit = firstHit,
+			dropped = drops,
+			railAfterHit = true,
+			balls = tableWith({}),
+			calledPocket = nil,
+		}
+	end
+	-- The same for a shot by side A on solids with every solid down, so A is on the 8, calling pocket 1 or `called`
+	local function onEight(firstHit: number?, dropped: { number }, called: number?): EightBall.ShotFacts
+		local shot = facts(firstHit, dropped)
+		shot.balls = tableWith(SOLIDS)
+		shot.calledPocket = called or 1
+		return shot
 	end
 	local OPEN: EightBall.Groups = {}
 
@@ -212,11 +237,6 @@ return function(test, check)
 		do
 			check.equal(EightBall.resolveShot(OPEN, "A", shot).groups.A, nil, name)
 		end
-	end)
-
-	test("the 8 dropping on its own doesn't set a group, and a group ball after it does", function()
-		check.equal(EightBall.resolveShot(OPEN, "A", facts(1, { 8 })).groups.A, nil)
-		check.equal(EightBall.resolveShot(OPEN, "A", facts(1, { 8, 10 })).groups.A, "stripes")
 	end)
 
 	test("once groups are set, pots never change them, and the groups passed in are left as they were", function()
@@ -271,9 +291,217 @@ return function(test, check)
 		check.truthy(not EightBall.resolveShot(SET, "A", facts(12, { 2 })).keepsTurn)
 	end)
 
-	test("the 8 going in after the break doesn't keep the turn", function()
-		check.truthy(not EightBall.resolveShot(OPEN, "A", facts(2, { 8 })).keepsTurn, "open table")
-		check.truthy(not EightBall.resolveShot(SET, "A", facts(2, { 8 })).keepsTurn, "groups set")
+	-- Fouls
+
+	test("sinking the cue ball is a foul, even with one of yours down, and it names the foul over any other", function()
+		for name, shot in
+			{ alone = facts(2, { 0 }), ["with yours"] = facts(2, { 2, 0 }), ["after theirs first"] = facts(12, { 0 }) }
+		do
+			local outcome = EightBall.resolveShot(SET, "A", shot)
+			check.equal(outcome.foul, "scratch", name)
+			check.truthy(not outcome.keepsTurn, name)
+		end
+	end)
+
+	test("the cue ball hitting nothing is a foul, on an open table or with groups set", function()
+		check.equal(EightBall.resolveShot(OPEN, "A", facts(nil, {})).foul, "nothingHit")
+		check.equal(EightBall.resolveShot(SET, "A", facts(nil, {})).foul, "nothingHit")
+	end)
+
+	test("on an open table, hitting the 8 first is a foul, and any other ball first isn't", function()
+		check.equal(EightBall.resolveShot(OPEN, "A", facts(8, {})).foul, "wrongBall")
+		check.equal(EightBall.resolveShot(OPEN, "A", facts(3, {})).foul, nil, "a solid")
+		check.equal(EightBall.resolveShot(OPEN, "A", facts(12, {})).foul, nil, "a stripe")
+	end)
+
+	test("with groups set, hitting one of theirs or the 8 first is a foul, and one of yours isn't", function()
+		check.equal(EightBall.resolveShot(SET, "A", facts(12, {})).foul, "wrongBall", "theirs")
+		check.equal(EightBall.resolveShot(SET, "A", facts(8, {})).foul, "wrongBall", "the 8")
+		check.equal(EightBall.resolveShot(SET, "B", facts(3, {})).foul, "wrongBall", "B hits a solid")
+		check.equal(EightBall.resolveShot(SET, "A", facts(3, {})).foul, nil, "yours")
+	end)
+
+	test("on the 8, hitting anything but the 8 first is a foul", function()
+		check.equal(EightBall.resolveShot(SET, "A", onEight(12, {})).foul, "wrongBall")
+		check.equal(EightBall.resolveShot(SET, "A", onEight(8, {})).foul, nil)
+	end)
+
+	test("when nothing drops and no ball touches a rail after the first hit, it's a foul", function()
+		local quiet = facts(2, {})
+		quiet.railAfterHit = false
+		check.equal(EightBall.resolveShot(SET, "A", quiet).foul, "noRail", "no rail, nothing in")
+		check.equal(EightBall.resolveShot(SET, "A", facts(2, {})).foul, nil, "a rail")
+		local potted = facts(2, { 2 })
+		potted.railAfterHit = false
+		local outcome = EightBall.resolveShot(SET, "A", potted)
+		check.equal(outcome.foul, nil, "no rail, but yours in")
+		check.truthy(outcome.keepsTurn, "no rail, but yours in")
+	end)
+
+	test("a foul passes the turn, and a pot on it neither keeps the turn nor sets a group", function()
+		local quiet = facts(2, {})
+		quiet.railAfterHit = false
+		for name, shot in { scratch = facts(2, { 2, 0 }), ["wrong ball"] = facts(8, { 2 }), ["no rail"] = quiet } do
+			local outcome = EightBall.resolveShot(OPEN, "A", shot)
+			check.truthy(outcome.foul ~= nil, name)
+			check.truthy(not outcome.keepsTurn, name)
+			check.equal(outcome.groups.A, nil, name)
+			check.equal(outcome.winner, nil, name)
+		end
+	end)
+
+	test("a fair shot that misses passes the turn with no foul", function()
+		local outcome = EightBall.resolveShot(SET, "A", facts(2, {}))
+		check.equal(outcome.foul, nil)
+		check.truthy(not outcome.keepsTurn)
+	end)
+
+	-- The break
+
+	test("any break counts: only a scratch fouls it, not nothing in, the 8 first, or no rail", function()
+		local quiet = facts(8, {}, true)
+		quiet.railAfterHit = false
+		check.equal(EightBall.resolveShot(OPEN, "A", quiet).foul, nil, "the 8 first, no rail")
+		check.equal(EightBall.resolveShot(OPEN, "A", facts(nil, {}, true)).foul, nil, "nothing hit")
+		check.equal(EightBall.resolveShot(OPEN, "A", facts(1, { 3, 0 }, true)).foul, "scratch", "scratch")
+	end)
+
+	test("the 8 on the break comes back on the foot spot and play goes on, with no win or loss", function()
+		local outcome = EightBall.resolveShot(OPEN, "A", facts(1, { 8 }, true))
+		check.truthy(outcome.respotEight)
+		check.equal(outcome.winner, nil)
+		check.equal(outcome.foul, nil)
+		check.truthy(outcome.keepsTurn)
+		outcome = EightBall.resolveShot(OPEN, "A", facts(1, { 8, 0 }, true))
+		check.truthy(outcome.respotEight, "with a scratch")
+		check.equal(outcome.winner, nil, "with a scratch")
+		check.equal(outcome.foul, "scratch", "with a scratch")
+		check.truthy(not outcome.keepsTurn, "with a scratch")
+		check.truthy(not EightBall.resolveShot(OPEN, "A", facts(1, { 3 }, true)).respotEight, "the 8 stays up")
+	end)
+
+	-- Where the 8 is respotted: clear of every ball still up, other than itself
+	local function clear(balls: { EightBall.Ball }, x: number, y: number): boolean
+		for _, ball in balls do
+			if ball.id ~= 8 and not ball.pocket and (ball.x - x) ^ 2 + (ball.y - y) ^ 2 < (2 * radius) ^ 2 then
+				return false
+			end
+		end
+		return true
+	end
+	local footX = tableParams.Length / 4
+
+	test("the 8 comes back on the foot spot when it's clear", function()
+		local x, y = EightBall.spotEight({ { id = 0, x = layout.headLineX, y = 0 } }, tableParams)
+		check.equal(x, footX)
+		check.equal(y, 0)
+	end)
+
+	test("with a ball on the foot spot, the 8 goes just behind it, toward the foot rail", function()
+		local balls: { EightBall.Ball } = { { id = 3, x = footX, y = 0 } }
+		local x, y = EightBall.spotEight(balls, tableParams)
+		check.near(x, footX + 2 * radius, radius / 100)
+		check.equal(y, 0)
+		check.truthy(clear(balls, x, y))
+		-- Even behind a whole rack
+		local racked = EightBall.rack(layout, first)
+		racked[9].pocket = 1
+		x, y = EightBall.spotEight(racked, tableParams)
+		check.truthy(x > footX and x <= tableParams.Length / 2 - radius, `behind the rack at {x}`)
+		check.truthy(clear(racked, x, y), "behind the rack")
+	end)
+
+	test("with no room behind the foot spot, the 8 goes in front of it", function()
+		local balls: { EightBall.Ball } = {}
+		for x = footX, tableParams.Length / 2 - radius, 2 * radius do
+			-- Any ids but the 8's
+			table.insert(balls, { id = if #balls < 7 then #balls + 1 else #balls + 2, x = x, y = 0 })
+		end
+		local x, y = EightBall.spotEight(balls, tableParams)
+		check.near(x, footX - 2 * radius, radius / 100)
+		check.truthy(clear(balls, x, y))
+	end)
+
+	-- The 8
+
+	test("a side is on the 8 once every ball of its group is down, and never on an open table", function()
+		check.truthy(EightBall.groupCleared(SET, "A", tableWith(SOLIDS)), "every solid down")
+		check.truthy(not EightBall.groupCleared(SET, "B", tableWith(SOLIDS)), "stripes still up")
+		check.truthy(not EightBall.groupCleared(SET, "A", tableWith({ 1, 2, 3, 4, 5, 6 })), "one solid left")
+		check.truthy(not EightBall.groupCleared(OPEN, "A", tableWith(SOLIDS)), "open table")
+	end)
+
+	test("sinking the 8 in the called pocket on a legal shot wins", function()
+		local outcome = EightBall.resolveShot(SET, "A", onEight(8, { 8 }))
+		check.equal(outcome.winner, "A")
+		check.equal(outcome.reason, "eightPotted")
+		local stripes = facts(8, { 8 })
+		stripes.balls, stripes.calledPocket = tableWith({ 9, 10, 11, 12, 13, 14, 15 }), 1
+		check.equal(EightBall.resolveShot(SET, "B", stripes).winner, "B", "B on stripes")
+	end)
+
+	test("sinking the 8 before your group is cleared loses, on an open table or with groups set", function()
+		for name, case in
+			{ open = { groups = OPEN, shot = facts(3, { 8 }) }, set = { groups = SET, shot = facts(2, { 8 }) } }
+		do
+			local outcome = EightBall.resolveShot(case.groups, "A", case.shot)
+			check.equal(outcome.winner, "B", name)
+			check.equal(outcome.reason, "eightEarly", name)
+		end
+	end)
+
+	test("sinking the 8 on the same shot as your last ball loses, whichever drops first", function()
+		for _, order in { { 7, 8 }, { 8, 7 } } do
+			local shot = facts(7, order)
+			shot.balls = tableWith({ 1, 2, 3, 4, 5, 6 })
+			local outcome = EightBall.resolveShot(SET, "A", shot)
+			check.equal(outcome.winner, "B", `{order[1]} then {order[2]}`)
+			check.equal(outcome.reason, "eightEarly", `{order[1]} then {order[2]}`)
+		end
+	end)
+
+	test("the 8 in a pocket you didn't call loses", function()
+		local outcome = EightBall.resolveShot(SET, "A", onEight(8, { 8 }, 3))
+		check.equal(outcome.winner, "B")
+		check.equal(outcome.reason, "eightWrongPocket")
+	end)
+
+	test("the 8 going in on a foul loses: with the cue ball, or after another ball first", function()
+		for name, shot in
+			{
+				["scratch after"] = onEight(8, { 8, 0 }),
+				["scratch first"] = onEight(8, { 0, 8 }),
+				["wrong ball"] = onEight(12, { 8 }),
+			}
+		do
+			local outcome = EightBall.resolveShot(SET, "A", shot)
+			check.equal(outcome.winner, "B", name)
+			check.equal(outcome.reason, "eightOnFoul", name)
+		end
+	end)
+
+	test("a foul on the 8 that leaves the 8 up is just a foul", function()
+		for name, case in
+			{
+				scratch = { shot = onEight(8, { 0 }), foul = "scratch" },
+				["nothing hit"] = { shot = onEight(nil, {}), foul = "nothingHit" },
+				["theirs first"] = { shot = onEight(12, { 12 }), foul = "wrongBall" },
+			}
+		do
+			local outcome = EightBall.resolveShot(SET, "A", case.shot)
+			check.equal(outcome.foul, case.foul, name)
+			check.equal(outcome.winner, nil, name)
+			check.truthy(not outcome.keepsTurn, name)
+		end
+	end)
+
+	test("on the 8, a fair miss or sinking one of theirs passes the turn with no foul", function()
+		for name, shot in { miss = onEight(8, {}), theirs = onEight(8, { 12 }) } do
+			local outcome = EightBall.resolveShot(SET, "A", shot)
+			check.equal(outcome.foul, nil, name)
+			check.equal(outcome.winner, nil, name)
+			check.truthy(not outcome.keepsTurn, name)
+		end
 	end)
 
 	test("solids are 1–7, stripes 9–15, and the cue ball and the 8 are in neither", function()

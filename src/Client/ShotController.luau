@@ -11,7 +11,9 @@
 -- go, the cue strikes forward and the shot starts on this screen the moment it reaches the ball.
 -- In a game you can only shoot on your turn. With ball in hand the cue ball follows the mouse, stopping at the nearest
 -- spot it's allowed, until a click sets it down; a click on it picks it up again until you shoot. The server checks
--- the spot when the shot goes. With no game on, the physics test mode lets testers shoot any time.
+-- the spot when the shot goes. On the 8, a gold ring marks the called pocket: the one the 8's yellow line points
+-- at, until a click on a pocket calls that one for the rest of the shot. With no game on, the physics test mode lets
+-- testers shoot any time.
 
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
@@ -41,13 +43,16 @@ local HINTS = {
 	keyboard = {
 		aiming = { { "Lock aim", "Space" }, { "Shoot", "Hold + drag back" } },
 		locked = { { "Unlock", "Space" }, { "Shoot", "Drag back" } },
-		-- With ball in hand. Space still locks, but there's only room for two hints.
+		-- Aiming on the 8. Space still locks, but there's only room for two hints.
+		calling = { { "Call pocket", "Click a pocket" }, { "Shoot", "Hold + drag back" } },
 		-- While the cue ball follows the mouse with ball in hand
 		placing = { { "Place ball", "Click" } },
 	},
 	touch = {
 		aiming = { { "Lock aim to pull from anywhere", "Tap Lock" }, { "Shoot", "Drag back from ball" } },
 		locked = { { "Unlock", "Tap Lock" }, { "Shoot", "Drag back" } },
+		-- ponytail: the same as aiming until the Mobile phase brings calling a pocket to phones
+		calling = { { "Lock aim to pull from anywhere", "Tap Lock" }, { "Shoot", "Drag back from ball" } },
 		-- ponytail: the same as aiming until the Mobile phase brings ball in hand to phones
 		placing = { { "Lock aim to pull from anywhere", "Tap Lock" }, { "Shoot", "Drag back from ball" } },
 	},
@@ -218,6 +223,17 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	placeRingStroke.Thickness = Theme.Ui.AimLineThickness
 	placeRingStroke.Transparency = Theme.Ui.AimFaintTransparency
 	placeRingStroke.Parent = placeRing
+	-- A gold ring round the pocket called for the 8
+	local pocketRing = Instance.new("Frame")
+	pocketRing.AnchorPoint = Vector2.new(0.5, 0.5)
+	pocketRing.BackgroundTransparency = 1
+	pocketRing.Visible = false
+	pocketRing.Parent = indicatorGui
+	roundCorners(pocketRing)
+	local pocketRingStroke = Instance.new("UIStroke")
+	pocketRingStroke.Color = Theme.Colors.CalledPocket
+	pocketRingStroke.Thickness = Theme.Ui.PocketRingThickness
+	pocketRingStroke.Parent = pocketRing
 	indicatorGui.Parent = playerGui
 
 	-- Radians in table space: 0 aims along +x, at the rack
@@ -243,6 +259,9 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	-- With ball in hand, whether the cue ball is following the mouse rather than set down
 	local holding = false
 	local placed: { x: number, y: number, from: CFrame }? = nil
+	-- On the 8, from TurnStarted: the pocket called for it, and whether a click chose it, after which it stops
+	-- following the aim. Nil when it's not this player's turn on the 8.
+	local calling: { pocket: number, clicked: boolean }? = nil
 
 	-- The camera's settings from before the view, and everything the view connected, while it's on
 	local saved: { cameraType: Enum.CameraType, cframe: CFrame, fieldOfView: number, connections: { RBXScriptConnection } }? =
@@ -295,6 +314,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 
 	local function hideIndicator()
 		placeRing.Visible = false
+		pocketRing.Visible = false
 		pathLine.Visible, cueLine.Visible, targetLine.Visible = false, false, false
 		ghost.Visible, ghostEdge.Visible, dot.Visible = false, false, false
 	end
@@ -357,6 +377,10 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		if not (contact.ball and hit) then
 			return
 		end
+		local hitX, hitY = TableSpace.toTable(felt, ballParts[contact.ball].Position)
+		if calling and not calling.clicked and contact.ball == 8 then
+			calling.pocket = Preview.aimedPocket(layout, hitX, hitY, contact.pushX :: number, contact.pushY :: number)
+		end
 		-- Each line is its longest times the share of the speed its ball gets, but never shorter than the minimum
 		local function length(share: number, longest: number): number
 			return math.max(Config.Aim.LineMinLength, share * longest) * radius
@@ -372,7 +396,6 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			)
 		end
 		if Config.Aim.ShowTargetLine then
-			local hitX, hitY = TableSpace.toTable(felt, ballParts[contact.ball].Position)
 			local ballLength = length(hit.ballShare, Config.Aim.TargetLineLength)
 			showLine(
 				targetLine,
@@ -405,9 +428,16 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
 		followThrough = { t = 0, x = cueX, y = cueY, aim = aim }
 		local remote = if turn then Remotes.RequestShot else Remotes.TestShoot
-		remote:FireServer(shot.dirX, shot.dirY, shot.power, placed and placed.x, placed and placed.y)
-		-- Placing ends with the shot, even before the server's next TurnStarted arrives
-		ballInHand, holding, placed = false, false, nil
+		remote:FireServer(
+			shot.dirX,
+			shot.dirY,
+			shot.power,
+			placed and placed.x,
+			placed and placed.y,
+			calling and calling.pocket
+		)
+		-- Placing and calling end with the shot, even before the server's next TurnStarted arrives
+		ballInHand, holding, placed, calling = false, false, nil, nil
 		TableView.predict(tableModel, shot, PhysicsTestAccess.params())
 		TableView.playSound(cueBall, "CueStrike", power)
 	end
@@ -444,6 +474,30 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		local back = math.clamp(-((x - cueX) * dirX + (y - cueY) * dirY), 0, tipBack + cueLength)
 		local dx, dy = x - (cueX - dirX * back), y - (cueY - dirY * back)
 		return dx * dx + dy * dy <= (Config.Aim.GrabRadius * radius) ^ 2
+	end
+
+	-- The pocket within PocketPickRadius of a point, if any
+	local function pocketAt(x: number, y: number): number?
+		local reach = Config.Aim.PocketPickRadius * radius
+		for index, pocket in Geometry.build(PhysicsTestAccess.params().Table).pockets do
+			if (x - pocket.x) ^ 2 + (y - pocket.y) ^ 2 <= reach * reach then
+				return index
+			end
+		end
+		return nil
+	end
+
+	-- The pocket nearest the 8 as this screen shows it, called until the aim or a click picks another
+	local function pocketNearEight(): number
+		local x, y = TableSpace.toTable(felt, ballParts[8].Position)
+		local best, bestSq = 1, math.huge
+		for index, pocket in Geometry.build(PhysicsTestAccess.params().Table).pockets do
+			local distSq = (x - pocket.x) ^ 2 + (y - pocket.y) ^ 2
+			if distSq < bestSq then
+				best, bestSq = index, distSq
+			end
+		end
+		return best
 	end
 
 	-- Ball in hand: moves the cue ball to the allowed spot nearest the pointer. Where none turns up, like over a cluster
@@ -530,6 +584,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 				elseif placing then hints.placing
 				elseif cancelling then HINTS.cancel
 				elseif held then hints.locked
+				elseif calling then hints.calling
 				else hints.aiming
 		)
 		lockButton.Text = if held then "Unlock" else "Lock"
@@ -538,6 +593,15 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			return
 		end
 		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
+		if calling then
+			local pocket = Geometry.build(PhysicsTestAccess.params().Table).pockets[calling.pocket]
+			local middle = toScreen(pocket.x, pocket.y)
+			local diameter = 2
+				* (toScreen(pocket.x + Config.Aim.PocketPickRadius * radius, pocket.y) - middle).Magnitude
+			pocketRing.Position = UDim2.fromOffset(middle.X, middle.Y)
+			pocketRing.Size = UDim2.fromOffset(diameter, diameter)
+			pocketRing.Visible = true
+		end
 		if placing then
 			local middle = toScreen(cueX, cueY)
 			local diameter = 2 * (toScreen(cueX + Config.Aim.PlaceRingRadius * radius, cueY) - middle).Magnitude
@@ -614,6 +678,12 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 				strike = { power = pull, t = 0 }
 				-- Each new shot starts unlocked
 				locked = false
+			elseif calling and not pulling.state.left then
+				-- On the 8, a click that never pulled back calls the pocket it's on
+				local pocket = pocketAt(pulling.state.pressX, pulling.state.pressY)
+				if pocket then
+					calling.pocket, calling.clicked = pocket, true
+				end
 			end
 			pulling = nil
 		elseif drag and input == drag.input then
@@ -694,7 +764,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	ContextActionService:SetTitle(VIEW_ACTION, "View")
 
 	Remotes.TurnStarted.OnClientEvent:Connect(
-		function(model: Model?, shooter: Player?, inHand: boolean?, seats: { Player }?)
+		function(model: Model?, shooter: Player?, inHand: boolean?, seats: { Player }?, callPocket: boolean?)
 			if model ~= tableModel then
 				return
 			end
@@ -703,11 +773,17 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 				cueBall.CFrame = placed.from
 			end
 			local wasSeated = turn ~= nil and turn.seated
-			local seated = shooter ~= nil and table.find(seats or {}, Players.LocalPlayer) ~= nil
-			turn = if shooter then { mine = shooter == Players.LocalPlayer, seated = seated } else nil
+			local seated = table.find(seats or {}, Players.LocalPlayer) ~= nil
+			-- Seats with no shooter: the game is over and its result is showing, so nobody shoots
+			turn = if seats then { mine = shooter == Players.LocalPlayer, seated = seated } else nil
 			-- Ball in hand starts with the cue ball following the mouse
 			ballInHand, holding = inHand == true, inHand == true
 			placed, pulling = nil, nil
+			calling = if callPocket == true
+					and turn
+					and turn.mine
+				then { pocket = pocketNearEight(), clicked = false }
+				else nil
 			-- Players go to the top-down view when their game starts and back when it ends. F still toggles it.
 			if seated and not wasSeated and not saved then
 				enterView()

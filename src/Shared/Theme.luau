@@ -30,6 +30,7 @@ local Theme = {
 		AimLine = Color3.fromRGB(255, 255, 255),
 		TargetLine = Color3.fromRGB(255, 214, 60), -- the aim indicator's yellow line from the hit ball
 		AimOutline = Color3.fromRGB(24, 18, 14), -- the thin dark edge round every part of the aim indicator
+		CalledPocket = ACCENT, -- the ring round the pocket called for the 8
 		BallMark = Color3.fromRGB(245, 242, 230), -- the white on the placeholder balls: stripes and number dots
 		CueBallMark = Color3.fromRGB(200, 35, 35),
 		BallShadow = Color3.fromRGB(10, 20, 40),
@@ -61,6 +62,9 @@ local Theme = {
 		AimDotSize = 6, -- pixels, the dot at the aim circle's center
 		AimOutline = 1, -- pixels of dark edge round the aim indicator's lines, circle and dot, so they read on any ball
 		AimFaintTransparency = 0.6, -- the aim indicator while aiming or about to cancel; solid while locked
+		PocketRingThickness = 3, -- pixels, the ring round the pocket called for the 8
+		BannerWidth = 560, -- the banner under the top bar naming a foul or the winner
+		BannerHeight = 44,
 		LockButtonWidth = 80, -- the phones' Lock button, beside the power meter
 		TestButtonWidth = 80, -- the physics test panel's Test button, beside the settings gear
 	},

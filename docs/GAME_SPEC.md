@@ -1,6 +1,6 @@
 # Game spec
 
-How the game works. Written 2026-10-11 from my design chats with Claude. Updated 2026-10-16 for the intense, item-based direction.
+How the game works. Written 2026-10-11 from my design chats with Claude. Updated 2026-10-16 for the intense, item-based direction, and 2026-10-24 for the full 8-ball rules.
 
 Markers: no marker = decided by me. *(default)* = Claude's proposal I haven't confirmed; build it this way unless I say otherwise. Every number is a starting value in `Config.luau`, tuned by feel.
 
@@ -61,7 +61,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 6a. Power, like a slingshot and like 8 Ball Duels: on PC, hold the mouse button anywhere, best in front of the cue ball near where you're aiming, and drag back along the aim line toward the cue ball and the stick. The cursor moves freely the whole time. If the aim isn't locked, pressing locks it where it is. On phones, while unlocked a touch on or near the cue ball or the cue starts a pull and a touch anywhere else turns the aim; while locked, a pull can start anywhere, so tap Lock first to start the pull wherever there's room. Power is how far the pointer has moved from where you pressed, measured only along the line straight back toward the stick. Moving toward the ball lowers it, down to 0, and it stays at 0 however far you keep going; it only comes back once the pointer is behind where you pressed again. Sideways movement neither adds nor removes power. The first stretch back is a small cancel zone, about fingertip size on a phone, that isn't drawn. Power counts from its edge, so soft shots still work, with full power 6 studs past it: 6.6 studs of pull in all, about 41% of the table length (`FullPullDistance` in Config, with a slider on the test panel to tune it). Power rises on a curve (speed is pull^1.45, so 76% on the meter gives about 67% of full speed), so soft shots get more of the drag. The cue slides back as you pull, and the power meter on the left fills up, with the power as a % under it; the meter only shows power, you don't drag it. Let go to shoot.
 6b. Cancelling: push back toward the ball into the cancel zone and the cue slides back to rest, the meter empties, the aim indicator turns see-through again and the hint says "Cancel · Let go"; let go there to cancel with no shot. Right-clicking, opening the Roblox menu (Esc) or a release the game misses also cancels. These put you back where you were before the pull: still locked if you'd pressed Space first, aiming again if not. Space or the Lock button mid-pull cancels and unlocks, and leaving the view cancels and resets.
 7. Aim indicator, always on, like 8 Ball Duels: a white line from the cue ball to the center of a white circle where the cue ball will be when it first touches a ball, with a small dot at that center. From the dot, a short white line shows where the cue ball goes after the hit; from the hit ball's center, a yellow line shows where that ball goes. Both follow the physics' own hit rule, so the white line includes the cue ball's slight drift forward of the tangent line. Each line's length follows the share of the speed its ball gets: a full hit draws a long yellow line and a short white one, a thin cut the opposite, and neither gets shorter than a minimum. If the cue ball would hit a rail or drop in a pocket first, the line and circle stop there, with no bounce lines. Every line, the circle and the dot have a thin dark outline, so they stay readable over white and yellow balls. It uses the physics' own geometry, so it's exact. Only the shooter sees it, and it hides while balls roll. `Config.Aim.ShowAimLine` switches the line, circle and dot, `Config.Aim.ShowCueLine` the white line after the hit and `Config.Aim.ShowTargetLine` the yellow line; there's no player setting.
-8. When shooting at the 8, the shooter clicks or taps the pocket they're calling before they can shoot *(default)*.
+8. When shooting at the 8, the shooter calls a pocket. A gold ring marks the pocket the 8's yellow line points at, and follows the aim. Clicking near another pocket calls that one instead for the rest of the shot. A press that pulls back still starts a pull, so a pull can start over a pocket. At the start of the turn the ring is on the pocket nearest the 8, and it stays on the last one while the aim isn't on the 8. On the 8 the hint "Lock aim · Space" becomes "Call pocket · Click a pocket". Only the shooter sees the ring until watchers see the shooter's aim live (Phase 3). (Phones: the Mobile phase.)
 9. When they let go, the cue strikes forward and the shot fires the moment it touches the cue ball; the cue carries on a little and fades out. Everyone sees the balls roll.
 10. When a game starts, every player in it switches to the top-down view automatically and stays there the whole game. Only the shooter gets the cue; the others watch. F still toggles the view for anyone who wants. When the game ends, the camera goes back to normal *(default)*.
 
@@ -93,21 +93,23 @@ Laid out like 8 Ball Duels, in the look `docs/STYLE.md` describes: cream cards, 
 
 Items never change these rules: what counts as a legal shot, a foul or a win is the same with or without them.
 
-- **Break:** any break counts. Sinking the cue ball on the break is a foul. If the 8 goes in on the break, it goes back on the foot spot and the breaker keeps shooting, unless the cue ball also went in, which is a foul *(default)*.
+- **Break:** any break counts, so a scratch is its only foul: no first-ball or rail rule. Any ball in keeps the breaker shooting, unless the cue ball went in, which gives the other side ball in hand anywhere. If the 8 goes in on the break, it goes back on the foot spot, or the nearest free spot behind it toward the foot rail if that's taken, and play goes on: it's never a win or a loss.
 - **Open table:** after the break the table is open, even if balls went in. On an open table you may hit any ball first except the 8.
 - **Groups:** the first ball legally sunk on an open table gives the shooter's side that group, solids or stripes. If both kinds drop on that shot, the first to drop decides *(default)*.
-- **Legal shot:** the cue ball first hits one of your group (any ball but the 8 on an open table, the 8 once your group is cleared), and the cue ball doesn't go in. No rail is required after contact *(default)*.
+- **Legal shot:** the cue ball first hits one of your group (any ball but the 8 on an open table, the 8 once your group is cleared), and the cue ball doesn't go in. After that first hit, a ball goes in or some ball touches a rail, the cue ball included.
 - **Turns:** you keep shooting after legally sinking one of your balls, or any ball on the break or an open table. Anything else passes the turn.
-- **Fouls:** the cue ball goes in, the first ball hit isn't legal, nothing is hit, or the clock runs out. After a foul, the other side gets ball in hand anywhere. Balls that went in on a foul stay down *(default)*.
+- **Fouls:** the cue ball goes in, nothing is hit, the first ball hit isn't legal (the 8 on an open table; anything but the 8 when you're on it), no ball goes in or touches a rail after the first hit, or the clock runs out. After a foul the turn passes and the next shooter gets ball in hand anywhere. Balls that went in on a foul stay down. Everyone at the table sees a banner for 3 seconds naming the foul and who has ball in hand, like "Foul: wrong ball first. Player2 has ball in hand."
 - **The other side's balls:** sinking one of theirs leaves it down; it counts for them.
 - **Winning:** once your group is cleared, call a pocket and legally sink the 8 there.
-- **Losing on the 8:** sinking it before your group is cleared (except on the break), in a pocket you didn't call, or on a shot that fouls (like the cue ball going in too).
+- **Losing on the 8:** sinking it before your group is cleared (except on the break), including on the same shot as your last ball; in a pocket you didn't call; or on a shot that fouls (like the cue ball going in too).
 - A foul while shooting at the 8 that doesn't sink it is just a foul.
+- **Until the end screen (Phase 3):** when the 8 decides the game, everyone at the table sees who won and why, like "Player1 wins: 8 in the wrong pocket", for 5 seconds, with nobody's turn. Then the game ends and the table re-racks. Players still on the platforms start a new game right away.
 
 ## 2v2
 
 - Same table, 2 platforms per long side. Your side is your team, and teammates share a group.
 - Turns go A1 → B1 → A2 → B2. Sinking a ball keeps the turn with the same player; the next time the team is up, the teammate shoots.
+- After a foul, ball in hand goes to the next shooter.
 
 ## Items
 

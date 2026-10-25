@@ -1,7 +1,8 @@
 --!strict
 -- One game of 8-ball on one table: who's seated, whose turn it is, ball in hand, and the shots they ask for. The
--- server is the referee: a shot only goes once every check in `shoot` passes.
--- ponytail: the rack, the break, groups and turns so far. Fouls and the 8 come with the next Phase 2 tasks.
+-- server is the referee: a shot only goes once every check in `shoot` passes. Once the 8 decides the game, everyone
+-- sees who won and why, and then the game tells TableService it's over.
+-- ponytail: no shot clock or leaving yet; they come with later Phase 2 and Phase 3 tasks.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -19,17 +20,34 @@ export type Match = {
 	-- In turn order: A1, B1, then A2 and B2 on a 2v2 table
 	seats: { Player },
 	shooter: Player,
-	-- Whether the shooter may place the cue ball anywhere before their next shot, after a scratch
+	-- Whether the shooter may place the cue ball anywhere before their next shot, after a foul
 	ballInHand: boolean,
 	isBreak: boolean,
 	groups: EightBall.Groups,
 	-- When each player last asked for a shot, for the rate limit
 	lastRequest: { [Player]: number },
+	-- No more shots: the game is over, or was ended
 	ended: boolean,
 	connection: RBXScriptConnection?,
+	-- Called once the result has shown, for TableService to end the game and re-rack
+	onEnd: () -> (),
 }
 
 local Match = {}
+
+-- The banner's words for each foul, and for how a game ended
+local FOUL_TEXT: { [EightBall.Foul]: string } = {
+	scratch = "cue ball in",
+	nothingHit = "no ball hit",
+	wrongBall = "wrong ball first",
+	noRail = "no rail after contact",
+}
+local REASON_TEXT: { [EightBall.Reason]: string } = {
+	eightPotted = "8 in the called pocket",
+	eightEarly = "8 in too early",
+	eightWrongPocket = "8 in the wrong pocket",
+	eightOnFoul = "8 in on a foul",
+}
 
 local function isFinite(value: number): boolean
 	return value == value and math.abs(value) ~= math.huge
@@ -55,7 +73,28 @@ local function startTurn(match: Match)
 	end
 	-- Tells the shooter's screen to start the shot at break power before the server's copy arrives. Display only.
 	match.tableModel:SetAttribute("BreakNext", match.isBreak)
-	Remotes.TurnStarted:FireAllClients(match.tableModel, match.shooter, match.ballInHand, match.seats)
+	local callPocket = EightBall.groupCleared(match.groups, sideOf(match, match.shooter), Balls.get(match.tableModel))
+	Remotes.TurnStarted:FireAllClients(match.tableModel, match.shooter, match.ballInHand, match.seats, callPocket)
+end
+
+-- The 8 decided the game: everyone at the table sees who won and why, with nobody's turn, and then the game ends
+local function finish(match: Match, winner: EightBall.Side, reason: EightBall.Reason)
+	match.ended = true
+	local names = {}
+	for _, player in match.seats do
+		player:SetAttribute("MyTurn", false)
+		if sideOf(match, player) == winner then
+			table.insert(names, player.DisplayName)
+		end
+	end
+	-- In Studio solo the one player is side A, so side B can win with nobody on it
+	local text = if #names == 0
+		then `{match.seats[1].DisplayName} loses: {REASON_TEXT[reason]}`
+		else `{table.concat(names, " and ")} {if #names == 1 then "wins" else "win"}: {REASON_TEXT[reason]}`
+	log(match, text)
+	Remotes.Banner:FireAllClients(match.tableModel, text, Config.Timers.ResultSeconds)
+	Remotes.TurnStarted:FireAllClients(match.tableModel, nil, false, match.seats, false)
+	task.delay(Config.Timers.ResultSeconds, match.onEnd)
 end
 
 local function shoot(
@@ -65,7 +104,8 @@ local function shoot(
 	dirY: unknown,
 	power: unknown,
 	cueX: unknown,
-	cueY: unknown
+	cueY: unknown,
+	calledPocket: unknown
 )
 	local tableModel = match.tableModel
 	if match.ended or player ~= match.shooter or Balls.isRolling(tableModel) then
@@ -85,6 +125,17 @@ local function shoot(
 	end
 
 	local params = PhysicsTestAccess.params()
+	local layout = Geometry.build(params.Table)
+	local side = sideOf(match, player)
+	-- On the 8, the shot must call a pocket that exists. NaN and infinity fail the whole-number check.
+	local onEight = EightBall.groupCleared(match.groups, side, Balls.get(tableModel))
+	local called: number? = nil
+	if onEight then
+		if typeof(calledPocket) ~= "number" or calledPocket % 1 ~= 0 or not layout.pockets[calledPocket] then
+			return
+		end
+		called = calledPocket
+	end
 	if not Balls.placeCue(tableModel, match.ballInHand, cueX, cueY, params.Table) then
 		return
 	end
@@ -92,43 +143,64 @@ local function shoot(
 	match.ballInHand = false
 	local shot: Simulate.Shot = { dirX = dirX / length, dirY = dirY / length, power = power, isBreak = match.isBreak }
 	match.isBreak = false
+	local before = Balls.get(tableModel)
 	local sim = Balls.shoot(tableModel, shot, params)
-	local side = sideOf(match, player)
-	local outcome = EightBall.resolveShot(
-		match.groups,
-		side,
-		{ isBreak = shot.isBreak == true, firstHit = sim.firstHit, dropped = Simulate.dropped(sim) }
-	)
+	local outcome = EightBall.resolveShot(match.groups, side, {
+		isBreak = shot.isBreak == true,
+		firstHit = sim.firstHit,
+		dropped = Simulate.dropped(sim),
+		railAfterHit = Simulate.railAfterFirstHit(sim),
+		balls = before,
+		calledPocket = called,
+	})
 	if outcome.groups[side] and not match.groups[side] then
 		log(match, `{player.Name} ({side}) takes {outcome.groups[side]}`)
 	end
 	match.groups = outcome.groups
+	if outcome.foul then
+		log(match, `{player.Name} fouls: {FOUL_TEXT[outcome.foul]}`)
+	end
 	if outcome.keepsTurn then
 		log(match, `{player.Name} keeps the turn`)
-	else
+	elseif not outcome.winner then
 		-- Round the seats in order: A1, B1, then A2 and B2 on a 2v2 table
 		match.shooter = match.seats[(table.find(match.seats, player) :: number) % #match.seats + 1]
 		log(match, `turn passes to {match.shooter.Name}`)
 	end
+	-- After a foul the next shooter places the cue ball anywhere: where it stopped, or back on the head line if it
+	-- went in. An 8 down on the break goes back first, so the cue ball keeps clear of it.
+	match.ballInHand = outcome.foul ~= nil
 	local balls = sim.balls
-	-- ponytail: until the fouls task, a sunk cue ball comes back on the head line and the next shooter gets ball in
-	-- hand. The cue ball sorts first.
-	local cue = balls[1]
-	if cue.pocket then
-		cue.pocket = nil
-		cue.x, cue.y = EightBall.freeSpot(balls, Geometry.build(params.Table).headLineX, params.Table)
-		match.ballInHand = true
+	for _, ball in balls do
+		if ball.id == 8 and outcome.respotEight then
+			ball.pocket = nil
+			ball.x, ball.y = EightBall.spotEight(balls, params.Table)
+			log(match, "the 8 goes back on the foot spot")
+		end
+	end
+	for _, ball in balls do
+		if ball.id == 0 and ball.pocket and not outcome.winner then
+			ball.pocket = nil
+			ball.x, ball.y = EightBall.freeSpot(balls, layout.headLineX, params.Table)
+		end
 	end
 	Balls.place(tableModel, balls)
 	Remotes.ShotResolved:FireAllClients(tableModel, balls)
-	if not match.ended then
-		startTurn(match)
+	if match.ended then
+		return
+	elseif outcome.winner and outcome.reason then
+		finish(match, outcome.winner, outcome.reason)
+		return
+	elseif outcome.foul then
+		local text = `Foul: {FOUL_TEXT[outcome.foul]}. {match.shooter.DisplayName} has ball in hand.`
+		Remotes.Banner:FireAllClients(tableModel, text, Config.Timers.FoulBannerSeconds)
 	end
+	startTurn(match)
 end
 
 -- Racks the table and starts a game, with a random player breaking. `pick(n)` returns a random whole number from 1
--- to n.
-function Match.new(tableModel: Model, seats: { Player }, pick: (number) -> number): Match
+-- to n. `onEnd` is called once a finished game's result has shown; it isn't called for Match.destroy.
+function Match.new(tableModel: Model, seats: { Player }, pick: (number) -> number, onEnd: () -> ()): Match
 	local params = PhysicsTestAccess.params()
 	Balls.place(tableModel, EightBall.rack(Geometry.build(params.Table), pick))
 	local match: Match = {
@@ -142,6 +214,7 @@ function Match.new(tableModel: Model, seats: { Player }, pick: (number) -> numbe
 		lastRequest = {},
 		ended = false,
 		connection = nil,
+		onEnd = onEnd,
 	}
 	match.connection = Remotes.RequestShot.OnServerEvent:Connect(function(player: Player, ...: unknown)
 		shoot(match, player, ...)

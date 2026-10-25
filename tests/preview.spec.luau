@@ -180,4 +180,11 @@ return function(test, check)
 		-- Simulate zeroes the speed when it drops, so compare the drop step's position
 		check.near(math.sqrt((cue.x - contact.x) ^ 2 + (cue.y - contact.y) ^ 2), 0, 2 * STEP_TRAVEL, "where")
 	end)
+
+	test("the pocket a ball points at is the one nearest its path, by angle", function()
+		-- Pocket ids: 1–3 along the −y side from the head end, 4–6 along the +y side
+		check.equal(Preview.aimedPocket(layout, 0, 0, unit(LENGTH, WIDTH)), 6, "the foot-end corner")
+		check.equal(Preview.aimedPocket(layout, 0, 0, 0, 1), 5, "the side pocket")
+		check.equal(Preview.aimedPocket(layout, 0, 0, unit(-LENGTH, -WIDTH * 0.9)), 1, "near the head-end corner")
+	end)
 end

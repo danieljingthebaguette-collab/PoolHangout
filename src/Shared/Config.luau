@@ -70,6 +70,8 @@ local Config = {
 		GrabRadius = 4, -- ball radii: on phones, an unlocked touch this close to the cue ball or the cue pulls instead of aiming
 		PlaceGrabRadius = 3, -- ball radii: with ball in hand, clicking this close to the cue ball picks it up again
 		PlaceRingRadius = 1.6, -- ball radii: the faint ring around the cue ball while it follows the mouse with ball in hand
+		-- Ball radii: on the 8, the ring around the called pocket's middle, and how close a click must be to call one
+		PocketPickRadius = 2.5,
 		CueLength = 0.6, -- share of the table length
 		CueThickness = 0.5, -- share of a ball's width
 		CueTipGap = 1, -- ball radii between the cue ball and the cue's tip
@@ -109,6 +111,8 @@ local Config = {
 		TakeoverSeconds = 5,
 		OpenSpotWaitSeconds = 15,
 		EndScreenSeconds = 10,
+		FoulBannerSeconds = 3, -- the banner naming a foul and who has ball in hand
+		ResultSeconds = 5, -- "Player1 wins" and why, before the table re-racks. Until the end screen replaces it
 	},
 
 	-- Studio only; the server also checks RunService:IsStudio() before using these, except PhysicsTestLive.
