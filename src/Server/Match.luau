@@ -64,17 +64,30 @@ local function sideOf(match: Match, player: Player): EightBall.Side
 	return if (table.find(match.seats, player) :: number) % 2 == 1 then "A" else "B"
 end
 
-local function startTurn(match: Match)
-	-- ponytail: each player's group and whether it's their turn as attributes, for the card's temporary label. Display
-	-- only. The top bar task sends them to everyone's screen instead.
-	for _, player in match.seats do
-		player:SetAttribute("Group", match.groups[sideOf(match, player)] or "open")
-		player:SetAttribute("MyTurn", player == match.shooter)
+-- The ids of the balls down, for every screen's top bar
+local function ballsDown(match: Match): { number }
+	local down = {}
+	for _, ball in Balls.get(match.tableModel) do
+		if ball.pocket then
+			table.insert(down, ball.id)
+		end
 	end
+	return down
+end
+
+local function startTurn(match: Match)
 	-- Tells the shooter's screen to start the shot at break power before the server's copy arrives. Display only.
 	match.tableModel:SetAttribute("BreakNext", match.isBreak)
 	local callPocket = EightBall.groupCleared(match.groups, sideOf(match, match.shooter), Balls.get(match.tableModel))
-	Remotes.TurnStarted:FireAllClients(match.tableModel, match.shooter, match.ballInHand, match.seats, callPocket)
+	Remotes.TurnStarted:FireAllClients(
+		match.tableModel,
+		match.shooter,
+		match.ballInHand,
+		match.seats,
+		callPocket,
+		match.groups,
+		ballsDown(match)
+	)
 end
 
 -- The 8 decided the game: everyone at the table sees who won and why, with nobody's turn, and then the game ends
@@ -82,7 +95,6 @@ local function finish(match: Match, winner: EightBall.Side, reason: EightBall.Re
 	match.ended = true
 	local names = {}
 	for _, player in match.seats do
-		player:SetAttribute("MyTurn", false)
 		if sideOf(match, player) == winner then
 			table.insert(names, player.DisplayName)
 		end
@@ -93,7 +105,7 @@ local function finish(match: Match, winner: EightBall.Side, reason: EightBall.Re
 		else `{table.concat(names, " and ")} {if #names == 1 then "wins" else "win"}: {REASON_TEXT[reason]}`
 	log(match, text)
 	Remotes.Banner:FireAllClients(match.tableModel, text, Config.Timers.ResultSeconds)
-	Remotes.TurnStarted:FireAllClients(match.tableModel, nil, false, match.seats, false)
+	Remotes.TurnStarted:FireAllClients(match.tableModel, nil, false, match.seats, false, match.groups, ballsDown(match))
 	task.delay(Config.Timers.ResultSeconds, match.onEnd)
 end
 
@@ -234,10 +246,6 @@ function Match.destroy(match: Match)
 	match.tableModel:SetAttribute("BreakNext", false)
 	if match.connection then
 		match.connection:Disconnect()
-	end
-	for _, player in match.seats do
-		player:SetAttribute("Group", nil)
-		player:SetAttribute("MyTurn", nil)
 	end
 	Remotes.TurnStarted:FireAllClients(match.tableModel, nil, false)
 end

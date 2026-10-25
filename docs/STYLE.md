@@ -52,14 +52,14 @@ Every value lives in `src/Shared/Theme.luau`, and UI is built in code. `src/Clie
 | Cards | Cream (246, 239, 224) with ink (36, 28, 22) text, thin dark corner brackets set just inside each corner, and a faint dot texture. Corners nearly square (4 px) |
 | Font | RobotoCondensed Bold everywhere: `Theme.Font`, set as `FontFace`. Big and bold for names and numbers |
 | Dark boxes | Near-black (32, 26, 22) with cream text: key boxes, the % readout, the power meter's track. Bigger ones, like the sunk-ball tray and later the timer, get cream corner brackets |
-| Timer | A dark box at the top center, under the turn or score card |
+| Timer | A dark box at the top center, between the top bar's two cards |
 | Control hints | Down the right side, stacked from the bottom: a slightly see-through cream label box, then a dark key box with the key or a short word, like "Lock aim" `Space` |
 | Item slots | Bottom center: square dark slots with bright corner brackets, a small number tag on each, and a dashed outline for an empty slot |
 | Buttons | A bright accent with ink text. The main accent is sunny gold (255, 196, 46). Other bright, slightly pastel accents like mint, sky blue or coral can mark other kinds of buttons; never neon |
 | Text over the world | Always on a card or a dark box, never bare, so it reads on any background |
 
 **Screen layout:**
-- **Top center:** the turn or score card, with the timer under it.
+- **Top center:** each side's card, yours on the left, with the timer between them. The side whose turn it is glows gold.
 - **Top right:** kept free for the spin control.
 - **Left:** the power meter, with the phones' Lock button beside it.
 - **Right:** the sunk-ball tray, with the control hints under it.

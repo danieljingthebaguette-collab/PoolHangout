@@ -76,16 +76,13 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 Laid out like 8 Ball Duels, in the look `docs/STYLE.md` describes: cream cards, dark boxes and bright accent buttons.
 
 - **In the top-down view:**
-  - a top bar with your player card (name and avatar)
+  - a top bar with two cards: your side on the left and the other side on the right, with a gap in the middle for the shot clock. Anyone watching sees side A on the left. Each card shows the side's avatars and names (both teammates in 2v2), its group ("Solids", "Stripes" or "Open table") and small icons of that group's balls, greyed out once they're down, with the 8 added once all seven are. The side whose turn it is glows gold, and the shooter's avatar gets a gold ring. Every screen draws it from the server's turn message, so they all agree; the icons change when the next turn starts. With no game on, only your own card shows
   - the power meter on the left, with a % readout under it; on phones the Lock button sits next to it
   - a tray on the right where sunk balls collect, the first one sunk at the bottom
   - soft shadows under the balls (the normal view has Roblox's own shadows)
   - a settings button bottom-left with a sound volume slider. The volume lasts for the session and isn't saved *(default)*. It shows only in the top-down view, so it never covers the phones' thumbstick.
 - **Phase 2:**
-  - the other player's card in the top bar
-  - a highlight on whose turn it is
-  - the shot-clock bar under the shooter's name
-  - each side's balls still left to sink
+  - the shot clock in the middle of the top bar, between the two cards
   - your group's balls pulse white briefly when your turn starts
   - item slots 1 and 2 at the bottom center, with icons drawn in code, and every player's slots and item bar on their card
 

@@ -165,7 +165,7 @@ Workspace
 | `SayPhrase` | client → server | A quick phrase, by index (Later list) |
 | `UseItem` | client → server | Slot, and a target: a ball id, a point on the felt or a pocket id |
 | `TableChanged` | server → clients | Sign text, state, seats |
-| `TurnStarted` | server → clients | Shooter, the game's players in turn order, clock end time, ball in hand (true or false), pocket call needed, held items, item bars and the points just added, any item earned, active effects. Players with no shooter: the game is over and its result is showing, so nobody shoots. No players means no game is on: the game just ended, or the physics test mode's ball in hand |
+| `TurnStarted` | server → clients | Shooter, the game's players in turn order, clock end time, ball in hand (true or false), pocket call needed, each side's group and the balls down (the top bar draws from these, so every screen agrees), held items, item bars and the points just added, any item earned, active effects. Players with no shooter: the game is over and its result is showing, so nobody shoots. No players means no game is on: the game just ended, or the physics test mode's ball in hand |
 | `ItemUsed` | server → clients | Who used which item, and its target |
 | `ShotStarted` | server → clients | Start balls, shot, item effects and physics params to replay |
 | `ShotResolved` | server → clients | Final balls, the outcome, item bars and the points just added, and any item earned |

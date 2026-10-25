@@ -28,11 +28,12 @@ return {
 	-- with ball in hand where the shooter placed the cue ball (nil leaves it where it is, and is the only choice
 	-- without it), and on the 8 the pocket id called for it
 	RequestShot = remote("RequestShot"),
-	-- server → clients: (table model, shooter, ball in hand, seats, call pocket), ball in hand being true when the
-	-- shooter may place the cue ball anywhere, seats the game's players in turn order, and call pocket true when the
-	-- shooter is on the 8. Seats with no shooter: the game is over and its result is showing, so nobody shoots. No
-	-- seats means no game is on the table: the game just ended, or the physics test mode is saying whether testers
-	-- have ball in hand.
+	-- server → clients: (table model, shooter, ball in hand, seats, call pocket, groups, balls down), ball in hand being
+	-- true when the shooter may place the cue ball anywhere, seats the game's players in turn order (A1, B1, A2, B2, so
+	-- odd seats are side A), call pocket true when the shooter is on the 8, groups each side's group by "A" and "B"
+	-- (empty while the table is open), and balls down the ids of the balls pocketed. Seats with no shooter: the game is
+	-- over and its result is showing, so nobody shoots. No seats means no game is on the table: the game just ended,
+	-- or the physics test mode is saying whether testers have ball in hand.
 	TurnStarted = remote("TurnStarted"),
 	-- server → clients: (table model, text, seconds), a message for everyone at the table, like a foul or the winner
 	Banner = remote("Banner"),
