@@ -1,6 +1,6 @@
 # Pool!
 
-Item-based 8-ball pool on Roblox, 1v1 and 2v2. Controls and physics match the feel of 8 Ball Duels; the look is inspired by Illegal Soccer (warm lodge, matte hand-painted). Solo project by Daniel, built with Claude Code. PC only for now. Launch target: Friday, Dec 11, 2026.
+Item-based 8-ball pool on Roblox, 1v1 and 2v2. Controls and physics match the feel of 8 Ball Duels; the look is inspired by Illegal Soccer (warm lodge, matte hand-painted). Solo project by Daniel, built with Claude Code. PC only for now. Launch target: Friday, Dec 18, 2026.
 
 ## Read first (only what the task needs)
 | Task | Read |

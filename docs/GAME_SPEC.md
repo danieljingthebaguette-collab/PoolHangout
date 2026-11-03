@@ -1,17 +1,17 @@
 # Game spec
 
-How the game works. Written 2026-10-11 from my design chats with Claude. Updated 2026-10-16 for the intense, item-based direction, and 2026-10-24 for the full 8-ball rules.
+How the game works. Written 2026-10-11 from my design chats with Claude. Updated 2026-10-16 for the intense, item-based direction, 2026-10-24 for the full 8-ball rules, and 2026-11-03 for players, parties, progression and money.
 
 Markers: no marker = decided by me. *(default)* = Claude's proposal I haven't confirmed; build it this way unless I say otherwise. Every number is a starting value in `Config.luau`, tuned by feel.
 
 ## The game
 
-An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm wooden arena. Each player's item bar fills as they take turns and as balls drop, theirs or the other side's, and gives a gadget each time it's full. They use them before a shot. Items bend the physics but never the rules. Between turns players walk around and talk on voice chat. How it looks is in `docs/STYLE.md`, in the spirit of Illegal Soccer's style only. The heart of it is still the shot: a top-down view, the cue following your mouse (or your finger on phones), an aim lock, and a slingshot pull for power. Mechanics come first. The base build has no economy, cosmetics or ranked mode.
+An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm wooden arena. Each player's item bar fills as they take turns and as balls drop, theirs or the other side's, and gives a gadget each time it's full. They use them before a shot. Items bend the physics but never the rules. Between turns players walk around and talk on voice chat. How it looks is in `docs/STYLE.md`, in the spirit of Illegal Soccer's style only. The heart of it is still the shot: a top-down view, the cue following your mouse (or your finger on phones), an aim lock, and a slingshot pull for power. Mechanics come first. 8-ball only, 1v1 and 2v2 only for now, and a game lasts 3–5 minutes. Progression comes after items (see Progression and money), and nothing is for sale. After launch, small updates every week.
 
 ## Audience and platform
 
-- For older players. Launch with the default 16+ audience; don't open it to under-16s.
-- Voice chat is on. Voices fade with distance, so each table has its own conversation.
+- Players are 10–15, maybe a little older. Launch for 16+ first, and open it to all ages later (tentative).
+- Chat: proximity voice chat, fading with distance so each table has its own conversation, and normal Roblox text chat. Roblox only offers voice chat to players 13 and over who pass its age check. Text chat also needs an age check, and only works between players in nearby age groups, so not every player can chat with every other.
 - No alcohol anywhere: names, models, decals, menus. Showing alcohol makes a game Restricted (ID-verified 18+ only). The counter serves sodas, milkshakes and coffee.
 - No guns or weapons: items are gadgets.
 - PC and phones. Phones play in landscape, and every feature must work by touch.
@@ -19,8 +19,8 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 
 ## The arena
 
-- 30 players per server and 8 tables: 4 for 1v1 and 4 for 2v2. Both kinds are the same size.
-- A big, warm wooden arena or lodge, as `docs/STYLE.md` describes: timber arches and beams, plank floors, plants, and lanterns throwing warm light over each table.
+- 24 players per server and 6 tables in one lodge room: 3 for 1v1 and 3 for 2v2 *(default split)*. Both kinds are the same size.
+- One cozy lodge room, as `docs/STYLE.md` describes: timber beams, plank floors, plants, and lanterns throwing warm light over each table. Players arrive in the lobby: the room's spawn area *(default)*.
 - A counter serving sodas, milkshakes and coffee, and places to sit.
 - Upbeat music and punchy sounds: I pick them.
 - Tables in green felt and painted warm wood: dark green cushions, slim rails with white diamonds, and black pockets.
@@ -29,7 +29,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 ## Table and balls
 
 - Playing surface 16 × 8 studs, 2:1 like a real table. With its cushions and slim wooden rails the whole table is about 18.2 × 10.2 studs: black plates over the corner pockets, the side pockets set into the rails, cushions angled at the pocket mouths, and white diamonds on the rails. The playing surface is about an avatar's hip height.
-- 16 balls: the cue ball, solids 1–7, the 8, stripes 9–15.
+- 16 balls: the cue ball, solids 1–7, the 8, stripes 9–15. Stylized balls with icons (details coming).
 - 6 pockets, tighter than real: the corners about 1.7 ball widths across, the sides about 1.6.
 - A full-power shot leaves at about 25 studs/s and rolls about 11 table lengths if nothing stops it. Balls slow at a steady rate at every speed.
 - A ball loses about 27% of its speed when it bounces off a rail, and comes off at the same angle it hit.
@@ -38,12 +38,19 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 
 ## Joining a table
 
-- A sign floats over each table: "0/2 players" or "0/4 players", counting the players standing on its platforms.
-- 1v1 tables have 2 platforms, one on each long side. 2v2 tables have 4, two on each long side. Your side is your team.
-- Stand on a platform to claim it. When every platform is filled, a 5-second countdown starts and shows on the sign ("Starting in 3…") *(default wording)*.
-- If anyone steps off during the countdown, it resets and waits. When every platform is filled again, it starts over from 5.
-- A player holds one platform at a time, and a player in a game can't claim another table's platform.
-- No waiting line and no "winner stays on": whoever is on the platforms when the countdown ends plays.
+- A "Join table" prompt floats above each table's centre: press E to join (phones: tap it). It shows how many have joined, like "1/2 joined". The first player takes side A, the next side B, and so on. A player who has joined sees "Waiting for players" there instead. The prompt only joins. To leave, press the Leave button at the top right, in either view: while waiting it takes you off the table, during the 3-second start it calls the start off, and during a game it asks first (see Leaving).
+- A sign floats over each table: "0/2 players" or "0/4 players", counting the players who have joined, so open tables show from across the arena.
+- 1v1 tables have 2 seats, one on each long side. 2v2 tables have 4, two on each long side. Your side is your team.
+- When every seat is taken, everyone at the table sees a 3-second "Starting..." banner, and the prompt reads "Starting…" and can't be used. Then each player is moved once to their seat's spot beside the table, facing it, and the game starts. Players walk freely before, during and after a game.
+- If a player leaves during those 3 seconds, with the Leave button or by leaving the server, the start is called off, everyone at the table sees "Start called off: Player1 left.", and the others stay joined.
+- While a game is on, the prompt reads "Table in use" and can't be used.
+- A player joins one table at a time, and a player in a game can't join another table.
+- No waiting line and no "winner stays on": whoever has joined when the last seat is taken plays.
+- **Parties** (the first update after launch): when a party's leader joins a table, their partner joins too: as their teammate on a 2v2 table, or their opponent on a 1v1 table *(default)*. A player on their own can take an open seat on a 2v2 table and get a random partner.
+
+## First join
+
+- A simple tutorial, before launch: on-screen tips during a player's first match cover the basics as they come up: aiming, power, ball in hand, groups and the 8, and items *(default list)*.
 
 ## Starting a game
 
@@ -62,13 +69,13 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 6a. Power, like a slingshot and like 8 Ball Duels: on PC, hold the mouse button anywhere, best in front of the cue ball near where you're aiming, and drag back along the aim line toward the cue ball and the stick. The cursor moves freely the whole time. If the aim isn't locked, pressing locks it where it is. On phones, while unlocked a touch on or near the cue ball or the cue starts a pull and a touch anywhere else turns the aim; while locked, a pull can start anywhere, so tap Lock first to start the pull wherever there's room. Power is how far the pointer has moved from where you pressed, measured only along the line straight back toward the stick. Moving toward the ball lowers it, down to 0, and it stays at 0 however far you keep going; it only comes back once the pointer is behind where you pressed again. Sideways movement neither adds nor removes power. The first stretch back is a small cancel zone, about fingertip size on a phone, that isn't drawn. Power counts from its edge, so soft shots still work, with full power 6 studs past it: 6.6 studs of pull in all, about 41% of the table length (`FullPullDistance` in Config, with a slider on the test panel to tune it). Power rises on a curve (speed is pull^1.45, so 76% on the meter gives about 67% of full speed), so soft shots get more of the drag. The cue slides back as you pull, and the power meter on the left fills up, with the power as a % under it; the meter only shows power, you don't drag it. Let go to shoot.
 6b. Cancelling: push back toward the ball into the cancel zone and the cue slides back to rest, the meter empties, the aim indicator turns see-through again and the hint says "Cancel · Let go"; let go there to cancel with no shot. Right-clicking, opening the Roblox menu (Esc) or a release the game misses also cancels. These put you back where you were before the pull: still locked if you'd pressed Space first, aiming again if not. Space or the Lock button mid-pull cancels and unlocks, and leaving the view cancels and resets.
 7. Aim indicator, always on, like 8 Ball Duels: a white line from the cue ball to the center of a white circle where the cue ball will be when it first touches a ball, with a small dot at that center. From the dot, a short white line shows where the cue ball goes after the hit; from the hit ball's center, a yellow line shows where that ball goes. Both follow the physics' own hit rule, so the white line includes the cue ball's slight drift forward of the tangent line. Each line's length follows the share of the speed its ball gets: a full hit draws a long yellow line and a short white one, a thin cut the opposite, and neither gets shorter than a minimum. If the cue ball would hit a rail or drop in a pocket first, the line and circle stop there, with no bounce lines. Every line, the circle and the dot have a thin dark outline, so they stay readable over white and yellow balls. It uses the physics' own geometry, so it's exact. Only the shooter sees it, and it hides while balls roll. `Config.Aim.ShowAimLine` switches the line, circle and dot, `Config.Aim.ShowCueLine` the white line after the hit and `Config.Aim.ShowTargetLine` the yellow line; there's no player setting.
-8. When shooting at the 8, the shooter calls a pocket. A gold ring marks the pocket the 8's yellow line points at, and follows the aim. Clicking near another pocket calls that one instead for the rest of the shot. A press that pulls back still starts a pull, so a pull can start over a pocket. At the start of the turn the ring is on the pocket nearest the 8, and it stays on the last one while the aim isn't on the 8. On the 8 the hint "Lock aim · Space" becomes "Call pocket · Click a pocket". Only the shooter sees the ring until watchers see the shooter's aim live (Phase 3). (Phones: the Mobile phase.)
+8. When shooting at the 8, the shooter calls a pocket. A gold ring marks the pocket the 8's yellow line points at, and follows the aim. Clicking near another pocket calls that one instead for the rest of the shot. A press that pulls back still starts a pull, so a pull can start over a pocket. At the start of the turn the ring is on the pocket nearest the 8, and it stays on the last one while the aim isn't on the 8. On the 8 the hint "Lock aim · Space" becomes "Call pocket · Click a pocket". Only the shooter sees the ring until watchers see the shooter's aim live (Phase 4, with spectating). (Phones: the Mobile phase.)
 9. When they let go, the cue strikes forward and the shot fires the moment it touches the cue ball; the cue carries on a little and fades out. Everyone sees the balls roll.
-10. When a game starts, every player in it switches to the top-down view automatically and stays there the whole game. Only the shooter gets the cue; the others watch. F still toggles the view for anyone who wants. When the game ends, the camera goes back to normal *(default)*.
+10. Your turn starting switches you to the top-down view, even if you'd pressed F to leave it. When your turn ends (the balls stop and the turn passes), you go back to the normal third-person view to watch the opponent; a turn you keep leaves the view as it is. Only the shooter gets the cue. F switches the view any time. Players only waiting or watching aren't moved. When the game ends, the camera goes back to normal *(default)*.
 
 - **Items:** before each shot, the shooter can use one item (see Items).
 - **Top-down only:** you can only aim and shoot from the top-down view. The cue and the power meter only show there, and leaving the view in the middle of a pull cancels it with no shot.
-- **Shot clock:** 45 seconds per shot (I said 30–60). It covers placing and aiming, shows a countdown for the last 10 seconds, and stops when the shot fires. The next shot gets a fresh 45. Running out is a foul, and 2 timeouts in a row remove the player, the same as leaving.
+- **Shot clock:** 45 seconds per shot (I said 30–60). It covers placing and aiming, shows a countdown for the last 10 seconds, and stops when the shot fires. The next shot gets a fresh 45. Running out is a foul, so the next shooter gets ball in hand, and 2 timeouts in a row remove the player, the same as leaving. The clock shows in the middle of the top bar.
 - **Between turns:** players can press F to leave the top-down view and walk around, sit or grab a drink.
 - **No spin** in the base build. The top-right corner of the screen stays free for a spin control later.
 
@@ -81,11 +88,12 @@ Laid out like 8 Ball Duels, in the look `docs/STYLE.md` describes: cream cards, 
   - the power meter on the left, with a % readout under it; on phones the Lock button sits next to it
   - a tray on the right where sunk balls collect, the first one sunk at the bottom
   - soft shadows under the balls (the normal view has Roblox's own shadows)
+  - a Leave button top right while you're at a table, in both views (see Leaving)
   - a settings button bottom-left with a sound volume slider. The volume lasts for the session and isn't saved *(default)*. It shows only in the top-down view, so it never covers the phones' thumbstick.
-- **Phase 2:**
-  - the shot clock in the middle of the top bar, between the two cards
-  - your group's balls pulse white briefly when your turn starts
-  - item slots 1 and 2 at the bottom center, with icons drawn in code, and every player's slots and item bar on their card
+- **Coming next:**
+  - the shot clock in the middle of the top bar, between the two cards (Normal tables)
+  - your group's balls pulse white briefly when your turn starts (Normal tables)
+  - item slots 1 and 2 at the bottom center (Items), with icons drawn in code, and every player's slots and item bar on their card
 
 ## 8-ball rules
 
@@ -101,11 +109,11 @@ Items never change these rules: what counts as a legal shot, a foul or a win is 
 - **Winning:** once your group is cleared, call a pocket and legally sink the 8 there.
 - **Losing on the 8:** sinking it before your group is cleared (except on the break), including on the same shot as your last ball; in a pocket you didn't call; or on a shot that fouls (like the cue ball going in too).
 - A foul while shooting at the 8 that doesn't sink it is just a foul.
-- **Until the end screen (Phase 3):** when the 8 decides the game, everyone at the table sees who won and why, like "Player1 wins: 8 in the wrong pocket", for 5 seconds, with nobody's turn. Then the game ends and the table re-racks. Players still on the platforms start a new game right away.
+- **Until the end screen (Normal tables step):** when the 8 decides the game, everyone at the table sees who won and why, like "Player1 wins: 8 in the wrong pocket", for 5 seconds, with nobody's turn. Then the game ends, the table re-racks and its prompt opens again; a new game starts only once every seat is joined again.
 
 ## 2v2
 
-- Same table, 2 platforms per long side. Your side is your team, and teammates share a group.
+- Same table, 2 seats per long side. Your side is your team, and teammates share a group.
 - Turns go A1 → B1 → A2 → B2. Sinking a ball keeps the turn with the same player; the next time the team is up, the teammate shoots.
 - After a foul, ball in hand goes to the next shooter.
 
@@ -162,11 +170,17 @@ Each player has one item bar. At 12 points it gives an item, and leftover points
 
 ## Watching and hanging out
 
-- In a real game, the other players and anyone watching see the shooter's cue move live while they aim (Phase 3).
+- In a real game, the other players and anyone watching see the shooter's cue move live while they aim (Phase 4, with spectating).
 - Anyone can watch a game in 3D from where they stand, or switch to the same top-down view *(default: a "Watch from above" button when you're near a table with a game on)*.
-- When a shot fires, the shooter's avatar is placed at the rail behind the cue ball and leans over with the cue, so 3D watchers see it (Later list) *(default)*.
+- While the shooter aims, their character moves around the table edge to stand behind the cue ball in a ready-to-shoot pose, so 3D watchers see it (a planned Phase 2 task).
 - Roblox's own emotes, text chat and voice chat. Quick phrases (like "Nice shot!" and "GG") are on the Later list.
-- Private servers are free. Public servers have no way to lock a table.
+- Public servers have no way to lock a table.
+
+## Progression and money
+
+- Progression is one of the first updates after launch (see BUILD_PLAN): XP levels you up, and coins buy loot crates. Crates give cosmetics, like cues, cloth colors and ball sets, and unlock new items, which then show up in matches the normal way, through the item bar. What earns XP and coins, what's in each crate and how unlocks work stay open until we design progression.
+- Free private servers. No paid boosters. $0 budget: free tools and assets only.
+- Nothing is for sale. Don't build any purchases; see "Raised but not decided".
 
 ## End of a game
 
@@ -175,17 +189,19 @@ Each player has one item bar. At 12 points it gives an item, and leftover points
   - **Balls sunk:** balls you sank on shots that weren't fouls
   - **Best run:** the most balls you sank in one turn
   - **Fouls:** your fouls, timeouts included
-- The end screen stays up 10 seconds *(default)*. Then everyone is moved just off their platform, the balls are re-racked, and the sign goes back to "0/2 players" or "0/4 players". Stepping back on starts a new game.
+- The end screen offers Rematch and other options *(default: Rematch and Back to lobby)*, and stays up 10 seconds *(default)*.
+- **Rematch:** if every player at the table presses it before the end screen closes, the table re-racks and the same players play again, with a random breaker *(default)*. It's a replay for the same players, not "winner stays on".
+- Otherwise everyone goes back to the lobby, the balls are re-racked, the prompt opens again and the sign goes back to "0/2 players" or "0/4 players". Joining again starts a new game.
 - Each player's lifetime stats are saved for future levels and ranked mode, but not shown anywhere yet.
 
 ## Leaving
 
-Leaving means leaving the server, disconnecting, pressing a Leave button in the game UI *(default)*, or 2 timeouts in a row. Walking away from the table doesn't count.
+Leaving means leaving the server, disconnecting, or 2 timeouts in a row. Walking away from the table doesn't count. The Leave button is a choice to give up, below the table.
 
 | Situation | What happens |
 | --- | --- |
-| Someone steps off during the countdown | The countdown resets and waits |
-| A player leaves mid-game | Their platform lights up. Anyone who stands on it for 5 seconds takes over their spot: team, group and turn |
+| Someone leaves the server during the 3-second start | The start is called off, and the others stay joined |
+| A player leaves mid-game | Their seat opens: the prompt reads "Take seat", and the first player to press E takes over their spot: team, group and turn *(default)* |
 | Nobody takes over within 15 seconds, 1v1 | The other player wins |
 | Nobody takes over within 15 seconds, 2v2 | The teammate plays on alone and shoots every time the team is up |
 | A whole 2v2 team is gone for 15 seconds | The other team wins |
@@ -193,16 +209,20 @@ Leaving means leaving the server, disconnecting, pressing a Leave button in the 
 | They leave while balls are rolling | The shot counts, then the rows above apply |
 | Everyone leaves | The table resets |
 
+- **The Leave button mid-game** asks "Leave and lose this game?" (Yes / No). Yes in 1v1 means the other side wins at once, shown like a win on the 8: "Player2 wins: Player1 left". In 2v2 it asks "Leave? Your teammate plays on alone.": Yes leaves the teammate to play on alone, shooting every time the team is up, and the other team wins once both have left.
+- Until Phase 4 builds the rows above, leaving the server mid-game just ends the game, with no winner.
+
 ## Later list (after launch, roughly in this order)
 
-1. More items, a few at a time in the Friday updates.
+The planned updates after launch, parties and progression first and extras like streaks later, are in BUILD_PLAN. These ideas come after or between them.
+
+1. More items, a few at a time in the weekly updates.
 2. Spin: GamePigeon's red dot on a cue-ball icon in the top-right corner. Top and back spin first, side spin later.
-3. Levels, plus lifetime stats on each player's profile.
-4. Cosmetics: cues, cloth colors, ball sets. The economy comes with this, along with missions and a coin pot for matches.
+3. Lifetime stats on each player's profile, beside their level.
+4. Missions and a coin pot for matches.
 5. Ranked mode, alongside casual.
-6. A back room with extra tables that opens once a server passes 15 players.
-7. The shooter's avatar leaning over the table with the cue, for 3D watchers (moved from Phase 4 to make room for items).
-8. Quick phrases like "Nice shot!" and "GG" (moved from Phase 4 to make room for items).
+6. A back room with extra tables, for when servers fill up.
+7. Quick phrases like "Nice shot!" and "GG" (moved from Phase 4 to make room for items).
 
 ## Decided against (don't re-propose)
 
@@ -224,3 +244,5 @@ Leaving means leaving the server, disconnecting, pressing a Leave button in the 
 
 - A practice table for a player who's alone, since new players leave empty servers fast.
 - A daily trick-shot challenge with a leaderboard.
+- Catch-up help for the player who's behind: decide with playtesters. Today the only help is the item bar's +2 for each of the other side's pots.
+- Paid gacha rolls, and whether Robux can buy items or coins. Don't build any purchases. Roblox requires paid random items to show their odds.

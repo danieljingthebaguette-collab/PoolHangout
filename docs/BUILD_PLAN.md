@@ -1,27 +1,27 @@
 # Build plan
 
-Launch Friday, Dec 11, 2026 with 1v1 and 2v2 pool and 5 items in a 30-player arena. The shot gets built first, features freeze Dec 4, and the last week is only for fixing. This assumes about 10 hours a week from me, with Claude writing most of the code and building the models. There's no commissioned modeler: the game is made entirely with AI.
+Launch Friday, Dec 18, 2026, with 1v1 and 2v2 pool, 5 items and a simple tutorial, in one lodge room with 6 tables and 24-player servers. The shot came first, then normal tables, then items. Features freeze Dec 11, and the last week is only for fixing. This assumes about 10 hours a week from me, with Claude writing most of the code and building the models. There's no commissioned modeler: the game is made entirely with AI.
 
-This file started as a copy of my "Pool! Build Plan" doc and is now the working copy: Claude ticks tasks and keeps Status current here. The label after each task says who does it. A phase ends only when I say its "Done when" test passed.
+This file started as a copy of my "Pool! Build Plan" doc and is now the working copy: Claude ticks tasks and keeps Status current here. The label after each task says who does it. A step ends only when I say its "Done when" test passed.
 
 ## Status
 
-- **Current phase:** Phase 2, 8-ball rules, 1v1 turns and earning items
-- **In progress:** nothing being built. Rack and break, Groups, Turns, Fouls, The 8, the rule tests and the top bar for two are built and passed lint, tests and Claude's playtest; all are waiting on my PC test, with 2 players (Test → Clients and Servers) for turns passing and a real win. A game starts once both of Table1's platforms have a player (one in Studio solo), with no sign or countdown until Phase 3, and everyone in it is in the top-down view until it ends. A foul (cue ball in, nothing hit, wrong ball first, or no ball in or to a rail after the first hit) passes the turn with ball in hand, and everyone sees a 3-second banner like "Foul: wrong ball first. Player2 has ball in hand." Only a scratch fouls the break, and an 8 down on the break is respotted. On the 8 a gold ring marks the called pocket: it follows the 8's yellow line, and clicking a pocket calls that one. When the 8 decides the game, everyone sees "Player1 wins: 8 in the wrong pocket" for 5 seconds, then the table re-racks and players still on the platforms start a new game. Claude's playtest checked the break, three fouls and their banners, ball in hand, the ring and pocket clicks (with a fake on-the-8 turn sent from the server), and a loss with the 8 sunk early through to the re-rack and next game. A real win, the scratch banner and the 8 respotted after the break are covered only by Lune tests so far. The top bar has a card per side, yours on the left and a gap in the middle for the shot clock: avatars, names, the group and its balls, greyed out once down, with the 8 added once the group is cleared. The side whose turn it is glows gold and its shooter's avatar gets a gold ring. Claude's playtest checked it in a real solo game and with fake 2-seat, 4-seat and game-over turns sent from the server; that both players' screens agree needs the 2-player test
-- **Last session:** 2026-10-24. Claude made a checkpoint commit of rack and break, Groups and Turns, then built the full 8-ball rules: fouls with ball in hand and a banner, the 8 respotted after the break, calling a pocket for the 8, and the win or loss with its banner and a re-rack. 18 new rule tests (85 pass). GAME_SPEC now requires a ball in or to a rail after the first hit, and calls the pocket automatically. Then the top bar for two, drawn from the server's turn message; the shot clock moved to the middle of the top bar in GAME_SPEC and STYLE
-- **Next up:** my PC test of everything above, then the "Turn" arrow and the shot clock. Phase 1's age check is still open: I'll do it when we first publish, before the friends playtest at the end of Phase 2
+- **Current step:** Phase 2, Normal tables
+- **In progress:** setting up the Claude docs and tools before more gameplay work. Part 1 (BUILD_PLAN, GAME_SPEC, VISION, STYLE, references/) is committed. Part 2 (art-director and style-builder subagents, a lint-and-test hook, CLAUDE.md pointers) is in progress. The join task (join with E, the Leave button, the automatic camera) is built and passes lint and tests but isn't playtested or committed yet: it waits for Claude's playtest, then my 2-player test. Table1 was rebuilt with seat markers on 2026-10-25; I still need to confirm the place was saved
+- **Dates:** launch moved to Friday, Dec 18 when the plan was reordered. The phase dates are Claude's proposal for that launch
+- **Last session:** 2026-11-03. New CLAUDE.md, R6 avatars only, and the plan reordered: normal tables, then items, then the lodge with a simple tutorial, Mobile and launch on Dec 18, with parties and progression as the first updates after launch and extras later
+- **Next up:** Part 2 of the setup, then Claude's playtest of the join task, then my 2-player test of everything built in Phase 2. Phase 1's age check is still open: I'll do it when we first publish, before the friends playtest in the Items step. I also need to switch the game to R6 in Studio (Game Settings → Avatar)
 - **Known issues:**
   - Touch and the new HUD layout haven't been tried on a real phone yet, only in the emulator; it's covered by the Mobile phase
   - The existing touch code isn't tested or extended until the Mobile phase, so it will fall behind the PC features built before then. Ball in hand is mouse-only: on a phone the cue ball can't be moved yet
   - Lighting.Technology has to be set to Future by hand in Studio; scripts can't change it
-  - A finished game re-racks, but players still on the platforms start a new one right away; in Studio solo the test mode only comes back once you step off. Phase 3's end screen moves everyone off
-  - A game ended by a player leaving leaves the balls where they stopped; Phase 3's leaving rules cover it
+  - Leaving the server mid-game ends the game with no winner and leaves the balls where they stopped, until the arena step's takeover rules
   - In Studio solo you're always side A, so sinking the 8 early reads "Player1 loses: …" rather than naming a winner
-  - Only the shooter sees the called pocket's ring; watchers see it with Phase 3's live aim
-  - In 2v2, two long names don't fit on one card and the second is cut to "…"; the avatars still show both. Revisit with Phase 3's 2v2 task
+  - Only the shooter sees the called pocket's ring; watchers see it with live aim for watchers
+  - In 2v2, two long names don't fit on one card and the second is cut to "…"; the avatars still show both
   - A card's ball icons change when the next turn starts, about a quarter second after the balls stop, not the moment a ball drops; the tray fills as they drop
-  - Respawning mid-game drops you back to the normal view; press F to return
-  - A player who joins mid-game hears nothing about the game until the next turn starts; Phase 3's spectating covers watchers
+  - Respawning mid-game drops you back to the normal view until your next turn starts
+  - A player who joins mid-game hears nothing about the game until the next turn starts; spectating covers watchers
   - The Output warning about rbxassetid://203785492 ("Pop Close Sound") comes from a Studio plugin or Roblox, not the place: ignore it
   - The GUI needs tweaking. Leave it as it is until I say we'll get to it
   - Our break sinks about 2.0 balls with the 0.8 / 0.75 pockets (2.35 at 0.85 / 0.95) and the cue ball rebounds further than in 8 Ball Duels' break (0 sunk, cue ball near the middle); no RackGap or BreakPower setting fixed both. `tools/BreakStats.luau` compares
@@ -30,13 +30,13 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Rules that protect quality
 
 1. **Riskiest first.** The shot is built and tuned before anything else, because every other system depends on it feeling good.
-2. **Gates.** Each phase ends with something playable and a "Done when" test. Don't start the next phase until it passes.
+2. **Gates.** Each step ends with something playable and a "Done when" test. Don't start the next step until it passes.
 3. **One config file.** Every tuning number lives there, so changing the feel never means rewriting code.
 4. **Tested rules.** Physics and 8-ball rules are plain Luau modules with automatic tests, so a fix can't quietly break another rule.
 5. **PC only until the Mobile phase.** I test every step and every "Done when" on PC. The touch code that's already there stays, but isn't tested or extended until Phase 5, the Mobile phase. Most Roblox players are on phones, so that phase makes everything work by touch before launch.
 6. **Save often.** Commit to git every session, and save a place version before big changes.
-7. **A Later list.** New ideas go on the Later list in GAME_SPEC.md, not into the current phase.
-8. **Feature freeze Dec 4.** The last week is only for fixing.
+7. **A Later list.** New ideas go on the Later list in GAME_SPEC.md, not into the current step.
+8. **Feature freeze Dec 11.** The last week is only for fixing.
 
 ## Phase 1, Oct 12–25: the shot on one table
 
@@ -53,70 +53,78 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [x] Tune the feel together: friction, power, rail bounce, pocket size (Me + Claude)
 - [x] Restyle the table (slim rails with diamonds, real-size pockets, classic green and warm wood) and add a HUD laid out like 8 Ball Duels: power meter with %, sunk-ball tray, ball shadows, my player card, settings with sound volume, a collapsible test panel (Claude)
 - [x] Decide the final table size, since `docs/MODELS.md` needs it (Me)
-- [ ] Complete the age check and the Maturity & Compliance Questionnaire, so friends can test from Phase 2 (Me)
+- [ ] Complete the age check and the Maturity & Compliance Questionnaire, so friends can test in the Items step (Me)
 
 **Done when:** I take 30 shots in a row on PC with no bugs, and sinking a ball feels satisfying. If it doesn't, keep tuning before Phase 2. **Passed 2026-10-17.**
 
-## Phase 2, Oct 26–Nov 8: 8-ball rules, 1v1 turns and earning items
+## Phase 2, Nov 3–15: Normal tables (current)
 
-**Goal:** two players can finish a full, fair game of 8-ball, earning items and using the first 2.
+**Goal:** a normal game of 8-ball works from joining to the end screen, in 1v1 and 2v2, and feels good, before any items.
 
 - [x] Rack and break: a random player breaks from the middle of the head line; no ball in hand on the break (Claude)
 - [x] Groups: the table stays open after the break, and the first legal pot sets solids or stripes (Claude)
 - [x] Turns: a legal pot keeps your turn; a miss passes it (Claude)
 - [x] Fouls (cue ball sunk, wrong ball hit first, nothing hit): the next player places the cue ball anywhere (Claude)
 - [x] The 8: call your pocket. Sinking it early, in the wrong pocket, or along with the cue ball loses (Claude)
-- [ ] "Turn" arrow over the shooter, and a 45-second shot clock in the middle of the top bar that stops while balls roll. Running out counts as a foul (Claude)
 - [x] Top bar for two: the other player's card, a highlight on whose turn it is, and each side's balls still left to sink, with room in the middle for the shot clock (Claude)
-- [ ] Your group's balls pulse white briefly when your turn starts (Claude)
 - [x] Automatic rule tests: 25+ scenarios, like sinking the cue ball on the 8, that rerun after every change (Claude)
+- [ ] Join Table1 with a "Join table" prompt instead of platforms: E only joins (side A, then B), a 3-second "Starting..." banner once every seat is taken, then each player is moved once to their seat facing the table, free to walk. "Table in use" during a game, and it opens again when the game ends. The table builder makes invisible seat markers where the platforms were. A coral Leave button top right in both views: off the table while waiting, calls off the 3-second start, and mid-game asks "Leave and lose this game?" (in 2v2 the teammate plays on). Camera: your turn switches you to the top-down view, and your turn passing switches you back to third person; F switches any time (Claude)
+- [ ] 2v2 on one table: Table2, built as a 2v2 table with A1 and A2 on one long side and B1 and B2 on the other. Your side is your team, teammates share a group, and turns go A1 → B1 → A2 → B2 (Claude)
+- [ ] "Turn" arrow over the shooter, and a 45-second shot clock in the middle of the top bar that stops while balls roll. Running out is a foul, with ball in hand for the next shooter (Claude)
+- [ ] End screen: the winner and each player's stats, with Rematch and the other options in GAME_SPEC, then back to the lobby (Claude)
+- [ ] Sounds and hit effects: hit, rail and pocket sounds, and small chunky sparks on hard hits, in `docs/STYLE.md`'s timings. The free placeholder sounds stay until I pick final ones (Claude; I pick the sounds)
+- [ ] R6 shot pose: while you aim, your character moves around the table edge to stand behind the cue ball in a ready-to-shoot pose (Claude)
+- [ ] Your group's balls pulse white briefly when your turn starts (Claude)
+- [ ] 2-player test of the whole step: 1v1 on Table1 and 2v2 on Table2 (Me)
+
+**Done when:**
+1. Join with E, Leave and the automatic top-down camera pass a 2-player test.
+2. 1v1 and 2v2 seats and turn order work.
+3. A 45-second shot clock, where running out is a foul with ball in hand.
+4. The end screen sends players to the lobby, with a Rematch button.
+5. Hit and pocket sounds, small hit effects, and an R6 shot pose.
+
+## Phase 3, Nov 16–29: Items
+
+**Goal:** players earn the 5 items during a game and use them, and games stay fair.
+
 - [ ] Earning items: one item bar per player that gives a random item at 12 points: +3 at the start of your turn, +4 for each of your balls you sink, +2 for each ball the other side sinks (in 2v2, all to the opponent who shoots next). When the bar fills with both slots full, it glows and the item arrives as soon as a slot frees. The bar sits under each card's 2 slots, with a small pop like "+4" for each fill. Test-panel buttons to give myself any item (Claude)
-- [ ] Using items: press 1 or 2, on your own turn, one per shot, with the item's name shown big to everyone at the table. Slot icons drawn in code. Plain placeholder looks until Phase 4 (Claude)
+- [ ] Using items: press 1 or 2, on your own turn, one per shot, with the item's name shown big to everyone at the table. Slot icons drawn in code. Plain placeholder looks until the arena step (Claude)
 - [ ] Power Shot (for the rest of the turn the meter keeps filling past 100%, up to 150% at 1.5× the full pull) and Blast Ball (one shot), with Lune tests for the blast. Check that a 150% pull fits on screen for a cue ball against a long rail shooting straight across, on a 1920×1080 PC; if it doesn't, make the extra 50% take less pull. The phone check is in the Mobile phase (Claude)
-- [ ] Arena blockout: `tools/BuildArena.luau` builds the walls, floor, 8 table spots and the counter in plain parts (Claude builds it, I adjust)
+- [ ] Freeze, Oil Slick and Pocket Block: frozen balls and pocket lids bounce balls like rails, oil patches slow balls less, and the aim indicator knows about frozen balls and lids. The lock-out rules: no freezing the 8 or a side's last group ball, no Pocket Block against a side shooting at the 8, and no side targeting the same ball or pocket two turns running. With Lune tests (Claude)
 - [ ] Playtest with 2 friends on a friends-only test version (Me)
 
 **Done when:** every rule and item test passes, and 2 friends finish 3 full games on PC, items included, without me explaining anything.
 
-## Phase 3, Nov 9–22: tables, joining, 2v2, leaving and the last 3 items
+## Phase 4, Nov 30–Dec 6: the lodge, every table, a simple tutorial, and polish
 
-**Goal:** every table runs itself from joining to reset, in both modes, even when people leave, with all 5 items.
+**Goal:** it looks, sounds and feels warm and punchy, every table runs itself even when people leave, and people want to stay.
 
-- [ ] All 8 tables: `tools/BuildTable.luau` builds 4 for 1v1 and 4 for 2v2, with their platforms, on the arena's table spots (Claude)
-- [ ] Platforms and "0/2" or "0/4" signs above each table (Claude)
-- [ ] A 5-second countdown once every platform is filled. It resets if anyone steps off and restarts at 5 when the spot is filled again (Claude)
-- [ ] 2v2 on the same table: 2 platforms per side, your side is your team, and turns go A1 → B1 → A2 → B2 (Claude)
-- [ ] Spectating: watch in 3D or switch to the top-down view (Claude)
-- [ ] End screen with the winner, shot accuracy, balls sunk, best run and fouls. Then everyone is removed and the table resets (Claude)
-- [ ] Save each player's lifetime stats, so ranked and levels have history later (Claude)
-- [ ] Leaving: the empty platform lights up, and anyone who stands on it for 5 seconds takes over. After 15 seconds with nobody, the other player wins a 1v1, or the teammate plays on alone in 2v2. Disconnects count as leaving, and 2 timeouts in a row removes a player (Claude)
-- [ ] Freeze, Oil Slick and Pocket Block: frozen balls and pocket lids bounce balls like rails, oil patches slow balls less, and the aim indicator knows about frozen balls and lids. The lock-out rules: no freezing the 8 or a side's last group ball, no Pocket Block against a side shooting at the 8, and no side targeting the same ball or pocket two turns running. With Lune tests (Claude)
-- [ ] Playtest with 4 friends: 1v1 and 2v2, with people leaving mid-game on purpose and every item used (Me)
-
-**Done when:** 4 friends play on PC for 30 minutes straight, including leaving mid-game, every item gets used, and no table ever gets stuck.
-
-## Phase 4, Nov 23–29: the arena, effects and polish
-
-**Goal:** it looks, sounds and feels big and punchy, and people want to stay.
-
-- [ ] The arena in the `docs/STYLE.md` look, built by `tools/BuildArena.luau`: timber arches and beams, a plank floor, lanterns over each table, seating, and a counter serving sodas, milkshakes and coffee (Claude)
+- [ ] Lodge blockout: `tools/BuildArena.luau` builds the room, the floor, the table spots, the lobby spawn and the counter in plain parts (Claude builds it, I adjust)
+- [ ] The lodge in the `docs/STYLE.md` look: timber beams, a plank floor, lanterns over each table, seating, and a counter serving sodas, milkshakes and coffee (Claude)
 - [ ] Plants and other organic props: Claude writes prompts for Studio's AI model and texture tools, I run them, and the arena builder places the results (Me + Claude)
-- [ ] Final looks for the table, platforms, cue and balls in the `docs/STYLE.md` look, every size still from Config (Claude)
+- [ ] All 6 tables: `tools/BuildTable.luau` builds 3 for 1v1 and 3 for 2v2, with their seat markers, on the lodge's table spots (Claude)
+- [ ] Simple tutorial: on-screen tips during a player's first match, covering aiming, power, ball in hand, groups and the 8, and items as each first comes up (Claude)
+- [ ] "0/2" or "0/4" signs above each table, counting the players who have joined (Claude)
+- [ ] Spectating: watch in 3D or switch to the top-down view (Claude)
+- [ ] Leaving: the leaver's seat opens on the prompt as "Take seat", and the first player to press E takes over. After 15 seconds with nobody, the other player wins a 1v1, or the teammate plays on alone in 2v2. Disconnects count as leaving, and 2 timeouts in a row removes a player (Claude)
+- [ ] Final looks for the table, cue and the stylized balls with icons, in the `docs/STYLE.md` look, every size still from Config (Claude)
 - [ ] Item effects in the `docs/STYLE.md` look: flame trail, blast burst and ring, icy frozen balls, oil patch, pocket lids, screen shake on big hits, and the ring at players' feet (Claude)
-- [ ] Server size 30 and voice chat turned on (Me)
-- [ ] Upbeat music and sounds: ball clicks, rail thuds, pocket drops and a sound for each item (I pick them, Claude wires them in)
+- [ ] Server size 24 and voice chat turned on (Me)
+- [ ] Upbeat music and final sounds: ball clicks, rail thuds, pocket drops and a sound for each item (I pick them, Claude wires them in)
 - [ ] Item balance pass: the item bar's points, blast strength, oil, item odds, all in Config. Aim for about one item every 2 turns per player. Try raising `OpponentBallPoints` to 3 for a stronger comeback, and `SinkItemsWaitForTurnEnd` if item runs get out of hand (Me + Claude)
 - [ ] Analytics: joined → first game started → first game finished → second game (Claude)
 - [ ] Store page: name, icon, 3–5 thumbnails, and a description (Me)
-- [ ] Big playtest over Thanksgiving weekend, Nov 26–29, with as many friends as I can get, on PC (Me)
+- [ ] Playtest with 4 friends: 1v1 and 2v2, with people leaving mid-game on purpose and every item used (Me)
+- [ ] Big playtest with as many friends as I can get, on PC (Me)
 
-**Done when:** Thanksgiving testers on PC stay 20+ minutes without being asked, and I have a written bug and balance list.
+**Done when:** 4 friends play on PC for 30 minutes straight, including leaving mid-game, every item gets used and no table ever gets stuck, and big-playtest testers stay 20+ minutes without being asked, leaving me a written bug and balance list.
 
-## Phase 5, Nov 30–Dec 4: Mobile
+## Phase 5, Dec 7–11: Mobile
 
 **Goal:** everything built so far works by touch on my phone, held sideways.
 
-- [ ] Touch controls: bring the existing touch code (drag to aim, a touch near the cue ball to pull, the Lock button, the F button) up to date with everything built since Phase 1 (Claude)
+- [ ] Touch controls: bring the existing touch code (drag to aim, a touch near the cue ball to pull, the Lock button, the F button) up to date with everything built since Phase 1, and make the first-match tips name the touch controls on phones (Claude)
 - [ ] Touch for items: tap a slot to use an item, and tap a ball, a spot on the felt or a pocket to pick a target, choosing the nearest one within a finger's reach (Claude)
 - [ ] Phone HUD layout: the power meter with the Lock button beside it, the item slots, the cards with their item bars, the hints and the top bar all fit a phone held sideways, with touch targets of at least 44 px (Claude)
 - [ ] Power Shot near-rail check on a phone: a 150% pull fits on screen for a cue ball against a long rail shooting straight across; if it doesn't, make the extra 50% take less pull (Claude)
@@ -125,20 +133,26 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 **Done when:** on my real phone I take 30 shots in a row and finish a full game with items, with no bugs, at 30+ fps.
 
-**Feature freeze Dec 4:** nothing new gets added after this date, items included.
+**Feature freeze Dec 11:** nothing new gets added after this date, items included.
 
-## Phase 6, Dec 5–10: fix and launch prep
+## Phase 6, Dec 12–17: fix and launch prep
 
-**Goal:** launch Friday, Dec 11 with no known game-breaking bugs.
+**Goal:** launch Friday, Dec 18 with no known game-breaking bugs.
 
 - [ ] Fix the bug list, worst first, including item balance (Config numbers only, no new items) (Me + Claude)
 - [ ] Turn off `Config.Debug.PhysicsTestLive` before launch, so the test mode can't run in public servers (Claude)
 - [ ] Final test with friends on PC and phones (Me)
 - [ ] Edit 6 short videos from playtest clips (Me)
-- [ ] Launch day: set the audience to Public, post the first videos, and share the link (Me)
+- [ ] Launch day: set the audience to Public for 16+, post the first videos, and share the link (Me)
 
-**If my Nov 1 application eats late October, or the items run long,** slide Phases 2–6 back one week and launch Dec 18. Don't cut the fix week.
+**If a step runs long,** don't cut the fix week.
 
 ## After launch
 
-Ship one themed update every Friday, starting with fixes from launch week, then new items and the rest of the Later list in GAME_SPEC.md.
+Small updates every week, starting with fixes from launch week. Then these steps, in this order, each with its own tasks and "Done when" once we plan it:
+
+1. **Parties:** a party joins a table together, and a player on their own can take an open seat with a random partner
+2. **Progression:** XP that levels you up, coins, and loot crates bought with coins that give cosmetics and unlock new items; save each player's lifetime stats. No purchases: monetization is still open
+3. **Extras** like streaks, later
+
+Then new items and the rest of the Later list in GAME_SPEC.md.

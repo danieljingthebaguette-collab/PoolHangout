@@ -94,7 +94,7 @@ Starting values for Config (tune by feel):
 7. Then the next turn, or the end of the game.
 
 - **Ball parts** are anchored, non-colliding parts the server creates for each table and moves only between shots. During a replay each client moves them locally. Players who join later get the resting positions through normal replication.
-- **Live aim for watchers (Phase 3):** while aiming, the shooter's client sends `AimUpdate` over an UnreliableRemoteEvent at most 10 times a second. The server checks the sender is the shooter and relays it.
+- **Live aim for watchers (Phase 4, with spectating):** while aiming, the shooter's client sends `AimUpdate` over an UnreliableRemoteEvent at most 10 times a second. The server checks the sender is the shooter and relays it.
 
 ## Items
 
@@ -145,7 +145,7 @@ What the code expects in the place. Claude builds it with builder scripts in `to
 ```text
 Workspace
 └─ Tables (Folder)
-   └─ Table1 … Table8 (Model, attribute Mode = "1v1" or "2v2")
+   └─ Table1 … Table6 (Model, attribute Mode = "1v1" or "2v2")
       ├─ Felt (Part): the playing surface. Size X and Z match Config's table length and width
       └─ Platforms (Folder): A1 and B1, plus A2 and B2 on 2v2 tables (Parts)
                              A platforms on one long side, B on the other

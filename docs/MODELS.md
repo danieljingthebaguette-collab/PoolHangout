@@ -23,7 +23,7 @@ How we build every model in Pool!. There's no modeler. Claude builds each model 
 
 ## Table
 
-Built by `src/Server/TableBuilder.luau` from table params. `tools/BuildTable.luau` runs it from `Config.Table` in edit mode, and the physics test mode runs it live when a pocket slider moves, without changing the saved place. Today it rebuilds Table1; in Phase 3 it builds all 8.
+Built by `src/Server/TableBuilder.luau` from table params. `tools/BuildTable.luau` runs it from `Config.Table` in edit mode, and the physics test mode runs it live when a pocket slider moves, without changing the saved place. Today it rebuilds Table1; Phase 2 adds Table2 as a 2v2 table, and Phase 4 builds all the tables.
 
 The rails are slim: the whole table, cushions and wooden rails included, is about **18.2 × 10.2 studs** (about 1.1 studs on every side of the playing surface) and must stay within 20 × 12. Black plates cover the corner pockets, the side pockets are set into the rails, the cushions are angled at each pocket mouth, and white diamonds sit on the rails: 6 on each long rail, every eighth of the length, and 3 on each end. The felt's top sits about **2.5 studs** above the floor, about an avatar's hip height.
 
@@ -73,10 +73,10 @@ Built in code with the item effects while Pocket Block covers a pocket. It spans
 
 ## The arena
 
-- A Folder named `Tables` in Workspace holding `Table1` to `Table8`. Each is a table model with an attribute **`Mode`** set to `"1v1"` (4 tables) or `"2v2"` (4 tables).
-- `tools/BuildArena.luau` builds everything else into a Workspace folder named `Arena`. In Phase 2 it's a blockout in plain parts: walls, the floor, 8 table spots and the counter. In Phase 4 it gets the full look: timber arches and beams, a plank floor, lanterns that throw warm pools of light over each table, places to sit, the counter, and the plants and rocks.
+- A Folder named `Tables` in Workspace holding `Table1` to `Table6`. Each is a table model with an attribute **`Mode`** set to `"1v1"` (3 tables) or `"2v2"` (3 tables).
+- `tools/BuildArena.luau` builds everything else into a Workspace folder named `Arena`. In Phase 4 it's first a blockout in plain parts: the room, the floor, the table spots, the lobby spawn and the counter. Then it gets the full look of one cozy lodge room: timber beams, a plank floor, lanterns that throw warm pools of light over each table, places to sit, the counter, and the plants and rocks.
 - Mostly warm reds, oranges and browns, with some green from the plants. The felt stays the strongest color in the room.
-- 30 players per server. Leave room around each table for its platforms and for people to walk past and watch. Voices fade with distance, so spread the tables out enough that each one has its own conversation.
+- One lodge room, 24 players per server. Leave room around each table for its platforms and for people to walk past and watch. Voices fade with distance, so spread the tables out enough that each one has its own conversation.
 - The builders don't make signs over the tables, arrows, buttons, screens or item effects; the game makes those.
 
 ## AI prompts
