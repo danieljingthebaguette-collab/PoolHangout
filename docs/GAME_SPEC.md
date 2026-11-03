@@ -15,6 +15,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 - No alcohol anywhere: names, models, decals, menus. Showing alcohol makes a game Restricted (ID-verified 18+ only). The counter serves sodas, milkshakes and coffee.
 - No guns or weapons: items are gadgets.
 - PC and phones. Phones play in landscape, and every feature must work by touch.
+- R6 avatars only: the game's avatar type is set to R6, so every character uses the same classic rig.
 
 ## The arena
 

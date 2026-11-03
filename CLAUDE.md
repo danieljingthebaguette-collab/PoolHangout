@@ -1,75 +1,78 @@
 # Pool!
 
-An intense, item-based Roblox pool game: 8-ball, 1v1 or 2v2, in a big warm wooden arena, where players earn gadgets by taking turns and sinking balls, gadgets that bend the physics but never the rules, and players talk on voice chat between turns. It's my first Roblox game. You write most of the code; I design, build in Studio, review your changes and playtest. Launch target: Friday, Dec 11, 2026.
+Item-based 8-ball pool on Roblox, 1v1 and 2v2. Controls and physics match the feel of 8 Ball Duels; the look is inspired by Illegal Soccer (warm lodge, matte hand-painted). Solo project by Daniel, built with Claude Code. PC only for now. Launch target: Friday, Dec 11, 2026.
 
-The documents imported at the bottom are the source of truth: what the game is (GAME_SPEC), how it looks (STYLE), how the code is built (ARCHITECTURE), and what to build when, plus where we are now (BUILD_PLAN).
+## Read first (only what the task needs)
+| Task | Read |
+|---|---|
+| Rules, items, game flow | docs/GAME_SPEC.md (always loaded, below) |
+| What to build next | docs/BUILD_PLAN.md (always loaded, below) |
+| Code structure | docs/ARCHITECTURE.md |
+| Anything visual | docs/STYLE.md and references/ (coming soon) |
+| Building models | docs/MODELS.md |
+| Who the game is for and why | docs/VISION.md (coming soon) |
 
-## Working with me
+## Always
+- The server decides everything: turns, fouls, ball results. Clients send inputs only (aim, power, item), through src/Shared/Remotes.luau.
+- Check every request on the server: right player, their turn, values in range, one shot per turn.
+- Keep the simulation and rules (src/Shared/Physics/, src/Shared/Rules/, src/Shared/Pull.luau) pure Luau with no Roblox services, so Lune can test them.
+- Follow BUILD_PLAN order. Current phase: see BUILD_PLAN Status. No streaks, King of the Table, crates or purchases until the plan says so.
+- PC only (mouse and keyboard): leave the existing touch code in place, but don't test or extend it until the Mobile phase. R6 avatars only.
+- $0 budget: free tools and assets only.
+- No guns or weapon items. No alcohol.
+- Other games are references for feel only. Never copy their models, textures, images, effects or code.
+- Never publish or change game permissions. The game stays Private until Daniel launches it.
+- Ask before you change game settings, upload assets, insert Creator Store models, add third-party code, change how data is saved, or delete anything from the place.
+- If a request conflicts with GAME_SPEC, point it out and ask. Spec items marked *(default)* are Claude's proposals Daniel hasn't confirmed: build them as written unless Daniel says otherwise.
 
-- I'm new to Roblox scripting. After each change, explain what it does in a sentence or two of plain English. When I need to do something in Studio, give me the exact clicks.
-- PC only for now. I test every step and every phase's "Done when" on PC. Leave the existing touch code in place, but don't test it, extend it or add touch versions of new features until the Mobile phase in BUILD_PLAN.md, and don't ask me to check a phone or the phone emulator before then.
-- Work on the current phase in BUILD_PLAN.md, one task at a time. Don't build anything from a later phase or the Later list early, even if it's quick.
-- For anything bigger than a small fix, plan first and wait for my OK before writing code.
-- Keep changes small. Don't rename, restructure or refactor code the task doesn't need.
-- If a request conflicts with GAME_SPEC.md, point it out and ask. When I change a decision, update the spec in the same session.
-- Spec items marked *(default)* are your proposals I haven't confirmed. Build them as written unless I say otherwise. Ask before deciding anything players would notice that the spec doesn't cover.
-- Don't re-propose anything on the spec's "Decided against" list unless I bring it up.
-- Ask before you publish, change game settings, upload assets, insert Creator Store models, add third-party code, change how data is saved, or delete anything from the place.
-- Don't commit or push unless I ask. `/wrap-up` proposes a commit at the end of a session.
+## Never
+- Insert Toolbox models that contain scripts without checking them first.
+- Use code from leak, exploit or cheat sites.
+- Refactor code the task didn't ask about.
 
 ## Where code lives
+Script Sync mirrors src/Server → ServerScriptService/Server, src/Client → StarterPlayer/StarterPlayerScripts/Client and src/Shared → ReplicatedStorage/Shared, both ways. tests/, docs/ and tools/ aren't synced; tools/ holds scripts Claude runs, in Studio through the MCP (BuildTable.luau) or in Lune (BreakStats.luau).
+- File names set the script type: Name.server.luau = Script, Name.local.luau = LocalScript, Name.luau = ModuleScript, a folder = Folder. No init.luau files.
+- Two entry scripts only: src/Server/Main.server.luau and src/Client/Main.local.luau. Everything else is a ModuleScript they start.
+- Every tuning number lives in src/Shared/Config.luau. UI is built in code, with colors, fonts and sizes from src/Shared/Theme.luau.
+- `--!strict` and typed parameters in every file; `task.wait`/`task.spawn`/`task.delay`, never `wait`/`spawn`/`delay`; every connection and timer is cleaned up when its game or player ends.
+- Only scripts and folders sync. Parts, models and lighting live only in the place file, which isn't in git, so after changing the place remind Daniel to save it (Cmd+S).
+- Never put attributes or tags on scripts: Script Sync skips those scripts.
+- Never "Sync to…" from a Studio folder that's empty while its folder on disk has files. If sync breaks, commit first and ask.
 
-Studio's Script Sync mirrors these folders both ways.
+## How to work
+1. For changes touching 3 or more files, plan first and wait for Daniel's OK.
+2. Build one step at a time, and test after each step.
+3. Edit code in the repo, never with Studio's script tools; Script Sync carries it into Studio.
+4. When a choice is Daniel's (design, look, feel), recommend one option with a one-line reason. Don't decide silently. Don't re-propose anything on GAME_SPEC's "Decided against" list.
+5. Explain in plain words. Daniel is learning Luau. For Studio steps, give the exact clicks.
+6. When a decision changes, update the doc that owns it in the same task.
+7. Ideas nobody asked for go at the end of your report, not into the code.
+8. Start a session with /next-task and end it with /wrap-up. When a task is done, tick it in BUILD_PLAN and update the Status there.
 
-| On disk | In Studio | Runs on |
-| --- | --- | --- |
-| `src/Server` | ServerScriptService/Server | Server |
-| `src/Client` | StarterPlayer/StarterPlayerScripts/Client | Each player |
-| `src/Shared` | ReplicatedStorage/Shared | Both |
-| `tests/`, `docs/` | Not synced | Lune tests, docs |
-| `tools/` | Not synced | Scripts Claude runs: Studio scripts through the MCP, like `BuildTable.luau` that rebuilds the greybox table from Config, and Lune scripts, like `BreakStats.luau` that summarizes 20 breaks |
+## Testing
+- Use the Studio MCP tools (the Roblox_Studio server) to playtest, screenshot and run Luau: call list_roblox_studios first and pass its studio_id on every call. /playtest runs a standard playtest. Check your own work before reporting.
+- Tests: `lune run tests/run` (add a word to filter, like `lune run tests/run physics`). Lint: `selene src`. Both must pass before you say you're done. A hook runs StyLua on every .luau file you edit.
+- The MCP controls one player, so solo playtests rely on Config.Debug.SoloTables. Its mouse input uses GUI points below Roblox's top bar; do a whole drag in one user_mouse_input call.
+- A playtest started before Script Sync picks up an edit runs the old code: restart it and check the change is live.
+- Multiplayer changes need a 2-player playtest. If you can't run it, give Daniel the steps (Test ▾ → Server & Clients → 2 players → Play, then End Session) and say exactly what to check.
+- Visual changes: screenshot before and after, and compare with docs/STYLE.md.
+- Table rebuilds: run tools/BuildTable.luau, then remind Daniel to save the place.
+- If Studio isn't open or is still in Play mode, stop, tell Daniel the exact step, and wait for "Go".
+- Scripts can't set Lighting.Technology; ask Daniel to set it in Properties.
 
-- File names set the script type: `Name.server.luau` = server Script, `Name.local.luau` = LocalScript, `Name.luau` = ModuleScript, a folder = Folder. Don't use `init.luau` files; use plain folders of modules.
-- Only scripts and folders sync. Parts, models and lighting live only in the place file, which isn't in git. After you build or change anything in the place, remind me to save it (Cmd+S).
-- Never put attributes or tags on scripts: Script Sync skips those scripts. Attributes on parts and models are fine.
-- Script Sync's "Sync to…" copies Studio's version onto disk, so never link a Studio folder that's empty while its folder on disk has files. If sync breaks, commit first and ask me.
+## Commits
+- Commit only after tests pass and Daniel confirms the playtest; that OK counts as the go-ahead to commit. One commit per task.
 
-## Code rules
+## End every task with this report (under 15 lines)
+- Changed: what, and which files
+- Tested: what you ran and the result
+- Daniel needs to: any step in Studio, or "nothing"
+- Next: the next step from BUILD_PLAN
 
-- `--!strict` at the top of every file. Type function parameters and return values.
-- Two entry scripts only: `src/Server/Main.server.luau` and `src/Client/Main.local.luau`. Everything else is a ModuleScript they start.
-- The server decides everything that matters: seats, turns, the shot clock, ball physics and rule outcomes. Clients send requests through `src/Shared/Remotes.luau`, and the server validates every argument.
-- Every tuning number lives in `src/Shared/Config.luau`. No magic numbers in systems.
-- Ball physics and 8-ball rules are pure Luau with no Roblox APIs, covered by Lune tests (see ARCHITECTURE.md).
-- Build UI (screens, signs, the Turn arrow) in code, with colors and fonts from `src/Shared/Theme.luau`, so it lives in git.
-- Use `task.wait`, `task.spawn` and `task.delay`, never the deprecated `wait`, `spawn` and `delay`.
-- Every connection and timer belongs to a table, a game or a player, and is cleaned up when that ends.
-- Names: PascalCase for modules and types, camelCase for functions and variables, UPPER_SNAKE_CASE for constants.
-- Comments explain why, not what.
-- You build every model; there's no modeler. Models that stay in the place (tables, platforms, the arena) come from builder scripts in `tools/`, like `BuildTable.luau`; models the game spawns (balls, the cue, the pocket lid, effects) come from game code. For shapes parts can't do well, like plants, write me prompts for Studio's AI model and texture tools and I'll run them. Keep code independent of models, so any model can be rebuilt or restyled with no code changes: Config is the source of truth for sizes and pocket positions, the physics never reads a model's shape, and scripts find parts by name. `docs/MODELS.md` is the guide for how we build models; when Config's table, ball, pocket or cue numbers change, update it in the same change.
+## Before launch
+- Turn off Config.Debug.PhysicsTestLive in src/Shared/Config.luau (owner-only test tool).
 
-## Tools and testing
-
-- Studio is connected through the `Roblox_Studio` MCP server. Call `list_roblox_studios` first and pass its `studio_id` on every call. Studio must be open with the place loaded; if it isn't connected, stop and tell me.
-- Edit code as files on disk, never with Studio's script tools, so formatting and git see every change.
-- Use the MCP tools to inspect the place, build greybox parts, playtest, read the console and take screenshots.
-- A hook runs StyLua on every `.luau` file you edit. Before calling code done, run `selene src` and fix what it reports.
-- `lune run tests/run` runs every `tests/**/*.spec.luau` (add a word to filter, like `lune run tests/run physics`). Run it after any change to physics, rules or Config. Every bug fixed there gets a test.
-- `/playtest` checks gameplay in Studio. The MCP tools control one player, so solo playtests rely on `Config.Debug.SoloTables`. For real multiplayer checks, ask me to run Test → Clients and Servers.
-- The MCP's mouse input uses GUI points below Roblox's top bar, like `InputObject.Position`, not screenshot pixels. A button held across separate `user_mouse_input` calls can get pressed again, so do a whole drag in one call and check it with a per-frame log from `execute_luau`.
-- A playtest started before Script Sync picks up an edit runs the old code. After changing code, restart the playtest and check the change is live.
-- Scripts can't set `Lighting.Technology`; ask me to set it in Studio's Properties.
-- Nothing is done until lint, tests and a playtest pass, or I've tested it myself.
-
-## Sessions
-
-- Start with `/next-task`, or with whatever I ask for.
-- When a task is done, tick its box in BUILD_PLAN.md and update the Status section there.
-- End with `/wrap-up`. It updates the status, notes known issues and proposes a commit.
-
-## Project documents (loaded every session)
-
+## Always loaded
 - Game spec: @docs/GAME_SPEC.md
-- Style guide: @docs/STYLE.md
-- Architecture: @docs/ARCHITECTURE.md
 - Build plan and status: @docs/BUILD_PLAN.md

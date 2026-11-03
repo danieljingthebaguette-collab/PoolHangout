@@ -41,7 +41,7 @@ A big, warm wooden arena or lodge: timber arches and beams, plank floors, plants
 
 ## Characters
 
-Normal Roblox avatars, unchanged. Each player has a soft ring at their feet: a thin cream circle with a faint glow, a little wider than the avatar. The ring isn't built yet.
+Normal Roblox avatars on the R6 rig only (set in the game's avatar settings), otherwise unchanged. Each player has a soft ring at their feet: a thin cream circle with a faint glow, a little wider than the avatar. The ring isn't built yet.
 
 ## UI
 
