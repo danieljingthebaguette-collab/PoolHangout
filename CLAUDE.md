@@ -8,9 +8,9 @@ Item-based 8-ball pool on Roblox, 1v1 and 2v2. Controls and physics match the fe
 | Rules, items, game flow | docs/GAME_SPEC.md (always loaded, below) |
 | What to build next | docs/BUILD_PLAN.md (always loaded, below) |
 | Code structure | docs/ARCHITECTURE.md |
-| Anything visual | docs/STYLE.md and references/ (coming soon) |
+| Anything visual | docs/STYLE.md and the images in references/ |
 | Building models | docs/MODELS.md |
-| Who the game is for and why | docs/VISION.md (coming soon) |
+| Who the game is for and why | docs/VISION.md |
 
 ## Always
 - The server decides everything: turns, fouls, ball results. Clients send inputs only (aim, power, item), through src/Shared/Remotes.luau.
@@ -34,7 +34,7 @@ Item-based 8-ball pool on Roblox, 1v1 and 2v2. Controls and physics match the fe
 Script Sync mirrors src/Server → ServerScriptService/Server, src/Client → StarterPlayer/StarterPlayerScripts/Client and src/Shared → ReplicatedStorage/Shared, both ways. tests/, docs/ and tools/ aren't synced; tools/ holds scripts Claude runs, in Studio through the MCP (BuildTable.luau) or in Lune (BreakStats.luau).
 - File names set the script type: Name.server.luau = Script, Name.local.luau = LocalScript, Name.luau = ModuleScript, a folder = Folder. No init.luau files.
 - Two entry scripts only: src/Server/Main.server.luau and src/Client/Main.local.luau. Everything else is a ModuleScript they start.
-- Every tuning number lives in src/Shared/Config.luau. UI is built in code, with colors, fonts and sizes from src/Shared/Theme.luau.
+- Every tuning number lives in src/Shared/Config.luau. UI is built in code. Every color, font, UI size and effect timing lives in src/Shared/Theme.luau, never hard-coded. Gameplay numbers stay in Config: table and ball sizes, the shot's feel, and every timer the server runs.
 - `--!strict` and typed parameters in every file; `task.wait`/`task.spawn`/`task.delay`, never `wait`/`spawn`/`delay`; every connection and timer is cleaned up when its game or player ends.
 - Only scripts and folders sync. Parts, models and lighting live only in the place file, which isn't in git, so after changing the place remind Daniel to save it (Cmd+S).
 - Never put attributes or tags on scripts: Script Sync skips those scripts.
@@ -49,14 +49,15 @@ Script Sync mirrors src/Server → ServerScriptService/Server, src/Client → St
 6. When a decision changes, update the doc that owns it in the same task.
 7. Ideas nobody asked for go at the end of your report, not into the code.
 8. Start a session with /next-task and end it with /wrap-up. When a task is done, tick it in BUILD_PLAN and update the Status there.
+9. Visual tasks go to the style-builder subagent. After it finishes, send its after screenshot to the art director.
 
 ## Testing
 - Use the Studio MCP tools (the Roblox_Studio server) to playtest, screenshot and run Luau: call list_roblox_studios first and pass its studio_id on every call. /playtest runs a standard playtest. Check your own work before reporting.
-- Tests: `lune run tests/run` (add a word to filter, like `lune run tests/run physics`). Lint: `selene src`. Both must pass before you say you're done. A hook runs StyLua on every .luau file you edit.
+- Tests: `lune run tests/run` (add a word to filter, like `lune run tests/run physics`). Lint: `selene src`. Both must pass before you say you're done. A hook runs StyLua on every .luau file you edit, and another runs lint and tests at the end of any turn that changed Luau code.
 - The MCP controls one player, so solo playtests rely on Config.Debug.SoloTables. Its mouse input uses GUI points below Roblox's top bar; do a whole drag in one user_mouse_input call.
 - A playtest started before Script Sync picks up an edit runs the old code: restart it and check the change is live.
 - Multiplayer changes need a 2-player playtest. If you can't run it, give Daniel the steps (Test ▾ → Server & Clients → 2 players → Play, then End Session) and say exactly what to check.
-- Visual changes: screenshot before and after, and compare with docs/STYLE.md.
+- Visual changes get an art-director review. Put its top 3 fixes in your report.
 - Table rebuilds: run tools/BuildTable.luau, then remind Daniel to save the place.
 - If Studio isn't open or is still in Play mode, stop, tell Daniel the exact step, and wait for "Go".
 - Scripts can't set Lighting.Technology; ask Daniel to set it in Properties.
