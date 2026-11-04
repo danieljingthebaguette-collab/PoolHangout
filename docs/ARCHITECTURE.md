@@ -94,7 +94,7 @@ Starting values for Config (tune by feel):
 7. Then the next turn, or the end of the game.
 
 - **Ball parts** are anchored, non-colliding parts the server creates for each table and moves only between shots. During a replay each client moves them locally. Players who join later get the resting positions through normal replication.
-- **Live aim for watchers (Phase 4, with spectating):** while aiming, the shooter's client sends `AimUpdate` over an UnreliableRemoteEvent at most 10 times a second. The server checks the sender is the shooter and relays it.
+- **Live aim for everyone at the table (Phase 2, after the health pass):** while aiming, the shooter's client sends `AimUpdate` over an UnreliableRemoteEvent at most 10 times a second: the aim, the pull and the called pocket. The server checks the sender is the shooter and relays it as `AimRelay`. Every other client in the top-down view smooths it and draws the cue, the aim indicator and the pocket ring from it. It's display only: the shot still comes from `RequestShot` alone, so a late or lost update never changes it.
 
 ## Items
 
@@ -160,7 +160,7 @@ Workspace
 | Remote | Direction | Carries |
 | --- | --- | --- |
 | `RequestShot` | client → server | Aim direction, power, cue ball placement, called pocket |
-| `AimUpdate` | client → server, unreliable | Live aim for watchers |
+| `AimUpdate` | client → server, unreliable | Live aim for everyone at the table |
 | `LeaveTable` | client → server | The Leave button |
 | `SayPhrase` | client → server | A quick phrase, by index (Later list) |
 | `UseItem` | client → server | Slot, and a target: a ball id, a point on the felt or a pocket id |
@@ -171,7 +171,7 @@ Workspace
 | `ShotResolved` | server → clients | Final balls, the outcome, item bars and the points just added, and any item earned |
 | `Banner` | server → clients | A message for everyone at the table and how many seconds to show it: a foul and who has ball in hand, or until the end screen, who won and why |
 | `GameOver` | server → clients | Winner and each player's stats |
-| `AimRelay` | server → clients, unreliable | Live aim for watchers |
+| `AimRelay` | server → clients, unreliable | Live aim for everyone at the table |
 | `TestRack` | client → server | Physics test mode: rack Table1 |
 | `TestShoot` | client → server | Physics test mode: direction, power and cue ball placement |
 | `TestTune` | client → server, and server → client | Physics test mode: a slider's name and value. Its attributes hold every slider's current value. Back to one client, with nothing, when the server turned its change down, so its panel shows the kept values |

@@ -10,14 +10,13 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - **In progress:** the Claude docs and tools are set up and committed: the docs (BUILD_PLAN, GAME_SPEC, VISION, STYLE, references/), the art-director and style-builder subagents, and a hook that runs lint and tests after any turn that changed code. The join task (join with E, the Leave button, the automatic camera, and the camera turning to face the table from behind your seat) passed Claude's solo playtest on 2026-11-04 and waits for my 2-player test before it's committed. Table1's seat markers are saved in the place, and the game is R6
 - **Dates:** launch moved to Friday, Dec 18 when the plan was reordered. The phase dates are Claude's proposal for that launch
 - **Last session:** 2026-11-03. New CLAUDE.md, R6 avatars only, and the plan reordered: normal tables, then items, then the lodge with a simple tutorial, Mobile and launch on Dec 18, with parties and progression as the first updates after launch and extras later. Then the Claude setup: the docs, two subagents for visual work and the lint-and-test hook
-- **Next up:** my 2-player test of the join task, then Claude's health pass (type check, TableFlow module, whole-game tests, Hud and ShotController split, small known-issue fixes, items-readiness notes). Phase 1's age check is still open: I'll do it when we first publish, before the friends playtest in the Items step
+- **Next up:** my 2-player test of the join task, then Claude's health pass (type check, TableFlow module, whole-game tests, Hud and ShotController split, small known-issue fixes, items-readiness notes), then live aim for everyone at the table. Phase 1's age check is still open: I'll do it when we first publish, before the friends playtest in the Items step
 - **Known issues:**
   - Touch and the new HUD layout haven't been tried on a real phone yet, only in the emulator; it's covered by the Mobile phase
   - The existing touch code isn't tested or extended until the Mobile phase, so it will fall behind the PC features built before then. Ball in hand is mouse-only: on a phone the cue ball can't be moved yet
   - Lighting.Technology has to be set to Future by hand in Studio; scripts can't change it
   - Leaving the server mid-game ends the game with no winner and leaves the balls where they stopped, until the arena step's takeover rules
   - In Studio solo you're always side A, so sinking the 8 early reads "Player1 loses: …" rather than naming a winner
-  - Only the shooter sees the called pocket's ring; watchers see it with live aim for watchers
   - In 2v2, two long names don't fit on one card and the second is cut to "…"; the avatars still show both
   - A card's ball icons change when the next turn starts, about a quarter second after the balls stop, not the moment a ball drops; the tray fills as they drop
   - Respawning mid-game drops you back to the normal view until your next turn starts
@@ -69,6 +68,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [x] Top bar for two: the other player's card, a highlight on whose turn it is, and each side's balls still left to sink, with room in the middle for the shot clock (Claude)
 - [x] Automatic rule tests: 25+ scenarios, like sinking the cue ball on the 8, that rerun after every change (Claude)
 - [ ] Join Table1 with a "Join table" prompt instead of platforms: E only joins (side A, then B), a 3-second "Starting..." banner once every seat is taken, then each player is moved once to their seat facing the table, with their camera behind them, free to walk. "Table in use" during a game, and it opens again when the game ends. The table builder makes invisible seat markers where the platforms were. A coral Leave button top right in both views: off the table while waiting, calls off the 3-second start, and mid-game asks "Leave and lose this game?" (in 2v2 the teammate plays on). Camera: your turn switches you to the top-down view, and your turn passing switches you back to third person; F switches any time (Claude)
+- [ ] Live aim for everyone at the table, after the health pass. Anyone in the top-down view, not just the shooter, sees the shooter's cue and aim indicator move live: the aim line, the circle, both direction lines, the called-pocket ring, and the cue sliding back during a pull. The updates are display-only and smoothed, so a slow connection never affects the shot. (Claude)
 - [ ] 2v2 on one table: Table2, built as a 2v2 table with A1 and A2 on one long side and B1 and B2 on the other. Your side is your team, teammates share a group, and turns go A1 → B1 → A2 → B2 (Claude)
 - [ ] "Turn" arrow over the shooter, and a 45-second shot clock in the middle of the top bar that stops while balls roll. Running out is a foul, with ball in hand for the next shooter (Claude)
 - [ ] End screen: the winner and each player's stats, with Rematch and the other options in GAME_SPEC, then back to the lobby (Claude)
@@ -83,6 +83,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 3. A 45-second shot clock, where running out is a foul with ball in hand.
 4. The end screen sends players to the lobby, with a Rematch button.
 5. Hit and pocket sounds, small hit effects, and an R6 shot pose.
+6. Everyone in the top-down view sees the shooter's cue and aim indicator move live.
 
 ## Phase 3, Nov 16–29: Items
 
