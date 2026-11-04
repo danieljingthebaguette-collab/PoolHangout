@@ -25,7 +25,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Shared/Items.luau` | A game's items as plain tables: slots, each player's item bar, active effects, and what each side targeted last. Adds bar points, awards items, checks every item rule and builds the simulation's `effects`. Pure, so Lune tests it (see Items) |
 | `Shared/Rules/EightBall.luau` | New game, resolve a shot, timeouts, forfeits, per-player game stats |
 | `Server/Main.server.luau` | Starts the services |
-| `Server/TableService.luau` | Finds tables, watches platforms, runs countdowns and signs, starts and resets games |
+| `Server/TableService.luau` | Finds tables, runs their Join prompts, countdowns and signs, moves players to their seats, starts and resets games |
 | `Server/Balls.luau` | Each table's ball parts and where its balls rest, and playing a shot on them: simulate in slices, `ShotStarted`, wait out the replay. Games and the test mode both shoot through it |
 | `Server/Match.luau` | One game: seats, turn order, shot clock, ball in hand, items (through `Items.luau`), takeovers, end-screen data |
 | `Server/StatsService.luau` | Lifetime stats. The only module that touches DataStores |
@@ -132,11 +132,11 @@ Starting values for `Config.Items`, every one a default to tune by feel. Distanc
 ## Tables
 
 - States: `Idle` → `Countdown` → `Playing` → `GameOver` → reset → `Idle`.
-- Platforms: about 5 times a second, the server checks each living player's HumanoidRootPart position against each platform's footprint. Don't use Touched or TouchEnded; they miss players standing still.
+- Joining: each table has a ProximityPrompt over its centre, made at runtime on an Attachment in the `Felt`. Pressing it only joins. The HUD's Leave button fires `LeaveTable`: off the table while waiting, the countdown called off at once, or mid-game `Match.leave`, which in 1v1 ends the game for the other side and in 2v2 leaves the teammate playing for the leaver's seat. A table's seat count comes from its `Mode` attribute, and joined players keep a display-only `JoinedTable` attribute so their own screen reads "Waiting for players". When every seat is taken, a countdown, then each player is moved once to their seat marker, facing the table, and their `ShotController` turns the normal camera to face the table from behind that marker (`Config.Camera.SeatPitch`). Players are never locked in place. Clients hide prompts in the top-down view, where they'd sit on the felt.
 - Every state change goes through one function that updates the sign and fires `TableChanged`.
 - Timers (countdown, shot clock, takeover window, end screen) carry the game id and the step they were made for, and do nothing if that step is over. This is what keeps tables from getting stuck.
 - One `Match` object holds everything about a game. Resetting the table destroys it and disconnects everything it made.
-- **Debug, Studio only:** with `Config.Debug.SoloTables` on and one player in the server, standing on one platform starts the table and that player takes every turn. `Config.Debug.LogShots` prints each shot's input and outcome. `Config.Debug.PhysicsTest` turns on the physics test mode on Table1 while no game is on it. It plays like a game without turns: R or the Rack button racks an 8-ball rack, the next shot is the break from the middle of the head line, a scratch gives ball in hand anywhere, a small "TEST MODE" label shows bottom-left, anyone can shoot with the real shot controls while the balls are still, and sliders tune the settings in `Config.Debug.TestSliders` live for everyone. The two pocket sliders, `CornerPocketMouth` and `SidePocketMouth`, also rebuild Table1 with `Server/TableBuilder.luau` in the running game, never the saved place, so they only move while the test mode has the table: no game on it and the balls still. The server turns down a change any other time, and that player's slider goes back. The server keeps the slider values and sends the physics ones with each shot; the shot controls read the rest, like `FullPullDistance`, at the start of each pull. Print values prints them to Output. The first shot after a rack is the break; the server sets Table1's `BreakNext` attribute so the shooter's screen starts it at break power. All of them check `RunService:IsStudio()`, so they can never run in a live server, with one exception: `Config.Debug.PhysicsTestLive` also runs the physics test mode in published servers, for the place's owner only, so I can test on my real phone. `Shared/PhysicsTestAccess.luau` decides who may use it, and the server checks it on every test request. It's turned off before launch.
+- **Debug, Studio only:** with `Config.Debug.SoloTables` on and one player in the server, joining with the prompt starts the table and that player takes every turn. `Config.Debug.LogShots` prints each shot's input and outcome. `Config.Debug.PhysicsTest` turns on the physics test mode on Table1 while no game is on it. It plays like a game without turns: R or the Rack button racks an 8-ball rack, the next shot is the break from the middle of the head line, a scratch gives ball in hand anywhere, a small "TEST MODE" label shows bottom-left, anyone can shoot with the real shot controls while the balls are still, and sliders tune the settings in `Config.Debug.TestSliders` live for everyone. The two pocket sliders, `CornerPocketMouth` and `SidePocketMouth`, also rebuild Table1 with `Server/TableBuilder.luau` in the running game, never the saved place, so they only move while the test mode has the table: no game on it and the balls still. The server turns down a change any other time, and that player's slider goes back. The server keeps the slider values and sends the physics ones with each shot; the shot controls read the rest, like `FullPullDistance`, at the start of each pull. Print values prints them to Output. The first shot after a rack is the break; the server sets Table1's `BreakNext` attribute so the shooter's screen starts it at break power. All of them check `RunService:IsStudio()`, so they can never run in a live server, with one exception: `Config.Debug.PhysicsTestLive` also runs the physics test mode in published servers, for the place's owner only, so I can test on my real phone. `Shared/PhysicsTestAccess.luau` decides who may use it, and the server checks it on every test request. It's turned off before launch.
 
 ## Place contract
 
@@ -147,12 +147,12 @@ Workspace
 └─ Tables (Folder)
    └─ Table1 … Table6 (Model, attribute Mode = "1v1" or "2v2")
       ├─ Felt (Part): the playing surface. Size X and Z match Config's table length and width
-      └─ Platforms (Folder): A1 and B1, plus A2 and B2 on 2v2 tables (Parts)
-                             A platforms on one long side, B on the other
+      └─ Seats (Folder): A1 and B1, plus A2 and B2 on 2v2 tables (invisible Parts where each seat's player
+                         is moved when a game starts). A seats on one long side, B on the other
 ```
 
 - Rails and pocket visuals must line up with Config. When pocket or table sizes change in Config, rebuild the greybox with `tools/BuildTable.luau`, which reads Config and runs `Server/TableBuilder.luau`.
-- Ball parts, signs, the Turn arrow and all UI are made by code at runtime. Don't build them in the place.
+- Ball parts, the Join prompts, signs, the Turn arrow and all UI are made by code at runtime. Don't build them in the place.
 - At startup, TableService warns in the output about anything missing or mismatched.
 
 ## Remotes (starting list; `Remotes.luau` is the source of truth)
@@ -165,7 +165,7 @@ Workspace
 | `SayPhrase` | client → server | A quick phrase, by index (Later list) |
 | `UseItem` | client → server | Slot, and a target: a ball id, a point on the felt or a pocket id |
 | `TableChanged` | server → clients | Sign text, state, seats |
-| `TurnStarted` | server → clients | Shooter, the game's players in turn order, clock end time, ball in hand (true or false), pocket call needed, each side's group and the balls down (the top bar draws from these, so every screen agrees), held items, item bars and the points just added, any item earned, active effects. Players with no shooter: the game is over and its result is showing, so nobody shoots. No players means no game is on: the game just ended, or the physics test mode's ball in hand |
+| `TurnStarted` | server → clients | Shooter, the game's players in turn order (a 2v2 player who pressed Leave shows as their teammate), clock end time, ball in hand (true or false), pocket call needed, each side's group and the balls down (the top bar draws from these, so every screen agrees), held items, item bars and the points just added, any item earned, active effects. Players with no shooter: the game is over and its result is showing, so nobody shoots. No players means no game is on: the game just ended, or the physics test mode's ball in hand |
 | `ItemUsed` | server → clients | Who used which item, and its target |
 | `ShotStarted` | server → clients | Start balls, shot, item effects and physics params to replay |
 | `ShotResolved` | server → clients | Final balls, the outcome, item bars and the points just added, and any item earned |

@@ -1,8 +1,10 @@
 --!strict
 -- Builds a greybox table from table params: felt, cushions with angled jaws, slim wooden rails with diamonds, black
--- corner plates, side pocket holes, body and legs. Keeps Felt (resized to the params), Platforms and the runtime
--- Balls folder; replaces every other part. Built to docs/MODELS.md until Phase 4's final looks. The look follows
--- docs/STYLE.md: matte, painted-looking flat colors (SmoothPlastic everywhere, no textured materials).
+-- corner plates, side pocket holes, body and legs, and the Seats folder of invisible markers where each seat's
+-- player is moved when a game starts. Keeps Felt (resized to the params) and the runtime Balls folder; replaces every
+-- other part, and removes the Platforms folder the seats replaced. Built to docs/MODELS.md until Phase 4's final
+-- looks. The look follows docs/STYLE.md: matte, painted-looking flat colors (SmoothPlastic everywhere, no textured
+-- materials).
 -- tools/BuildTable.luau runs it in edit mode from Config, and the physics test mode runs it live from the pocket
 -- sliders. Yields.
 
@@ -15,6 +17,10 @@ local CUSHION_WIDTH, WOOD_WIDTH = 0.35, 0.75
 local FELT_THICKNESS = 0.4
 local PLATE_RADIUS = 0.5 -- the corner plates' outer rounding
 local CORNER_JAW_SLOPE, SIDE_JAW_SLOPE = 1, math.tan(math.rad(20)) -- how far each cushion's back runs past its nose
+-- The seat markers, exactly where the platforms they replaced were: the middle of each long side, this far from the
+-- table's centre, sitting on the floor this far below the felt's top
+local SEAT_OUT, SEAT_DROP = 7.1, 2.4
+local SEAT_SIZE = Vector3.new(4, 0.2, 3)
 
 local FELT_COLOR = Color3.fromRGB(50, 122, 76)
 local CUSHION_COLOR = Color3.fromRGB(34, 88, 52)
@@ -329,15 +335,30 @@ function TableBuilder.build(tableModel: Model, tableParams: Geometry.TableParams
 		end
 	end
 
-	local keep = { Felt = true, Platforms = true, Balls = true }
+	-- A on the felt's −Z side, B on the other.
+	-- ponytail: 1v1 seats only; Phase 3's 2v2 tables add A2 and B2 beside them.
+	local seats = Instance.new("Folder")
+	seats.Name = "Seats"
+	for name, side in { A1 = -1, B1 = 1 } do
+		local marker = part(name, SEAT_SIZE, CFrame.new(world(0, FELT_TOP - SEAT_DROP, side * SEAT_OUT)), BLACK)
+		marker.Transparency = 1
+		marker.CanCollide = false
+		marker.CanTouch = false
+		marker.CanQuery = false
+		marker.CastShadow = false
+		marker.Parent = seats
+	end
+
+	local keep = { Felt = true, Balls = true }
 	for _, child in tableModel:GetChildren() do
-		if not keep[child.Name] and child:IsA("BasePart") then
+		if (not keep[child.Name] and child:IsA("BasePart")) or child.Name == "Seats" or child.Name == "Platforms" then
 			child:Destroy()
 		end
 	end
 	for _, item in built do
 		item.Parent = tableModel
 	end
+	seats.Parent = tableModel
 	felt.Size = Vector3.new(L, FELT_THICKNESS, W)
 	felt.Position = world(0, FELT_TOP - FELT_THICKNESS / 2, 0)
 	felt.Color = FELT_COLOR

@@ -1,11 +1,12 @@
 --!strict
--- Finds the tables, makes and racks their balls, and starts and ends their games. A few times a second it checks
--- who stands on each table's platforms, and once every platform has a player a game starts. In Studio with
--- Config.Debug.SoloTables and one player in the server, one platform is enough. A game ends once its result has
--- shown, and the table re-racks; players still on the platforms then start a new one. It also ends when one of its
--- players leaves the server, leaving the balls where they are; walking away from the table doesn't count.
--- ponytail: no sign, countdown or end screen, and nobody is moved off the platforms. Phase 3 adds them, with the
--- table's states and its reset.
+-- Finds the tables, makes and racks their balls, and starts and ends their games. Players join a table with the
+-- "Join table" prompt over its centre: the first takes side A, the next side B. The prompt only joins; the HUD's
+-- Leave button leaves, calls off a start, or leaves a game (see Match.leave). Once every seat is taken (one is enough in Studio with Config.Debug.SoloTables and one player in the
+-- server), everyone at the table sees "Starting...", and after the countdown each player is moved once to their
+-- seat's spot, facing the table, and the game starts. Players walk freely the whole time. A game ends once its result
+-- has shown, and the table re-racks and opens again. It also ends when one of its players leaves the server, leaving
+-- the balls where they are, unless they had already pressed Leave.
+-- ponytail: no sign, end screen or takeovers yet. Phase 3 adds them, with the table's states and its reset.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,15 +16,24 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local EightBall = require(ReplicatedStorage.Shared.Rules.EightBall)
 local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
 local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Balls = require(script.Parent.Balls)
 local Match = require(script.Parent.Match)
 
--- Platforms in turn order. A 1v1 table has the first two.
+-- Seats in turn order, by the names of their spot markers. A 1v1 table has the first two.
 local SEAT_ORDER = { "A1", "B1", "A2", "B2" }
+-- How many seats each kind of table has, by its Mode attribute
+local SEATS: { [string]: number } = { ["1v1"] = 2, ["2v2"] = 4 }
 
 local TableService = {}
 
 local matches: { [Model]: Match.Match } = {}
+-- The players who have joined each table and are waiting for its game, in the order they joined
+local joined: { [Model]: { Player } } = {}
+-- Tables counting down to their game, when nobody can join, each with a token for that countdown, so one called off
+-- and started again doesn't start twice
+local starting: { [Model]: {} } = {}
+local prompts: { [Model]: ProximityPrompt } = {}
 local random = Random.new()
 
 function TableService.hasGame(tableModel: Model): boolean
@@ -32,66 +42,40 @@ end
 
 local function inGame(player: Player): boolean
 	for _, match in matches do
-		if table.find(match.seats, player) then
+		if table.find(match.seats, player) and not match.left[player] then
 			return true
 		end
 	end
 	return false
 end
 
--- Whether a root part is over the platform's footprint and no more than StandHeight above its top
-local function standingOn(platform: BasePart, root: BasePart): boolean
-	local offset = platform.CFrame:PointToObjectSpace(root.Position)
-	local half = platform.Size / 2
-	return math.abs(offset.X) <= half.X
-		and math.abs(offset.Z) <= half.Z
-		and offset.Y >= half.Y
-		and offset.Y <= half.Y + Config.Platforms.StandHeight
+local function isWaiting(player: Player): boolean
+	for _, players in joined do
+		if table.find(players, player) then
+			return true
+		end
+	end
+	return false
 end
 
--- The players on the table's platforms, in turn order, once enough platforms are filled for a game; nil until then.
--- A player can't hold two platforms, or one here while they're in a game.
-local function seatsFilled(tableModel: Model): { Player }?
-	local platforms = tableModel:FindFirstChild("Platforms")
-	if not platforms then
-		return nil
+-- How many seats the table has, from its Mode, not from its seat markers, so a table still opens with one missing
+local function seatCount(tableModel: Model): number
+	return SEATS[tableModel:GetAttribute("Mode") :: string] or SEATS["1v1"]
+end
+
+-- The table's seat marker for a seat in turn order, if the builder has made it
+local function seatMarker(tableModel: Model, seat: number): BasePart?
+	local folder = tableModel:FindFirstChild("Seats")
+	local marker = folder and folder:FindFirstChild(SEAT_ORDER[seat])
+	return if marker and marker:IsA("BasePart") then marker else nil
+end
+
+-- How many players a game on this table needs: one per seat, or one in Studio solo
+local function needed(tableModel: Model): number
+	if RunService:IsStudio() and Config.Debug.SoloTables and #Players:GetPlayers() == 1 then
+		return 1
 	end
-	local seats: { Player } = {}
-	local open = 0
-	for _, name in SEAT_ORDER do
-		local platform = platforms:FindFirstChild(name)
-		if not (platform and platform:IsA("BasePart")) then
-			continue
-		end
-		local found: Player? = nil
-		for _, player in Players:GetPlayers() do
-			local character = player.Character
-			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-			local root = character and character:FindFirstChild("HumanoidRootPart")
-			if
-				humanoid
-				and humanoid.Health > 0
-				and root
-				and root:IsA("BasePart")
-				and standingOn(platform, root)
-				and not table.find(seats, player)
-				and not inGame(player)
-			then
-				found = player
-				break
-			end
-		end
-		if found then
-			table.insert(seats, found)
-		else
-			open += 1
-		end
-	end
-	local solo = RunService:IsStudio() and Config.Debug.SoloTables and #Players:GetPlayers() == 1
-	if #seats > 0 and (open == 0 or solo) then
-		return seats
-	end
-	return nil
+	return seatCount(tableModel)
 end
 
 local function pick(n: number): number
@@ -102,49 +86,174 @@ local function rack(tableModel: Model)
 	Balls.place(tableModel, EightBall.rack(Geometry.build(PhysicsTestAccess.params().Table), pick))
 end
 
+-- The prompt's words. The client shows "Waiting for players" instead to a player who has joined.
+local function updatePrompt(tableModel: Model)
+	local prompt = prompts[tableModel]
+	local count = `{#joined[tableModel]}/{seatCount(tableModel)}`
+	if matches[tableModel] then
+		prompt.ActionText, prompt.ObjectText = "Table in use", ""
+	elseif starting[tableModel] then
+		prompt.ActionText, prompt.ObjectText = "Starting…", count
+	else
+		prompt.ActionText, prompt.ObjectText = "Join table", `{count} joined`
+	end
+end
+
+-- Puts a player's character on a seat's spot, facing the table's centre. Only once, as the game starts: they walk
+-- freely after.
+local function moveToSeat(player: Player, marker: BasePart, felt: BasePart)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not (character and humanoid and root and root:IsA("BasePart")) then
+		return
+	end
+	-- An R15 root part floats HipHeight above the floor; an R6 one stands on 2-stud legs
+	local legs = if humanoid.RigType == Enum.HumanoidRigType.R6 then 2 else humanoid.HipHeight
+	local height = marker.Position.Y + marker.Size.Y / 2 + legs + root.Size.Y / 2
+	local spot = Vector3.new(marker.Position.X, height, marker.Position.Z)
+	character:PivotTo(CFrame.lookAt(spot, Vector3.new(felt.Position.X, height, felt.Position.Z)))
+end
+
+local function endGame(tableModel: Model, match: Match.Match)
+	Match.destroy(match)
+	matches[tableModel] = nil
+	updatePrompt(tableModel)
+end
+
+-- Every seat is taken: "Starting..." for everyone at the table, then the players go to their seats and the game
+-- starts. A player who leaves meanwhile calls it off (see unjoin), and the rest stay joined.
+local function startGame(tableModel: Model)
+	local token = {}
+	starting[tableModel] = token
+	updatePrompt(tableModel)
+	Remotes.Banner:FireAllClients(tableModel, "Starting...", Config.Timers.CountdownSeconds)
+	task.delay(Config.Timers.CountdownSeconds, function()
+		-- A test shot still rolling finishes before the game racks
+		while Balls.isRolling(tableModel) and starting[tableModel] == token do
+			task.wait()
+		end
+		if starting[tableModel] ~= token then
+			return
+		end
+		starting[tableModel] = nil
+		local players = joined[tableModel]
+		if #players == 0 or #players < needed(tableModel) then
+			updatePrompt(tableModel)
+			return
+		end
+		joined[tableModel] = {}
+		local felt = tableModel:FindFirstChild("Felt") :: BasePart
+		for i, player in players do
+			player:SetAttribute("JoinedTable", nil)
+			local marker = seatMarker(tableModel, i)
+			if marker then
+				moveToSeat(player, marker, felt)
+			end
+		end
+		local match: Match.Match
+		match = Match.new(tableModel, players, pick, function()
+			-- A player who left while the result showed has already ended this game
+			if matches[tableModel] == match then
+				endGame(tableModel, match)
+				rack(tableModel)
+			end
+		end)
+		matches[tableModel] = match
+		updatePrompt(tableModel)
+	end)
+end
+
+-- Takes a player off the table they joined and are waiting at, if any. During the countdown that calls the start off
+-- at once, and the others stay joined.
+local function unjoin(player: Player)
+	for tableModel, players in joined do
+		local index = table.find(players, player)
+		if not index then
+			continue
+		end
+		table.remove(players, index)
+		player:SetAttribute("JoinedTable", nil)
+		if starting[tableModel] then
+			starting[tableModel] = nil
+			Remotes.Banner:FireAllClients(
+				tableModel,
+				`Start called off: {player.DisplayName} left.`,
+				Config.Timers.NoticeSeconds
+			)
+		end
+		updatePrompt(tableModel)
+	end
+end
+
+-- The "Join table" prompt over the table's centre. Pressing it joins; pressing it again does nothing.
+local function makePrompt(tableModel: Model)
+	local felt = tableModel:FindFirstChild("Felt") :: BasePart
+	local attachment = Instance.new("Attachment")
+	attachment.Name = "JoinPrompt"
+	attachment.Position = Vector3.new(0, felt.Size.Y / 2 + Config.Join.PromptHeight, 0)
+	attachment.Parent = felt
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = Config.Join.PromptDistance
+	prompt.RequiresLineOfSight = false -- the table's own rails can hide the spot above its centre
+	prompt.Parent = attachment
+	prompts[tableModel] = prompt
+	joined[tableModel] = {}
+	updatePrompt(tableModel)
+
+	prompt.Triggered:Connect(function(player: Player)
+		if matches[tableModel] or starting[tableModel] then
+			return
+		end
+		local players = joined[tableModel]
+		if inGame(player) or isWaiting(player) or #players >= seatCount(tableModel) then
+			return
+		end
+		table.insert(players, player)
+		-- Display only, so this player's prompt reads "Waiting for players" and they see the table's banners
+		player:SetAttribute("JoinedTable", tableModel.Name)
+		updatePrompt(tableModel)
+		if #players > 0 and #players >= needed(tableModel) then
+			startGame(tableModel)
+		end
+	end)
+end
+
 function TableService.start()
-	local tables: { Model } = {}
 	for _, child in workspace:WaitForChild("Tables"):GetChildren() do
 		if child:IsA("Model") then
 			child:WaitForChild("Felt")
 			Balls.create(child)
 			rack(child)
-			table.insert(tables, child)
+			makePrompt(child)
+			for seat = 1, seatCount(child) do
+				if not seatMarker(child, seat) then
+					warn(
+						`[{child.Name}] no seat marker {SEAT_ORDER[seat]}: run tools/BuildTable.luau and save the place`
+					)
+				end
+			end
 		end
 	end
 
 	Players.PlayerRemoving:Connect(function(player: Player)
 		for tableModel, match in matches do
-			if table.find(match.seats, player) then
-				Match.destroy(match)
-				matches[tableModel] = nil
+			if table.find(match.seats, player) and not match.left[player] then
+				endGame(tableModel, match)
 			end
 		end
+		unjoin(player)
 	end)
 
-	task.spawn(function()
-		while true do
-			for _, tableModel in tables do
-				-- A shot still rolling from an ended game finishes before the next game racks
-				if matches[tableModel] or Balls.isRolling(tableModel) then
-					continue
-				end
-				local seats = seatsFilled(tableModel)
-				if seats then
-					local match: Match.Match
-					match = Match.new(tableModel, seats, pick, function()
-						-- A player who left while the result showed has already ended this game
-						if matches[tableModel] == match then
-							Match.destroy(match)
-							matches[tableModel] = nil
-							rack(tableModel)
-						end
-					end)
-					matches[tableModel] = match
-				end
+	Remotes.LeaveTable.OnServerEvent:Connect(function(player: Player)
+		for _, match in matches do
+			if table.find(match.seats, player) then
+				Match.leave(match, player)
 			end
-			task.wait(Config.Platforms.CheckSeconds)
 		end
+		unjoin(player)
 	end)
 end
 

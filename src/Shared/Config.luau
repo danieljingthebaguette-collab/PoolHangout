@@ -98,20 +98,23 @@ local Config = {
 		-- Degrees, top to bottom. Narrow and high above, so balls near the table's edges don't look stretched.
 		TopDownFieldOfView = 20,
 		TopDownMargin = 1.3, -- studs of room the top-down view shows around the playing surface: the rails plus a little
+		-- Degrees down: as a game starts, each player's normal camera turns to face the table from behind their seat
+		SeatPitch = 25,
 	},
 
-	Platforms = {
-		CheckSeconds = 0.2, -- how often the server checks who stands on each table's platforms
-		-- Studs above a platform's top a player's root part can be and still count as standing on it, jumps included
-		StandHeight = 6,
+	Join = {
+		PromptHeight = 3, -- studs above the felt's top: the "Join table" prompt over each table's centre
+		PromptDistance = 12, -- studs: how close a player must be to use it
+		BannerDistance = 25, -- studs from a table's centre within which players see its banners, like "Starting..."
 	},
 
 	Timers = {
-		CountdownSeconds = 5,
+		CountdownSeconds = 3, -- the "Starting..." banner once every seat is taken, before the game starts
 		TakeoverSeconds = 5,
 		OpenSpotWaitSeconds = 15,
 		EndScreenSeconds = 10,
 		FoulBannerSeconds = 3, -- the banner naming a foul and who has ball in hand
+		NoticeSeconds = 3, -- short banners, like a start called off because someone left
 		ResultSeconds = 5, -- "Player1 wins" and why, before the table re-racks. Until the end screen replaces it
 	},
 

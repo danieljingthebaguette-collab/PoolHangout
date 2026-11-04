@@ -6,7 +6,7 @@ How we build every model in Pool!. There's no modeler. Claude builds each model 
 
 - **Config is the source of truth.** Anything the game measures (the felt, cushions, pockets, balls, cue and pocket lid) gets its size from `Config.luau`, never from a model, and the physics never reads a model's shape. When Config's table, ball, pocket or cue numbers change, rebuild with the builder script and update this file in the same change.
 - **Found by name.** The game finds parts by exact name, so the names below must match, including capitals.
-- **Place models come from builder scripts.** Tables, platforms and the arena are built by scripts in `tools/`, like `BuildTable.luau`. Each one reads Config, rebuilds its model from scratch so running it twice gives the same result, keeps the parts the game owns (like `Felt` and `Platforms`), and supports Undo. Claude runs them through the MCP's `execute_luau` in edit mode, then I save the place (Cmd+S). The place file isn't in git but the scripts are, so the place can always be rebuilt.
+- **Place models come from builder scripts.** Tables, with their seat markers, and the arena are built by scripts in `tools/`, like `BuildTable.luau`. Each one reads Config, rebuilds its model from scratch so running it twice gives the same result, keeps the parts the game owns (like `Felt` and the runtime `Balls`), and supports Undo. Claude runs them through the MCP's `execute_luau` in edit mode, then I save the place (Cmd+S). The place file isn't in git but the scripts are, so the place can always be rebuilt.
 - **Spawned models come from game code.** Balls, the cue, the pocket lid and item effects are built at runtime by the game's own modules, like the balls and the cue today, so they live in git and the place holds no copy.
 - **Organic shapes come from Studio's AI tools.** For plants and other shapes parts can't do well, Claude writes a prompt (see AI prompts below), I run it, and the result goes in `ServerStorage/Props` under the prompt's name. The arena builder copies props from there into place. They live only in the place file, so their prompts are kept here, so we can generate one again if it's lost. Never use these tools for anything the game measures.
 
@@ -30,7 +30,7 @@ The rails are slim: the whole table, cushions and wooden rails included, is abou
 | Name | What it is | Must have |
 | --- | --- | --- |
 | `Felt` | The playing surface | A single flat Part, exactly **16 × 8 studs** on top (its X axis along the length, Z across). Its top face is where the balls sit. Its center is the table's center. Any thickness |
-| `Platforms` | A Folder | The platforms below |
+| `Seats` | A Folder | The seat markers below. The builder makes it |
 | `Balls` | A Folder | Made by the game at runtime; the builder keeps it |
 | Anything else | Rails, pockets, body, legs, trim | Any names and any number of parts |
 
@@ -47,14 +47,13 @@ The cushion ends are the pockets' jaws. Inside the pocket, anything that looks l
 
 **1v1 and 2v2 tables are the same size.** One builder serves both.
 
-## Platforms
+## Seats
 
-Players stand on a platform to join a table, and the game lights a platform up when a spot opens mid-game.
+Players join a table with its "Join table" prompt, which the game makes. When the game starts, each player is moved to their seat's marker, facing the table.
 
-- Each platform is **a single Part**, named `A1`, `B1`, and on 2v2 tables also `A2` and `B2`, inside the table's `Platforms` folder.
-- `A` platforms go on one long side of the table (the felt's −Z side), `B` platforms on the other. On 2v2 tables, A1 and A2 sit side by side along their long side, and so do B1 and B2.
-- 4 × 3 studs, 0.2 thick, about 7 studs from the table's center, just clear of the rails. The game checks whether a player is standing within the platform's footprint, so its top is the area a player stands on.
-- The game changes the platform's color or material to light it up, so keep it plain enough to tint.
+- Each marker is **a single invisible Part**, named `A1`, `B1`, and on 2v2 tables also `A2` and `B2`, inside the table's `Seats` folder. They don't collide, so nobody trips on them.
+- `A` seats go on one long side of the table (the felt's −Z side), `B` seats on the other. On 2v2 tables, A1 and A2 sit side by side along their long side, and so do B1 and B2.
+- 4 × 3 studs, 0.2 thick, on the floor 7.1 studs from the table's center, just clear of the rails: where the platforms they replaced were. A player is placed standing on the marker's top.
 
 ## Cue
 
@@ -76,7 +75,7 @@ Built in code with the item effects while Pocket Block covers a pocket. It spans
 - A Folder named `Tables` in Workspace holding `Table1` to `Table6`. Each is a table model with an attribute **`Mode`** set to `"1v1"` (3 tables) or `"2v2"` (3 tables).
 - `tools/BuildArena.luau` builds everything else into a Workspace folder named `Arena`. In Phase 4 it's first a blockout in plain parts: the room, the floor, the table spots, the lobby spawn and the counter. Then it gets the full look of one cozy lodge room: timber beams, a plank floor, lanterns that throw warm pools of light over each table, places to sit, the counter, and the plants and rocks.
 - Mostly warm reds, oranges and browns, with some green from the plants. The felt stays the strongest color in the room.
-- One lodge room, 24 players per server. Leave room around each table for its platforms and for people to walk past and watch. Voices fade with distance, so spread the tables out enough that each one has its own conversation.
+- One lodge room, 24 players per server. Leave room around each table for its seats and for people to walk past and watch. Voices fade with distance, so spread the tables out enough that each one has its own conversation.
 - The builders don't make signs over the tables, arrows, buttons, screens or item effects; the game makes those.
 
 ## AI prompts

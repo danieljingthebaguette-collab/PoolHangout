@@ -1,7 +1,8 @@
 --!strict
 -- One game of 8-ball on one table: who's seated, whose turn it is, ball in hand, and the shots they ask for. The
--- server is the referee: a shot only goes once every check in `shoot` passes. Once the 8 decides the game, everyone
--- sees who won and why, and then the game tells TableService it's over.
+-- server is the referee: a shot only goes once every check in `shoot` passes. Once the 8 decides the game, or a
+-- player presses Leave with no teammate left to play on, everyone sees who won and why, and then the game tells
+-- TableService it's over.
 -- ponytail: no shot clock or leaving yet; they come with later Phase 2 and Phase 3 tasks.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,7 +20,11 @@ export type Match = {
 	tableModel: Model,
 	-- In turn order: A1, B1, then A2 and B2 on a 2v2 table
 	seats: { Player },
+	-- The seat whose turn it is, and who shoots for it: its own player, or their teammate once they've left
+	turnSeat: number,
 	shooter: Player,
+	-- 2v2 players who pressed Leave while a teammate played on. They keep their seat, so the sides stay put.
+	left: { [Player]: boolean },
 	-- Whether the shooter may place the cue ball anywhere before their next shot, after a foul
 	ballInHand: boolean,
 	isBreak: boolean,
@@ -64,6 +69,25 @@ local function sideOf(match: Match, player: Player): EightBall.Side
 	return if (table.find(match.seats, player) :: number) % 2 == 1 then "A" else "B"
 end
 
+-- Who shoots for a seat: its own player, or once they've left, their teammate. Seats alternate sides, so in 2v2 a
+-- teammate sits two seats away.
+local function shooterFor(match: Match, seat: number): Player
+	local player = match.seats[seat]
+	if match.left[player] then
+		return match.seats[(seat + 1) % #match.seats + 1]
+	end
+	return player
+end
+
+-- The seats as every screen sees them: a player who left shows as the teammate playing for them
+local function seatsShown(match: Match): { Player }
+	local shown = {}
+	for seat in match.seats do
+		shown[seat] = shooterFor(match, seat)
+	end
+	return shown
+end
+
 -- The ids of the balls down, for every screen's top bar
 local function ballsDown(match: Match): { number }
 	local down = {}
@@ -83,15 +107,15 @@ local function startTurn(match: Match)
 		match.tableModel,
 		match.shooter,
 		match.ballInHand,
-		match.seats,
+		seatsShown(match),
 		callPocket,
 		match.groups,
 		ballsDown(match)
 	)
 end
 
--- The 8 decided the game: everyone at the table sees who won and why, with nobody's turn, and then the game ends
-local function finish(match: Match, winner: EightBall.Side, reason: EightBall.Reason)
+-- The game is decided: everyone at the table sees who won and why, with nobody's turn, and then the game ends
+local function finish(match: Match, winner: EightBall.Side, why: string)
 	match.ended = true
 	local names = {}
 	for _, player in match.seats do
@@ -101,11 +125,19 @@ local function finish(match: Match, winner: EightBall.Side, reason: EightBall.Re
 	end
 	-- In Studio solo the one player is side A, so side B can win with nobody on it
 	local text = if #names == 0
-		then `{match.seats[1].DisplayName} loses: {REASON_TEXT[reason]}`
-		else `{table.concat(names, " and ")} {if #names == 1 then "wins" else "win"}: {REASON_TEXT[reason]}`
+		then `{match.seats[1].DisplayName} loses: {why}`
+		else `{table.concat(names, " and ")} {if #names == 1 then "wins" else "win"}: {why}`
 	log(match, text)
 	Remotes.Banner:FireAllClients(match.tableModel, text, Config.Timers.ResultSeconds)
-	Remotes.TurnStarted:FireAllClients(match.tableModel, nil, false, match.seats, false, match.groups, ballsDown(match))
+	Remotes.TurnStarted:FireAllClients(
+		match.tableModel,
+		nil,
+		false,
+		seatsShown(match),
+		false,
+		match.groups,
+		ballsDown(match)
+	)
 	task.delay(Config.Timers.ResultSeconds, match.onEnd)
 end
 
@@ -176,7 +208,11 @@ local function shoot(
 		log(match, `{player.Name} keeps the turn`)
 	elseif not outcome.winner then
 		-- Round the seats in order: A1, B1, then A2 and B2 on a 2v2 table
-		match.shooter = match.seats[(table.find(match.seats, player) :: number) % #match.seats + 1]
+		match.turnSeat = match.turnSeat % #match.seats + 1
+	end
+	-- The same seat or the next, and a shooter who left mid-shot hands it to their teammate
+	match.shooter = shooterFor(match, match.turnSeat)
+	if not outcome.keepsTurn and not outcome.winner then
 		log(match, `turn passes to {match.shooter.Name}`)
 	end
 	-- After a foul the next shooter places the cue ball anywhere: where it stopped, or back on the head line if it
@@ -201,7 +237,7 @@ local function shoot(
 	if match.ended then
 		return
 	elseif outcome.winner and outcome.reason then
-		finish(match, outcome.winner, outcome.reason)
+		finish(match, outcome.winner, REASON_TEXT[outcome.reason])
 		return
 	elseif outcome.foul then
 		local text = `Foul: {FOUL_TEXT[outcome.foul]}. {match.shooter.DisplayName} has ball in hand.`
@@ -215,10 +251,13 @@ end
 function Match.new(tableModel: Model, seats: { Player }, pick: (number) -> number, onEnd: () -> ()): Match
 	local params = PhysicsTestAccess.params()
 	Balls.place(tableModel, EightBall.rack(Geometry.build(params.Table), pick))
+	local breaker = pick(#seats)
 	local match: Match = {
 		tableModel = tableModel,
 		seats = seats,
-		shooter = seats[pick(#seats)],
+		turnSeat = breaker,
+		shooter = seats[breaker],
+		left = {},
 		-- The break is from the middle of the head line, where the rack put the cue ball
 		ballInHand = false,
 		isBreak = true,
@@ -238,6 +277,32 @@ function Match.new(tableModel: Model, seats: { Player }, pick: (number) -> numbe
 	log(match, `game started: {table.concat(names, ", ")}. {match.shooter.Name} breaks.`)
 	startTurn(match)
 	return match
+end
+
+-- A player pressed Leave mid-game. A teammate still playing carries on alone and takes their turns; with nobody left
+-- on their side, the other side wins.
+function Match.leave(match: Match, player: Player)
+	if match.ended or match.left[player] then
+		return
+	end
+	match.left[player] = true
+	local side = sideOf(match, player)
+	for _, other in match.seats do
+		if not match.left[other] and sideOf(match, other) == side then
+			log(match, `{player.Name} left; {other.Name} plays on alone`)
+			if match.shooter == player and not Balls.isRolling(match.tableModel) then
+				-- Their turn, with the balls still: the teammate shoots now, and every screen drops the leaver
+				match.shooter = shooterFor(match, match.turnSeat)
+				startTurn(match)
+			else
+				-- Every other screen drops them at the next turn. A shot of theirs still rolling hands the turn on
+				-- when it's done.
+				Remotes.TurnStarted:FireClient(player, match.tableModel, nil, false)
+			end
+			return
+		end
+	end
+	finish(match, if side == "A" then "B" else "A", `{player.DisplayName} left`)
 end
 
 -- Ends the game at once. A shot still rolling finishes and is shown, but no turn follows it.

@@ -30,13 +30,17 @@ return {
 	RequestShot = remote("RequestShot"),
 	-- server → clients: (table model, shooter, ball in hand, seats, call pocket, groups, balls down), ball in hand being
 	-- true when the shooter may place the cue ball anywhere, seats the game's players in turn order (A1, B1, A2, B2, so
-	-- odd seats are side A), call pocket true when the shooter is on the 8, groups each side's group by "A" and "B"
-	-- (empty while the table is open), and balls down the ids of the balls pocketed. Seats with no shooter: the game is
-	-- over and its result is showing, so nobody shoots. No seats means no game is on the table: the game just ended,
-	-- or the physics test mode is saying whether testers have ball in hand.
+	-- odd seats are side A, and a 2v2 player who left shows as their teammate), call pocket true when the shooter is
+	-- on the 8, groups each side's group by "A" and "B" (empty while the table is open), and balls down the ids of the
+	-- balls pocketed. Seats with no shooter: the game is over and its result is showing, so nobody shoots. No seats
+	-- means no game is on the table: the game just ended, the player left it, or the physics test mode is saying
+	-- whether testers have ball in hand.
 	TurnStarted = remote("TurnStarted"),
 	-- server → clients: (table model, text, seconds), a message for everyone at the table, like a foul or the winner
 	Banner = remote("Banner"),
+	-- client → server: (), the Leave button. Off the table this player joined, calling off its start, or out of
+	-- their game: the server decides which.
+	LeaveTable = remote("LeaveTable"),
 	-- server → clients: (table model, starting balls, shot, physics params) to replay
 	ShotStarted = remote("ShotStarted"),
 	-- server → clients: (table model, final balls)

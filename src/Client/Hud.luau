@@ -1,12 +1,14 @@
 --!strict
 -- The HUD around the top-down view, in the style of docs/STYLE.md: the top bar with each side's card, the banner
--- under it naming fouls and the winner, the power meter on the left, the tray on the right where sunk balls collect,
+-- under it naming fouls and the winner, the Leave button top right while you're at a table, the power meter on the left, the tray on the right where sunk balls collect,
 -- the control hints on the bottom right, the settings button bottom-left with the sound volume, and beside it
 -- "TEST MODE" while the physics test mode has the table.
 
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Card = require(script.Parent.Card)
@@ -17,6 +19,7 @@ local Hud = {}
 
 -- Everything the HUD shows only in the top-down view
 local guis: { ScreenGui } = {}
+local inView = false
 -- The power meter, once it's built: its screen, its fill and its % readout
 local meter: { gui: ScreenGui, fill: Frame, percent: TextLabel }? = nil
 -- The control hints' column, once it's built, and the rows it shows
@@ -48,6 +51,10 @@ local sideCards: { SideCard } = {}
 -- Avatar pictures by user id, so each is only asked for once, and the user each avatar shows
 local thumbnails: { [number]: string } = {}
 local shownUsers: { [ImageLabel]: number } = {}
+-- The Leave button and the question it asks mid-game, once they're built, and from the latest TurnStarted, whether
+-- this player is in a game still being played and has a teammate still in it
+local leave: { button: TextButton, ask: Frame }? = nil
+local playing = false
 
 local function roundCorners(item: GuiObject, radius: UDim?)
 	local corner = Instance.new("UICorner")
@@ -74,9 +81,12 @@ end
 
 -- Shows the HUD while you're in the top-down view. In the normal view it would sit where phones put the thumbstick.
 function Hud.showTable(visible: boolean)
+	inView = visible
 	for _, gui in guis do
 		gui.Enabled = visible
 	end
+	-- Prompts float over the table, so in the top-down view "Table in use" would sit on the felt
+	ProximityPromptService.Enabled = not visible
 end
 
 -- Shows the pull on the power meter, 0 to 1, or hides the meter with nil while you can't shoot
@@ -476,10 +486,13 @@ local function showTopBar(shooter: Player?, seats: { Player }?, groups: { [strin
 		showSide(sideCards[2], {}, nil, nil, nil)
 		return
 	end
-	-- Seats go A1, B1, A2, B2
+	-- Seats go A1, B1, A2, B2. A 2v2 player who left shows as the teammate playing for them, so only once.
 	local sides: { [string]: { Player } } = { A = {}, B = {} }
 	for i, player in seats do
-		table.insert(sides[if i % 2 == 1 then "A" else "B"], player)
+		local side = sides[if i % 2 == 1 then "A" else "B"]
+		if not table.find(side, player) then
+			table.insert(side, player)
+		end
 	end
 	local seat = table.find(seats, me)
 	local mine = if seat and seat % 2 == 0 then "B" else "A"
@@ -490,6 +503,90 @@ local function showTopBar(shooter: Player?, seats: { Player }?, groups: { [strin
 	end
 	showSide(sideCards[1], sides[mine], shooter, (groups or {})[mine], down)
 	showSide(sideCards[2], sides[theirs], shooter, (groups or {})[theirs], down)
+end
+
+-- A bright button with ink text
+local function accentButton(text: string, color: Color3, parent: Instance): TextButton
+	local button = Instance.new("TextButton")
+	button.BackgroundColor3 = color
+	button.FontFace = Theme.Font
+	button.TextSize = Theme.TextSize
+	button.TextColor3 = Theme.Colors.Text
+	button.Text = text
+	button.Parent = parent
+	roundCorners(button)
+	return button
+end
+
+-- Shows the Leave button while this player is at a table: joined and waiting, starting, or playing
+local function showLeave()
+	if not leave then
+		return
+	end
+	leave.button.Visible = playing or Players.LocalPlayer:GetAttribute("JoinedTable") ~= nil
+	leave.ask.Visible = leave.ask.Visible and playing
+end
+
+-- The Leave button, top right in the top bar's row in both views, and the question it asks mid-game. Off a game it
+-- leaves at once; in one it asks first, since leaving loses unless a teammate plays on.
+local function leaveControls(playerGui: Instance): (boolean) -> ()
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "Leave"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true -- in the top bar's row, clear of the tray under it
+	gui.DisplayOrder = 4 -- the question covers the rest of the HUD
+	local button = accentButton("Leave", Theme.Colors.LeaveButton, gui)
+	button.AnchorPoint = Vector2.new(1, 0)
+	button.Position = UDim2.new(1, -Theme.Ui.Padding, 0, Theme.Ui.Padding)
+	button.Size = UDim2.fromOffset(Theme.Ui.LeaveButtonWidth, Theme.Ui.ButtonHeight)
+	button.Visible = false
+
+	-- A card in the middle of the screen. Active, so a click on it never starts a shot.
+	local ask = Instance.new("Frame")
+	ask.AnchorPoint = Vector2.new(0.5, 0.5)
+	ask.Position = UDim2.fromScale(0.5, 0.5)
+	ask.Size = UDim2.fromOffset(Theme.Ui.AskWidth, 2 * Theme.Ui.ButtonHeight + 3 * Theme.Ui.Padding)
+	ask.Active = true
+	ask.Visible = false
+	Card.style(ask)
+	ask.Parent = gui
+	local question = label("", ask)
+	question.Position = UDim2.fromOffset(0, Theme.Ui.Padding)
+	question.Size = UDim2.new(1, 0, 0, Theme.Ui.ButtonHeight)
+	question.TextSize = Theme.Ui.LargeTextSize
+	local yes = accentButton("Yes", Theme.Colors.LeaveButton, ask)
+	yes.AnchorPoint = Vector2.new(1, 1)
+	yes.Position = UDim2.new(0.5, -Theme.Ui.Padding / 2, 1, -Theme.Ui.Padding)
+	yes.Size = UDim2.fromOffset(Theme.Ui.LeaveButtonWidth, Theme.Ui.ButtonHeight)
+	local no = accentButton("No", Theme.Colors.Button, ask)
+	no.AnchorPoint = Vector2.new(0, 1)
+	no.Position = UDim2.new(0.5, Theme.Ui.Padding / 2, 1, -Theme.Ui.Padding)
+	no.Size = yes.Size
+	gui.Parent = playerGui
+	leave = { button = button, ask = ask }
+
+	local hasTeammate = false
+	button.Activated:Connect(function()
+		if playing then
+			question.Text = if hasTeammate then "Leave? Your teammate plays on alone." else "Leave and lose this game?"
+			ask.Visible = true
+		else
+			Remotes.LeaveTable:FireServer()
+		end
+	end)
+	yes.Activated:Connect(function()
+		ask.Visible = false
+		Remotes.LeaveTable:FireServer()
+	end)
+	no.Activated:Connect(function()
+		ask.Visible = false
+	end)
+	Players.LocalPlayer:GetAttributeChangedSignal("JoinedTable"):Connect(showLeave)
+	showLeave()
+	-- TurnStarted says whether this player's teammate is still in
+	return function(teammate: boolean)
+		hasTeammate = teammate
+	end
 end
 
 -- The tray on the right, a dark box from below the top bar down to the control hints. Each object ball joins it
@@ -627,7 +724,6 @@ function Hud.start(tableModel: Model)
 	gui.Enabled = false
 	sideCards = { sideCard(gui, true), sideCard(gui, false) }
 	showTopBar(nil, nil, nil, nil)
-	bannerCard(gui)
 	hints(gui)
 	testModeLabel(gui)
 	gui.Parent = playerGui
@@ -643,11 +739,49 @@ function Hud.start(tableModel: Model)
 	table.insert(guis, settingsGui)
 
 	powerMeter(playerGui)
+	local setTeammate = leaveControls(playerGui)
 
+	-- The banner has its own screen, shown in either view, since "Starting..." comes before anyone's in the top-down
+	-- view. It's for everyone at the table: watching from above, waiting to play, or standing near it.
+	local bannerGui = Instance.new("ScreenGui")
+	bannerGui.Name = "Banner"
+	bannerGui.ResetOnSpawn = false
+	bannerGui.IgnoreGuiInset = true -- so it lines up under the top bar's cards
+	bannerCard(bannerGui)
+	bannerGui.Parent = playerGui
+	local felt = tableModel:WaitForChild("Felt") :: BasePart
+	local player = Players.LocalPlayer
+	local function atTable(): boolean
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		return inView
+			or player:GetAttribute("JoinedTable") == tableModel.Name
+			or (
+				root ~= nil
+				and root:IsA("BasePart")
+				and (root.Position - felt.Position).Magnitude <= Config.Join.BannerDistance
+			)
+	end
 	Remotes.Banner.OnClientEvent:Connect(function(model: Model?, message: string, seconds: number)
-		if model == tableModel then
+		if model == tableModel and atTable() then
 			showBanner(message, seconds)
 		end
+	end)
+
+	-- A player who has joined sees "Waiting for players" on the prompt, since there's no leaving until the game ends.
+	-- Only on this screen, and the server's own words come back each time it changes them, so check again then.
+	task.spawn(function()
+		local prompt = felt:WaitForChild("JoinPrompt"):WaitForChild("ProximityPrompt") :: ProximityPrompt
+		local function relabel()
+			local mine = player:GetAttribute("JoinedTable") == tableModel.Name
+			if mine and prompt.ActionText == "Join table" then
+				prompt.ActionText = "Waiting for players"
+			elseif not mine and prompt.ActionText == "Waiting for players" then
+				prompt.ActionText = "Join table"
+			end
+		end
+		prompt:GetPropertyChangedSignal("ActionText"):Connect(relabel)
+		player:GetAttributeChangedSignal("JoinedTable"):Connect(relabel)
+		relabel()
 	end)
 	Remotes.TurnStarted.OnClientEvent:Connect(
 		function(
@@ -659,9 +793,20 @@ function Hud.start(tableModel: Model)
 			groups: { [string]: string }?,
 			down: { number }?
 		)
-			if model == tableModel then
-				showTopBar(shooter, seats, groups, down)
+			if model ~= tableModel then
+				return
 			end
+			showTopBar(shooter, seats, groups, down)
+			-- In a game still being played, and in 2v2 with a teammate still in: seats alternate sides, and a teammate
+			-- who left shows as this player
+			local seat = seats and table.find(seats, player)
+			playing = seat ~= nil and shooter ~= nil
+			local teammate = false
+			for i, other in seats or {} do
+				teammate = teammate or (seat ~= nil and other ~= player and i % 2 == seat % 2)
+			end
+			setTeammate(teammate)
+			showLeave()
 		end
 	)
 

@@ -1,5 +1,6 @@
 --!strict
--- The shooter's controls. F (phones: an on-screen button) switches to a top-down view of the table and back.
+-- The shooter's controls. F (phones: an on-screen button) switches to a top-down view of the table and back. In a
+-- game, your turn starting switches you to it and your turn passing switches you back.
 -- You can only aim and shoot from the view: walking is off and a cue stick lies behind the cue ball.
 -- Aim: on PC only the mouse aims; on phones dragging turns the aim around the cue ball. Power is a slingshot
 -- pull, like 8 Ball Duels: hold the mouse button anywhere (phones: touch near the cue ball), best in front of the
@@ -751,6 +752,26 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		end, false, Enum.KeyCode.Space)
 	end
 
+	-- As a game starts the server moves each player to their seat (A1, B1, A2, B2 in turn order), and this turns their
+	-- normal camera to face the table from behind it. Roblox's camera keeps only the direction and stays on the
+	-- character. In the top-down view, it's the camera that leaving the view brings back.
+	local function faceTable(seat: number)
+		local folder = tableModel:FindFirstChild("Seats")
+		local marker = folder and folder:FindFirstChild(`{if seat % 2 == 1 then "A" else "B"}{math.ceil(seat / 2)}`)
+		if not (marker and marker:IsA("BasePart")) then
+			return
+		end
+		local flat = ((felt.Position - marker.Position) * Vector3.new(1, 0, 1)).Unit
+		local pitch = math.rad(Config.Camera.SeatPitch)
+		local look = flat * math.cos(pitch) - Vector3.yAxis * math.sin(pitch)
+		local cframe = CFrame.lookAt(marker.Position, marker.Position + look)
+		if saved then
+			saved.cframe = cframe
+		else
+			workspace.CurrentCamera.CFrame = cframe
+		end
+	end
+
 	ContextActionService:BindAction(VIEW_ACTION, function(_, state: Enum.UserInputState)
 		if state == Enum.UserInputState.Begin then
 			if saved then
@@ -773,9 +794,13 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 				cueBall.CFrame = placed.from
 			end
 			local wasSeated = turn ~= nil and turn.seated
+			local wasMine = turn ~= nil and turn.mine
 			local seated = table.find(seats or {}, Players.LocalPlayer) ~= nil
 			-- Seats with no shooter: the game is over and its result is showing, so nobody shoots
 			turn = if seats then { mine = shooter == Players.LocalPlayer, seated = seated } else nil
+			if seats and seated and not wasSeated then
+				faceTable(table.find(seats, Players.LocalPlayer) :: number)
+			end
 			-- Ball in hand starts with the cue ball following the mouse
 			ballInHand, holding = inHand == true, inHand == true
 			placed, pulling = nil, nil
@@ -784,11 +809,13 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 					and turn.mine
 				then { pocket = pocketNearEight(), clicked = false }
 				else nil
-			-- Players go to the top-down view when their game starts and back when it ends. F still toggles it.
-			if seated and not wasSeated and not saved then
-				enterView()
-			elseif wasSeated and not seated then
+			-- Your turn starting takes you to the top-down view, even if F took you out of it, and your turn passing to
+			-- someone else takes you back to the normal view to watch them; so does the game ending. F still switches any
+			-- time, and nobody waiting or watching is moved.
+			if (wasSeated and not seated) or (wasMine and shooter ~= nil and not (turn and turn.mine)) then
 				leaveView()
+			elseif turn and turn.mine and not wasMine and not saved then
+				enterView()
 			end
 		end
 	)
