@@ -118,7 +118,7 @@ function TableBuilder.build(tableModel: Model, tableParams: Geometry.TableParams
 	end
 
 	local function sideHoleCutters(): { BasePart }
-		local cutters = {}
+		local cutters: { BasePart } = {}
 		for _, side in { -1, 1 } do
 			table.insert(
 				cutters,
@@ -160,8 +160,10 @@ function TableBuilder.build(tableModel: Model, tableParams: Geometry.TableParams
 			MATTE
 		)
 		local cuts: { BasePart } = {}
-		for _, finish in { { b, along, slopeB }, { a, -along, slopeA } } do
-			local nose, direction, slope = finish[1], finish[2], finish[3]
+		for _, finish in
+			{ { nose = b, direction = along, slope = slopeB }, { nose = a, direction = -along, slope = slopeA } }
+		do
+			local nose, direction, slope = finish.nose, finish.direction, finish.slope
 			local back = nose + out * CUSHION_WIDTH + direction * CUSHION_WIDTH * slope
 			local face = (back - nose).Unit
 			local normal = Vector3.new(face.Z, 0, -face.X)
@@ -339,7 +341,7 @@ function TableBuilder.build(tableModel: Model, tableParams: Geometry.TableParams
 	-- ponytail: 1v1 seats only; Phase 3's 2v2 tables add A2 and B2 beside them.
 	local seats = Instance.new("Folder")
 	seats.Name = "Seats"
-	for name, side in { A1 = -1, B1 = 1 } do
+	for name, side in { A1 = -1, B1 = 1 } :: { [string]: number } do
 		local marker = part(name, SEAT_SIZE, CFrame.new(world(0, FELT_TOP - SEAT_DROP, side * SEAT_OUT)), BLACK)
 		marker.Transparency = 1
 		marker.CanCollide = false

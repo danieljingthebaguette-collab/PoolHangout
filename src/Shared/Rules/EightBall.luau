@@ -5,7 +5,7 @@
 local Geometry = require("../Physics/Geometry")
 local Simulate = require("../Physics/Simulate")
 
-export type Ball = { id: number, x: number, y: number, pocket: number? }
+export type Ball = Simulate.Ball
 export type Side = "A" | "B"
 export type Group = "solids" | "stripes"
 -- The group each side plays. Empty while the table is open; once one side has a group, so does the other.
@@ -268,12 +268,13 @@ function EightBall.resolveShot(groups: Groups, side: Side, facts: ShotFacts): Ou
 		return outcome
 	end
 	for _, drop in facts.dropped do
-		local dropGroup = EightBall.groupOf(drop.id)
+		local dropGroup: Group? = EightBall.groupOf(drop.id)
 		-- On an open table the first ball to drop decides the groups, even if both kinds went in
 		if not group and dropGroup then
 			group = dropGroup
 			outcome.groups[side] = dropGroup
-			outcome.groups[if side == "A" then "B" else "A"] = if dropGroup == "solids" then "stripes" else "solids"
+			local otherSide: Side = if side == "A" then "B" else "A"
+			outcome.groups[otherSide] = if dropGroup == "solids" then "stripes" else "solids"
 		end
 		-- A legal pot of your own group keeps the turn, including the one that just set it
 		outcome.keepsTurn = outcome.keepsTurn or (dropGroup ~= nil and dropGroup == group)

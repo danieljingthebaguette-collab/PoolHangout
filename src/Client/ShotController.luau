@@ -84,7 +84,9 @@ local function roundCorners(item: GuiObject, radius: UDim?)
 	corner.Parent = item
 end
 
-local function styleText(label: TextLabel | TextButton, text: string)
+local function styleText(textItem: TextLabel | TextButton, text: string)
+	-- Both have these text properties, but the type checker can't write to a mix of two classes
+	local label: TextLabel = textItem :: any
 	label.FontFace = Theme.Font
 	label.TextSize = Theme.TextSize
 	label.TextColor3 = Theme.Colors.Text
@@ -505,7 +507,8 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	-- of balls, it stays where it was. Only this screen sees it move until the shot.
 	local function placeAt(ray: Ray)
 		local x, y = pointerOnTable(ray)
-		local spotX, spotY = EightBall.nearestCueSpot(shownBalls(), x, y, PhysicsTestAccess.params().Table)
+		-- It reads only each ball's id, place and pocket, which the shown balls have; they have no speeds
+		local spotX, spotY = EightBall.nearestCueSpot(shownBalls() :: any, x, y, PhysicsTestAccess.params().Table)
 		if spotX and spotY then
 			placed = { x = spotX, y = spotY, from = if placed then placed.from else cueBall.CFrame }
 			cueBall.CFrame = cueBall.CFrame.Rotation + TableSpace.toWorld(felt, spotX, spotY, radius).Position

@@ -25,7 +25,9 @@ function PhysicsTestPanel.show(visible: boolean)
 	end
 end
 
-local function style(item: TextLabel | TextButton, text: string)
+local function style(textItem: TextLabel | TextButton, text: string)
+	-- Both have these text properties, but the type checker can't write to a mix of two classes
+	local item: TextLabel = textItem :: any
 	item.Size = UDim2.new(1, 0, 0, Theme.Ui.ButtonHeight)
 	item.BackgroundTransparency = 1
 	item.FontFace = Theme.Font
@@ -128,7 +130,7 @@ function PhysicsTestPanel.start()
 		row.LayoutOrder = i
 		row.Parent = panel
 		local function showKept()
-			show(Remotes.TestTune:GetAttribute(range.name))
+			show(Remotes.TestTune:GetAttribute(range.name) :: number)
 		end
 		Remotes.TestTune:GetAttributeChangedSignal(range.name):Connect(showKept)
 		-- The server turned a change down, like a pocket size during a game

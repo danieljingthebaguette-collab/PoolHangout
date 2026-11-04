@@ -144,7 +144,7 @@ function Hud.setHints(rows: { { string } }?)
 			child:Destroy()
 		end
 	end
-	for i, row in rows or {} do
+	for i, row in (rows or {}) :: { { string } } do
 		hintRow(row[1], row[2], i).Parent = hintColumn
 	end
 end
@@ -423,7 +423,7 @@ local function showSide(
 	side.outline.Enabled = turn
 	local names = {}
 	for i, avatar in side.avatars do
-		local player = players[i]
+		local player: Player? = players[i]
 		avatar.Visible = player ~= nil
 		side.rings[i].Enabled = player ~= nil and player == shooter
 		if player then
@@ -498,7 +498,7 @@ local function showTopBar(shooter: Player?, seats: { Player }?, groups: { [strin
 	local mine = if seat and seat % 2 == 0 then "B" else "A"
 	local theirs = if mine == "A" then "B" else "A"
 	local down: { [number]: boolean } = {}
-	for _, id in downIds or {} do
+	for _, id in (downIds or {}) :: { number } do
 		down[id] = true
 	end
 	showSide(sideCards[1], sides[mine], shooter, (groups or {})[mine], down)
@@ -802,7 +802,7 @@ function Hud.start(tableModel: Model)
 			local seat = seats and table.find(seats, player)
 			playing = seat ~= nil and shooter ~= nil
 			local teammate = false
-			for i, other in seats or {} do
+			for i, other in (seats or {}) :: { Player } do
 				teammate = teammate or (seat ~= nil and other ~= player and i % 2 == seat % 2)
 			end
 			setTeammate(teammate)

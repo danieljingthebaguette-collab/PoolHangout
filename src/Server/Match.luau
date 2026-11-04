@@ -170,7 +170,7 @@ local function shoot(
 
 	local params = PhysicsTestAccess.params()
 	local layout = Geometry.build(params.Table)
-	local side = sideOf(match, player)
+	local side: EightBall.Side = sideOf(match, player)
 	-- On the 8, the shot must call a pocket that exists. NaN and infinity fail the whole-number check.
 	local onEight = EightBall.groupCleared(match.groups, side, Balls.get(tableModel))
 	local called: number? = nil
@@ -286,7 +286,7 @@ function Match.leave(match: Match, player: Player)
 		return
 	end
 	match.left[player] = true
-	local side = sideOf(match, player)
+	local side: EightBall.Side = sideOf(match, player)
 	for _, other in match.seats do
 		if not match.left[other] and sideOf(match, other) == side then
 			log(match, `{player.Name} left; {other.Name} plays on alone`)

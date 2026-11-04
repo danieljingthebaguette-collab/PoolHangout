@@ -130,7 +130,7 @@ function PhysicsTest.start()
 		end
 		local lines = { `Physics test values, printed for {player.Name}:` }
 		for _, slider in Config.Debug.TestSliders do
-			local value = string.format("%g", Remotes.TestTune:GetAttribute(slider.name))
+			local value = string.format("%g", Remotes.TestTune:GetAttribute(slider.name) :: number)
 			table.insert(lines, `  {slider.group}.{slider.name} = {value},`)
 		end
 		print(table.concat(lines, "\n"))

@@ -31,7 +31,7 @@ Item-based 8-ball pool on Roblox, 1v1 and 2v2. Controls and physics match the fe
 - Refactor code the task didn't ask about.
 
 ## Where code lives
-Script Sync mirrors src/Server → ServerScriptService/Server, src/Client → StarterPlayer/StarterPlayerScripts/Client and src/Shared → ReplicatedStorage/Shared, both ways. tests/, docs/ and tools/ aren't synced; tools/ holds scripts Claude runs, in Studio through the MCP (BuildTable.luau) or in Lune (BreakStats.luau).
+Script Sync mirrors src/Server → ServerScriptService/Server, src/Client → StarterPlayer/StarterPlayerScripts/Client and src/Shared → ReplicatedStorage/Shared, both ways. tests/, docs/ and tools/ aren't synced; tools/ holds scripts Claude runs, in Studio through the MCP (BuildTable.luau) or in Lune (BreakStats.luau, and Sourcemap.luau for the type check).
 - File names set the script type: Name.server.luau = Script, Name.local.luau = LocalScript, Name.luau = ModuleScript, a folder = Folder. No init.luau files.
 - Two entry scripts only: src/Server/Main.server.luau and src/Client/Main.local.luau. Everything else is a ModuleScript they start.
 - Every tuning number lives in src/Shared/Config.luau. UI is built in code. Every color, font, UI size and effect timing lives in src/Shared/Theme.luau, never hard-coded. Gameplay numbers stay in Config: table and ball sizes, the shot's feel, and every timer the server runs.
@@ -53,7 +53,7 @@ Script Sync mirrors src/Server → ServerScriptService/Server, src/Client → St
 
 ## Testing
 - Use the Studio MCP tools (the Roblox_Studio server) to playtest, screenshot and run Luau: call list_roblox_studios first and pass its studio_id on every call. /playtest runs a standard playtest. Check your own work before reporting.
-- Tests: `lune run tests/run` (add a word to filter, like `lune run tests/run physics`). Lint: `selene src`. Both must pass before you say you're done. A hook runs StyLua on every .luau file you edit, and another runs lint and tests at the end of any turn that changed Luau code.
+- Tests: `lune run tests/run` (add a word to filter, like `lune run tests/run physics`). Lint: `selene src`. Type check: luau-lsp, with the command in .claude/hooks/check.sh. All three must pass before you say you're done. A hook runs StyLua on every .luau file you edit, and another runs lint, the type check and tests at the end of any turn that changed Luau code.
 - The MCP controls one player, so solo playtests rely on Config.Debug.SoloTables. Its mouse input uses GUI points below Roblox's top bar; do a whole drag in one user_mouse_input call.
 - A playtest started before Script Sync picks up an edit runs the old code: restart it and check the change is live.
 - Multiplayer changes need a 2-player playtest. If you can't run it, give Daniel the steps (Test ▾ → Server & Clients → 2 players → Play, then End Session) and say exactly what to check.

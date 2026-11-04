@@ -2,3 +2,5 @@
 *.rbxl.lock
 *.rbxlx.lock
 .claude/settings.local.json
+sourcemap.json
+.luau-lsp/
