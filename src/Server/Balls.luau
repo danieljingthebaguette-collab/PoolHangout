@@ -8,9 +8,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local EightBall = require(ReplicatedStorage.Shared.Rules.EightBall)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Simulate = require(ReplicatedStorage.Shared.Physics.Simulate)
+local TableFlow = require(ReplicatedStorage.Shared.Rules.TableFlow)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 
@@ -115,21 +115,15 @@ function Balls.placeCue(
 	cueY: unknown,
 	tableParams: typeof(Config.Table)
 ): boolean
-	if cueX == nil and cueY == nil then
-		return true
-	end
 	local balls = resting[tableModel]
-	if
-		not ballInHand
-		or typeof(cueX) ~= "number"
-		or typeof(cueY) ~= "number"
-		or not EightBall.canPlaceCue(balls, cueX, cueY, tableParams)
-	then
+	if not TableFlow.cueSpotAllowed(ballInHand, cueX, cueY, balls, tableParams) then
 		return false
+	elseif cueX == nil or cueY == nil then
+		return true
 	end
 	local placed: { Simulate.Ball } = {}
 	for i, ball in balls do
-		placed[i] = if ball.id == 0 then { id = 0, x = cueX, y = cueY, vx = 0, vy = 0 } else ball
+		placed[i] = if ball.id == 0 then { id = 0, x = cueX :: number, y = cueY :: number, vx = 0, vy = 0 } else ball
 	end
 	Balls.place(tableModel, placed)
 	return true

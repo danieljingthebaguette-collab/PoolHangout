@@ -14,6 +14,7 @@ local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
 local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Simulate = require(ReplicatedStorage.Shared.Physics.Simulate)
+local TableFlow = require(ReplicatedStorage.Shared.Rules.TableFlow)
 local Balls = require(script.Parent.Balls)
 
 export type Match = {
@@ -23,8 +24,9 @@ export type Match = {
 	-- The seat whose turn it is, and who shoots for it: its own player, or their teammate once they've left
 	turnSeat: number,
 	shooter: Player,
-	-- 2v2 players who pressed Leave while a teammate played on. They keep their seat, so the sides stay put.
-	left: { [Player]: boolean },
+	-- The seats of 2v2 players who pressed Leave while a teammate played on. They keep their seat, so the sides stay
+	-- put.
+	left: { [number]: boolean },
 	-- Whether the shooter may place the cue ball anywhere before their next shot, after a foul
 	ballInHand: boolean,
 	isBreak: boolean,
@@ -54,10 +56,6 @@ local REASON_TEXT: { [EightBall.Reason]: string } = {
 	eightOnFoul = "8 in on a foul",
 }
 
-local function isFinite(value: number): boolean
-	return value == value and math.abs(value) ~= math.huge
-end
-
 local function log(match: Match, message: string)
 	if Config.Debug.LogShots and RunService:IsStudio() then
 		print(`[{match.tableModel.Name}] {message}`)
@@ -66,17 +64,12 @@ end
 
 -- A1 and A2 are side A, B1 and B2 side B. In Studio solo you're A.
 local function sideOf(match: Match, player: Player): EightBall.Side
-	return if (table.find(match.seats, player) :: number) % 2 == 1 then "A" else "B"
+	return TableFlow.sideOf(table.find(match.seats, player) :: number)
 end
 
--- Who shoots for a seat: its own player, or once they've left, their teammate. Seats alternate sides, so in 2v2 a
--- teammate sits two seats away.
+-- Who shoots for a seat: its own player, or once they've left, their teammate
 local function shooterFor(match: Match, seat: number): Player
-	local player = match.seats[seat]
-	if match.left[player] then
-		return match.seats[(seat + 1) % #match.seats + 1]
-	end
-	return player
+	return match.seats[TableFlow.shooterSeat(seat, match.left, #match.seats)]
 end
 
 -- The seats as every screen sees them: a player who left shows as the teammate playing for them
@@ -152,40 +145,35 @@ local function shoot(
 	calledPocket: unknown
 )
 	local tableModel = match.tableModel
-	if match.ended or player ~= match.shooter or Balls.isRolling(tableModel) then
-		return
-	end
 	local now = os.clock()
-	if now - (match.lastRequest[player] or -math.huge) < Config.Shot.RequestCooldown then
+	local isShooter = player == match.shooter
+	local rolling = Balls.isRolling(tableModel)
+	if
+		not TableFlow.mayRequest(
+			match.ended,
+			isShooter,
+			rolling,
+			match.lastRequest[player],
+			now,
+			Config.Shot.RequestCooldown
+		)
+	then
 		return
 	end
 	match.lastRequest[player] = now
-	if typeof(dirX) ~= "number" or typeof(dirY) ~= "number" or typeof(power) ~= "number" then
-		return
-	end
-	local length = math.sqrt(dirX * dirX + dirY * dirY)
-	if not (isFinite(length) and length > 0 and power >= 0 and power <= 1) then
-		return
-	end
-
 	local params = PhysicsTestAccess.params()
 	local layout = Geometry.build(params.Table)
 	local side: EightBall.Side = sideOf(match, player)
-	-- On the 8, the shot must call a pocket that exists. NaN and infinity fail the whole-number check.
 	local onEight = EightBall.groupCleared(match.groups, side, Balls.get(tableModel))
-	local called: number? = nil
-	if onEight then
-		if typeof(calledPocket) ~= "number" or calledPocket % 1 ~= 0 or not layout.pockets[calledPocket] then
-			return
-		end
-		called = calledPocket
-	end
-	if not Balls.placeCue(tableModel, match.ballInHand, cueX, cueY, params.Table) then
+	local request = TableFlow.readShot(dirX, dirY, power, calledPocket, onEight, layout)
+	if not request or not Balls.placeCue(tableModel, match.ballInHand, cueX, cueY, params.Table) then
 		return
 	end
 
 	match.ballInHand = false
-	local shot: Simulate.Shot = { dirX = dirX / length, dirY = dirY / length, power = power, isBreak = match.isBreak }
+	local called = request.calledPocket
+	local shot: Simulate.Shot =
+		{ dirX = request.dirX, dirY = request.dirY, power = request.power, isBreak = match.isBreak }
 	match.isBreak = false
 	local before = Balls.get(tableModel)
 	local sim = Balls.shoot(tableModel, shot, params)
@@ -206,10 +194,8 @@ local function shoot(
 	end
 	if outcome.keepsTurn then
 		log(match, `{player.Name} keeps the turn`)
-	elseif not outcome.winner then
-		-- Round the seats in order: A1, B1, then A2 and B2 on a 2v2 table
-		match.turnSeat = match.turnSeat % #match.seats + 1
 	end
+	match.turnSeat = TableFlow.nextTurn(match.turnSeat, #match.seats, outcome.keepsTurn, outcome.winner ~= nil)
 	-- The same seat or the next, and a shooter who left mid-shot hands it to their teammate
 	match.shooter = shooterFor(match, match.turnSeat)
 	if not outcome.keepsTurn and not outcome.winner then
@@ -282,27 +268,26 @@ end
 -- A player pressed Leave mid-game. A teammate still playing carries on alone and takes their turns; with nobody left
 -- on their side, the other side wins.
 function Match.leave(match: Match, player: Player)
-	if match.ended or match.left[player] then
+	local seat = table.find(match.seats, player) :: number
+	if match.ended or match.left[seat] then
 		return
 	end
-	match.left[player] = true
-	local side: EightBall.Side = sideOf(match, player)
-	for _, other in match.seats do
-		if not match.left[other] and sideOf(match, other) == side then
-			log(match, `{player.Name} left; {other.Name} plays on alone`)
-			if match.shooter == player and not Balls.isRolling(match.tableModel) then
-				-- Their turn, with the balls still: the teammate shoots now, and every screen drops the leaver
-				match.shooter = shooterFor(match, match.turnSeat)
-				startTurn(match)
-			else
-				-- Every other screen drops them at the next turn. A shot of theirs still rolling hands the turn on
-				-- when it's done.
-				Remotes.TurnStarted:FireClient(player, match.tableModel, nil, false)
-			end
-			return
+	match.left[seat] = true
+	local teammate = TableFlow.teammateIn(seat, match.left, #match.seats)
+	if teammate then
+		log(match, `{player.Name} left; {match.seats[teammate].Name} plays on alone`)
+		if match.shooter == player and not Balls.isRolling(match.tableModel) then
+			-- Their turn, with the balls still: the teammate shoots now, and every screen drops the leaver
+			match.shooter = shooterFor(match, match.turnSeat)
+			startTurn(match)
+		else
+			-- Every other screen drops them at the next turn. A shot of theirs still rolling hands the turn on
+			-- when it's done.
+			Remotes.TurnStarted:FireClient(player, match.tableModel, nil, false)
 		end
+		return
 	end
-	finish(match, if side == "A" then "B" else "A", `{player.DisplayName} left`)
+	finish(match, TableFlow.otherSide(TableFlow.sideOf(seat)), `{player.DisplayName} left`)
 end
 
 -- Ends the game at once. A shot still rolling finishes and is shown, but no turn follows it.

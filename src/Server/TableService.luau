@@ -17,22 +17,15 @@ local EightBall = require(ReplicatedStorage.Shared.Rules.EightBall)
 local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
 local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local TableFlow = require(ReplicatedStorage.Shared.Rules.TableFlow)
 local Balls = require(script.Parent.Balls)
 local Match = require(script.Parent.Match)
-
--- Seats in turn order, by the names of their spot markers. A 1v1 table has the first two.
-local SEAT_ORDER = { "A1", "B1", "A2", "B2" }
--- How many seats each kind of table has, by its Mode attribute
-local SEATS: { [string]: number } = { ["1v1"] = 2, ["2v2"] = 4 }
 
 local TableService = {}
 
 local matches: { [Model]: Match.Match } = {}
--- The players who have joined each table and are waiting for its game, in the order they joined
-local joined: { [Model]: { Player } } = {}
--- Tables counting down to their game, when nobody can join, each with a token for that countdown, so one called off
--- and started again doesn't start twice
-local starting: { [Model]: {} } = {}
+-- The players who have joined each table and are waiting for its game, and its countdown, when nobody can join
+local lobbies: { [Model]: TableFlow.Lobby<Player> } = {}
 local prompts: { [Model]: ProximityPrompt } = {}
 local random = Random.new()
 
@@ -42,7 +35,8 @@ end
 
 local function inGame(player: Player): boolean
 	for _, match in matches do
-		if table.find(match.seats, player) and not match.left[player] then
+		local seat = table.find(match.seats, player)
+		if seat and not match.left[seat] then
 			return true
 		end
 	end
@@ -50,8 +44,8 @@ local function inGame(player: Player): boolean
 end
 
 local function isWaiting(player: Player): boolean
-	for _, players in joined do
-		if table.find(players, player) then
+	for _, lobby in lobbies do
+		if table.find(lobby.joined, player) then
 			return true
 		end
 	end
@@ -60,22 +54,20 @@ end
 
 -- How many seats the table has, from its Mode, not from its seat markers, so a table still opens with one missing
 local function seatCount(tableModel: Model): number
-	return SEATS[tableModel:GetAttribute("Mode") :: string] or SEATS["1v1"]
+	return TableFlow.seatCount(tableModel:GetAttribute("Mode"))
 end
 
 -- The table's seat marker for a seat in turn order, if the builder has made it
 local function seatMarker(tableModel: Model, seat: number): BasePart?
 	local folder = tableModel:FindFirstChild("Seats")
-	local marker = folder and folder:FindFirstChild(SEAT_ORDER[seat])
+	local marker = folder and folder:FindFirstChild(TableFlow.SEAT_NAMES[seat])
 	return if marker and marker:IsA("BasePart") then marker else nil
 end
 
 -- How many players a game on this table needs: one per seat, or one in Studio solo
 local function needed(tableModel: Model): number
-	if RunService:IsStudio() and Config.Debug.SoloTables and #Players:GetPlayers() == 1 then
-		return 1
-	end
-	return seatCount(tableModel)
+	local solo = RunService:IsStudio() and Config.Debug.SoloTables and #Players:GetPlayers() == 1
+	return TableFlow.needed(seatCount(tableModel), solo)
 end
 
 local function pick(n: number): number
@@ -89,10 +81,11 @@ end
 -- The prompt's words. The client shows "Waiting for players" instead to a player who has joined.
 local function updatePrompt(tableModel: Model)
 	local prompt = prompts[tableModel]
-	local count = `{#joined[tableModel]}/{seatCount(tableModel)}`
+	local lobby = lobbies[tableModel]
+	local count = `{#lobby.joined}/{seatCount(tableModel)}`
 	if matches[tableModel] then
 		prompt.ActionText, prompt.ObjectText = "Table in use", ""
-	elseif starting[tableModel] then
+	elseif lobby.countdown then
 		prompt.ActionText, prompt.ObjectText = "Starting…", count
 	else
 		prompt.ActionText, prompt.ObjectText = "Join table", `{count} joined`
@@ -123,26 +116,23 @@ end
 
 -- Every seat is taken: "Starting..." for everyone at the table, then the players go to their seats and the game
 -- starts. A player who leaves meanwhile calls it off (see unjoin), and the rest stay joined.
-local function startGame(tableModel: Model)
-	local token = {}
-	starting[tableModel] = token
+local function startGame(tableModel: Model, token: {})
+	local lobby = lobbies[tableModel]
 	updatePrompt(tableModel)
 	Remotes.Banner:FireAllClients(tableModel, "Starting...", Config.Timers.CountdownSeconds)
 	task.delay(Config.Timers.CountdownSeconds, function()
 		-- A test shot still rolling finishes before the game racks
-		while Balls.isRolling(tableModel) and starting[tableModel] == token do
+		while Balls.isRolling(tableModel) and lobby.countdown == token do
 			task.wait()
 		end
-		if starting[tableModel] ~= token then
+		if lobby.countdown ~= token then
 			return
 		end
-		starting[tableModel] = nil
-		local players = joined[tableModel]
-		if #players == 0 or #players < needed(tableModel) then
+		local players = TableFlow.endCountdown(lobby, token, needed(tableModel))
+		if not players then
 			updatePrompt(tableModel)
 			return
 		end
-		joined[tableModel] = {}
 		local felt = tableModel:FindFirstChild("Felt") :: BasePart
 		for i, player in players do
 			player:SetAttribute("JoinedTable", nil)
@@ -167,15 +157,13 @@ end
 -- Takes a player off the table they joined and are waiting at, if any. During the countdown that calls the start off
 -- at once, and the others stay joined.
 local function unjoin(player: Player)
-	for tableModel, players in joined do
-		local index = table.find(players, player)
-		if not index then
+	for tableModel, lobby in lobbies do
+		local wasJoined, calledOff = TableFlow.unjoin(lobby, player)
+		if not wasJoined then
 			continue
 		end
-		table.remove(players, index)
 		player:SetAttribute("JoinedTable", nil)
-		if starting[tableModel] then
-			starting[tableModel] = nil
+		if calledOff then
 			Remotes.Banner:FireAllClients(
 				tableModel,
 				`Start called off: {player.DisplayName} left.`,
@@ -200,23 +188,22 @@ local function makePrompt(tableModel: Model)
 	prompt.RequiresLineOfSight = false -- the table's own rails can hide the spot above its centre
 	prompt.Parent = attachment
 	prompts[tableModel] = prompt
-	joined[tableModel] = {}
+	local lobby = TableFlow.lobby()
+	lobbies[tableModel] = lobby
 	updatePrompt(tableModel)
 
 	prompt.Triggered:Connect(function(player: Player)
-		if matches[tableModel] or starting[tableModel] then
+		local inUse = matches[tableModel] ~= nil
+		local busy = inGame(player) or isWaiting(player)
+		local joined, token = TableFlow.join(lobby, player, seatCount(tableModel), needed(tableModel), inUse, busy)
+		if not joined then
 			return
 		end
-		local players = joined[tableModel]
-		if inGame(player) or isWaiting(player) or #players >= seatCount(tableModel) then
-			return
-		end
-		table.insert(players, player)
 		-- Display only, so this player's prompt reads "Waiting for players" and they see the table's banners
 		player:SetAttribute("JoinedTable", tableModel.Name)
 		updatePrompt(tableModel)
-		if #players > 0 and #players >= needed(tableModel) then
-			startGame(tableModel)
+		if token then
+			startGame(tableModel, token)
 		end
 	end)
 end
@@ -231,7 +218,7 @@ function TableService.start()
 			for seat = 1, seatCount(child) do
 				if not seatMarker(child, seat) then
 					warn(
-						`[{child.Name}] no seat marker {SEAT_ORDER[seat]}: run tools/BuildTable.luau and save the place`
+						`[{child.Name}] no seat marker {TableFlow.SEAT_NAMES[seat]}: run tools/BuildTable.luau and save the place`
 					)
 				end
 			end
@@ -240,7 +227,8 @@ function TableService.start()
 
 	Players.PlayerRemoving:Connect(function(player: Player)
 		for tableModel, match in matches do
-			if table.find(match.seats, player) and not match.left[player] then
+			local seat = table.find(match.seats, player)
+			if seat and not match.left[seat] then
 				endGame(tableModel, match)
 			end
 		end
