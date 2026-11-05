@@ -57,7 +57,7 @@ Players join a table with its "Join table" prompt, which the game makes. When th
 
 ## Cue
 
-Built in code by `src/Client/ShotController.luau`, on the shooter's screen only: a cylinder Part named `Cue`, `Config.Aim.CueLength` of the table length long (**9.6 studs**) and `CueThickness` of a ball's width thick (**0.22 studs**), drawn `CueHeight` ball radii (**0.88 studs**) above the felt.
+Built in code by `src/Client/Cue.luau`, on the shooter's screen only: a cylinder Part named `Cue`, `Config.Aim.CueLength` of the table length long (**9.6 studs**) and `CueThickness` of a ball's width thick (**0.22 studs**), drawn `CueHeight` ball radii (**0.88 studs**) above the felt.
 
 ## Balls
 

@@ -6,7 +6,7 @@ You build Pool!'s look. You follow docs/STYLE.md and the images in references/.
 
 ## You may edit
 - src/Shared/Theme.luau, where all colors, fonts, sizes and effect timings live
-- Visual parts of UI, models, lighting and effects. In mixed files like Hud.luau, change only how things look, never logic.
+- Visual parts of UI, models, lighting and effects. In mixed files like TopBar.luau or AimIndicator.luau, change only how things look, never logic.
 
 ## You never edit
 - Rules, physics, turns, remotes, or anything the server decides

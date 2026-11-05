@@ -34,8 +34,19 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Server/TableBuilder.luau` | Builds a greybox table's cushions, rails, plates, pockets, body and legs around its `Felt`, from table params. `tools/BuildTable.luau` runs it in edit mode from Config; the test mode runs it live when a pocket slider moves |
 | `Client/Main.local.luau` | Starts the controllers |
 | `Client/TableView.luau` | Replays shots on the ball parts, plays their sounds, draws the balls' shadows, and starts the shooter's shot before the server's copy arrives |
-| `Client/ShotController.luau` | F and the top-down camera, placing the cue ball, aim, pocket call, using items (keys 1 and 2, slot taps, picking a target), the pull for power, the cue's strike and follow-through |
-| `Client/Hud.luau` | Top bar with player cards, the power meter, the sunk-ball tray, the control hints, settings (sound volume); later the shot clock, item slots with icons drawn in code, every card's slots and item bar with its "+4" pops, the item's name shown big, end screen and Leave button |
+| `Client/ShotController.luau` | The shot controls: F and when the view turns on and off, placing the cue ball, aim, pocket call, using items (keys 1 and 2, slot taps, picking a target), the pull for power, the cue's strike and follow-through. The three modules below draw what it decides |
+| `Client/TopDownView.luau` | The top-down camera: framing the table between the HUD's reserves, saving and bringing back the normal camera, and turning it to face the table from a seat |
+| `Client/AimIndicator.luau` | The aim indicator (the line, circle and dot, and the cue ball's and hit ball's lines), the faint ring with ball in hand and the called pocket's ring, drawn on the screen |
+| `Client/Cue.luau` | The cue stick, a Part only the shooter's screen sees, and laying it along the aim |
+| `Client/Hud.luau` | Starts the HUD's parts below, shows them in the top-down view, and "TEST MODE"; later the shot clock, item slots with icons drawn in code, the item's name shown big and the end screen |
+| `Client/TopBar.luau` | Each side's card: avatars, names, the turn glow, and the group with its balls; later every card's item slots and bar with its "+4" pops |
+| `Client/Banner.luau` | The banner under the top bar for the server's messages, for everyone at the table |
+| `Client/LeaveButton.luau` | The Leave button and the question it asks mid-game |
+| `Client/PowerMeter.luau` | The power meter and its % |
+| `Client/Tray.luau` | The sunk-ball tray |
+| `Client/Hints.luau` | The control hints, bottom right |
+| `Client/SettingsPanel.luau` | The gear and its card with the sound volume |
+| `Client/Ui.luau` | Small shared builders: rounded corners, labels, accent buttons and ball icons |
 | `Client/Effects.luau` | Item effects and screen shake: flame trail, blast, frozen balls, oil patches, pocket lids. Built in code once per effect and destroyed when it ends |
 | `Client/Slider.luau` | A labelled slider row for mouse and touch, for the settings and the test panel |
 | `Client/Card.luau` | The card look from `docs/STYLE.md`: cream or dark, with corner brackets and a faint dot texture |

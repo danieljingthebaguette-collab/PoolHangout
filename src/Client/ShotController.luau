@@ -14,7 +14,8 @@
 -- spot it's allowed, until a click sets it down; a click on it picks it up again until you shoot. The server checks
 -- the spot when the shot goes. On the 8, a gold ring marks the called pocket: the one the 8's yellow line points
 -- at, until a click on a pocket calls that one for the rest of the shot. With no game on, the physics test mode lets
--- testers shoot any time.
+-- testers shoot any time. TopDownView moves the camera, AimIndicator draws the indicator and the rings, and Cue is the
+-- stick; this module decides what they show.
 
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
@@ -33,8 +34,12 @@ local Pull = require(ReplicatedStorage.Shared.Pull)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
+local AimIndicator = require(script.Parent.AimIndicator)
+local Cue = require(script.Parent.Cue)
 local Hud = require(script.Parent.Hud)
 local TableView = require(script.Parent.TableView)
+local TopDownView = require(script.Parent.TopDownView)
+local Ui = require(script.Parent.Ui)
 
 local VIEW_ACTION = "TopDownView"
 local LOCK_ACTION = "LockAim"
@@ -78,12 +83,6 @@ local function stillHeld(started: InputObject): boolean
 		or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
 end
 
-local function roundCorners(item: GuiObject, radius: UDim?)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = radius or UDim.new(0.5, 0)
-	corner.Parent = item
-end
-
 local function styleText(textItem: TextLabel | TextButton, text: string)
 	-- Both have these text properties, but the type checker can't write to a mix of two classes
 	local label: TextLabel = textItem :: any
@@ -113,26 +112,11 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	local hints = if UserInputService.TouchEnabled then HINTS.touch else HINTS.keyboard
 
 	local radius = Config.Table.BallRadius
-	local cueLength = Config.Aim.CueLength * Config.Table.Length
-	-- From the cue ball's center to the cue's tip, and to the cue's center
-	local tipBack = radius * (1 + Config.Aim.CueTipGap)
-	local cueBack = tipBack + cueLength / 2
-	local cueHeight = radius * Config.Aim.CueHeight
 	local cancelRadius = Config.Shot.CancelRadius * radius
 
-	-- Only this screen sees the cue
-	local cue = Instance.new("Part")
-	cue.Name = "Cue"
-	cue.Shape = Enum.PartType.Cylinder
-	cue.Size = Vector3.new(cueLength, 2 * radius * Config.Aim.CueThickness, 2 * radius * Config.Aim.CueThickness)
-	cue.Color = Theme.Colors.Cue
-	cue.Anchored = true
-	cue.CanCollide = false
-	cue.CanTouch = false
-	cue.CanQuery = false
-	cue.CastShadow = false
-	cue.Transparency = 1
-	cue.Parent = tableModel
+	-- Only this screen sees the cue. From the cue ball's center to the cue's tip, and at rest to the cue's center.
+	local cue = Cue.new(tableModel)
+	local tipBack, cueLength, cueBack = cue.tipBack, cue.length, cue.restBack
 
 	-- The phones' Lock button, a bright accent button beside the power meter. Hud draws the meter and the hints.
 	local controlsGui = Instance.new("ScreenGui")
@@ -149,95 +133,11 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	lockButton.Visible = UserInputService.TouchEnabled
 	lockButton.Parent = controlsGui
 	styleText(lockButton, "Lock")
-	roundCorners(lockButton, UDim.new(0, Theme.Ui.Corner))
+	Ui.roundCorners(lockButton, UDim.new(0, Theme.Ui.Corner))
 	controlsGui.Parent = playerGui
 
-	-- The aim indicator, the lock icon and the cancel ring. Only this screen sees them. They're drawn on the
-	-- screen over the fixed top-down view: 3D line adornments came out broken up and hidden behind balls, and a
-	-- hollow cylinder shows nothing from straight above.
-	local indicatorGui = Instance.new("ScreenGui")
-	indicatorGui.Name = "AimIndicator"
-	indicatorGui.ResetOnSpawn = false
-	indicatorGui.IgnoreGuiInset = true -- so the camera's viewport points place it directly
-	-- Every part gets a thin dark edge, so the lines read over white and yellow balls. The edges fade with the
-	-- indicator, so it keeps them all.
-	local outlines: { UIStroke } = {}
-	local function outline(item: GuiObject, thickness: number): UIStroke
-		local stroke = Instance.new("UIStroke")
-		stroke.Color = Theme.Colors.AimOutline
-		stroke.Thickness = thickness
-		stroke.Parent = item
-		table.insert(outlines, stroke)
-		return stroke
-	end
-	local function indicatorLine(color: Color3): Frame
-		local line = Instance.new("Frame")
-		line.AnchorPoint = Vector2.new(0.5, 0.5)
-		line.BackgroundColor3 = color
-		line.BorderSizePixel = 0
-		line.Visible = false
-		line.Parent = indicatorGui
-		outline(line, Theme.Ui.AimOutline)
-		return line
-	end
-	-- The line to the circle, the cue ball's line after the hit, and the hit ball's yellow line
-	local pathLine = indicatorLine(Theme.Colors.AimLine)
-	local cueLine = indicatorLine(Theme.Colors.AimLine)
-	local targetLine = indicatorLine(Theme.Colors.TargetLine)
-	-- The circle's dark edge: a thicker dark ring just inside the white one and drawn under it, so a dark line shows
-	-- on both sides of the white
-	local ghostEdge = Instance.new("Frame")
-	ghostEdge.AnchorPoint = Vector2.new(0.5, 0.5)
-	ghostEdge.BackgroundTransparency = 1
-	ghostEdge.Visible = false
-	ghostEdge.Parent = indicatorGui
-	roundCorners(ghostEdge)
-	outline(ghostEdge, Theme.Ui.AimLineThickness + 2 * Theme.Ui.AimOutline)
-	-- A ball-sized ring where the cue ball will be when it first touches something
-	local ghost = Instance.new("Frame")
-	ghost.AnchorPoint = Vector2.new(0.5, 0.5)
-	ghost.BackgroundTransparency = 1
-	ghost.Visible = false
-	ghost.Parent = indicatorGui
-	roundCorners(ghost)
-	local ghostOutline = Instance.new("UIStroke")
-	ghostOutline.Color = Theme.Colors.AimLine
-	ghostOutline.Thickness = Theme.Ui.AimLineThickness
-	ghostOutline.Parent = ghost
-	-- A small dot at the circle's center, where the line ends and the cue ball's line starts
-	local dot = Instance.new("Frame")
-	dot.AnchorPoint = Vector2.new(0.5, 0.5)
-	dot.Size = UDim2.fromOffset(Theme.Ui.AimDotSize, Theme.Ui.AimDotSize)
-	dot.BackgroundColor3 = Theme.Colors.AimLine
-	dot.BorderSizePixel = 0
-	dot.Visible = false
-	dot.Parent = indicatorGui
-	roundCorners(dot)
-	outline(dot, Theme.Ui.AimOutline)
-	-- A faint ring around the cue ball while it follows the mouse with ball in hand
-	local placeRing = Instance.new("Frame")
-	placeRing.AnchorPoint = Vector2.new(0.5, 0.5)
-	placeRing.BackgroundTransparency = 1
-	placeRing.Visible = false
-	placeRing.Parent = indicatorGui
-	roundCorners(placeRing)
-	local placeRingStroke = Instance.new("UIStroke")
-	placeRingStroke.Color = Theme.Colors.AimLine
-	placeRingStroke.Thickness = Theme.Ui.AimLineThickness
-	placeRingStroke.Transparency = Theme.Ui.AimFaintTransparency
-	placeRingStroke.Parent = placeRing
-	-- A gold ring round the pocket called for the 8
-	local pocketRing = Instance.new("Frame")
-	pocketRing.AnchorPoint = Vector2.new(0.5, 0.5)
-	pocketRing.BackgroundTransparency = 1
-	pocketRing.Visible = false
-	pocketRing.Parent = indicatorGui
-	roundCorners(pocketRing)
-	local pocketRingStroke = Instance.new("UIStroke")
-	pocketRingStroke.Color = Theme.Colors.CalledPocket
-	pocketRingStroke.Thickness = Theme.Ui.PocketRingThickness
-	pocketRingStroke.Parent = pocketRing
-	indicatorGui.Parent = playerGui
+	-- The aim indicator, the faint ring with ball in hand and the called pocket's ring
+	local indicator = AimIndicator.new(playerGui, felt, ballParts)
 
 	-- Radians in table space: 0 aims along +x, at the rack
 	local aim = 0
@@ -266,82 +166,9 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	-- following the aim. Nil when it's not this player's turn on the 8.
 	local calling: { pocket: number, clicked: boolean }? = nil
 
-	-- The camera's settings from before the view, and everything the view connected, while it's on
-	local saved: { cameraType: Enum.CameraType, cframe: CFrame, fieldOfView: number, connections: { RBXScriptConnection } }? =
-		nil
-
-	-- Screen space, in pixels, the view keeps clear around the table for the HUD: the meter (and on phones the Lock
-	-- button) on the left, the sunk-ball tray on the right, the top bar's cards above, and the gear and the control
-	-- hints below
-	local reserve = {
-		left = Theme.Ui.MeterReserve
-			+ (if UserInputService.TouchEnabled then Theme.Ui.LockButtonWidth + Theme.Ui.Padding else 0),
-		right = Theme.Ui.TrayReserve,
-		top = Theme.Ui.CardHeight + 2 * Theme.Ui.Padding,
-		bottom = Hud.bottomBand(),
-	}
-
-	local function frame()
-		local camera = workspace.CurrentCamera
-		local viewport = camera.ViewportSize
-		local freeWidth = 1 - (reserve.left + reserve.right) / viewport.X
-		local freeHeight = 1 - (reserve.top + reserve.bottom) / viewport.Y
-		local tanHalfHeight = math.tan(math.rad(Config.Camera.TopDownFieldOfView / 2))
-		local tanHalfWidth = tanHalfHeight * viewport.X / viewport.Y
-		-- High enough that the whole table fits between the reserves, with its length across the screen
-		local margin = Config.Camera.TopDownMargin
-		local height = math.max(
-			(Config.Table.Length / 2 + margin) / (tanHalfWidth * freeWidth),
-			(Config.Table.Width / 2 + margin) / (tanHalfHeight * freeHeight)
-		)
-		-- Slide the view so the table sits in the middle of the space the reserves leave. The screen's up is the
-		-- felt's LookVector.
-		local shiftX = (reserve.left - reserve.right) / viewport.X * height * tanHalfWidth
-		local shiftY = (reserve.top - reserve.bottom) / viewport.Y * height * tanHalfHeight
-		camera.FieldOfView = Config.Camera.TopDownFieldOfView
-		camera.CFrame = CFrame.fromMatrix(
-			felt.Position
-				+ felt.CFrame.UpVector * height
-				- felt.CFrame.RightVector * shiftX
-				+ felt.CFrame.LookVector * shiftY,
-			felt.CFrame.RightVector,
-			felt.CFrame.LookVector
-		)
-	end
-
-	-- Where a table-space point at ball-center height is on the screen
-	local function toScreen(x: number, y: number): Vector2
-		local point = workspace.CurrentCamera:WorldToViewportPoint(TableSpace.toWorld(felt, x, y, radius).Position)
-		return Vector2.new(point.X, point.Y)
-	end
-
-	local function hideIndicator()
-		placeRing.Visible = false
-		pocketRing.Visible = false
-		pathLine.Visible, cueLine.Visible, targetLine.Visible = false, false, false
-		ghost.Visible, ghostEdge.Visible, dot.Visible = false, false, false
-	end
-
-	-- See-through while aiming or about to cancel, solid while the aim is locked
-	local function fadeIndicator(faint: boolean)
-		local transparency = if faint then Theme.Ui.AimFaintTransparency else 0
-		for _, part in { pathLine, cueLine, targetLine, dot } do
-			part.BackgroundTransparency = transparency
-		end
-		ghostOutline.Transparency = transparency
-		for _, stroke in outlines do
-			stroke.Transparency = transparency
-		end
-	end
-
-	local function showLine(line: Frame, fromX: number, fromY: number, toX: number, toY: number)
-		local from, to = toScreen(fromX, fromY), toScreen(toX, toY)
-		local middle, along = (from + to) / 2, to - from
-		line.Position = UDim2.fromOffset(middle.X, middle.Y)
-		line.Size = UDim2.fromOffset(along.Magnitude, Theme.Ui.AimLineThickness)
-		line.Rotation = math.deg(math.atan2(along.Y, along.X))
-		line.Visible = true
-	end
+	-- The top-down view's camera, and everything the view connected while it's on
+	local view = TopDownView.new(tableModel, felt)
+	local connections: { RBXScriptConnection } = {}
 
 	-- The balls on the table as this screen shows them
 	local function shownBalls(): { Preview.Ball }
@@ -353,61 +180,6 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			end
 		end
 		return balls
-	end
-
-	local function drawIndicator(cueX: number, cueY: number)
-		-- The hit uses the table and physics the shot will use, sliders and all
-		local params = PhysicsTestAccess.params()
-		local layout = Geometry.build(params.Table)
-		local contact =
-			Preview.firstContact(shownBalls(), math.cos(aim), math.sin(aim), params.Table, layout, params.Physics)
-		if Config.Aim.ShowAimLine then
-			-- The line runs to the circle's center, which the dot marks
-			showLine(pathLine, cueX, cueY, contact.x, contact.y)
-			local middle = toScreen(contact.x, contact.y)
-			local diameter = 2 * (toScreen(contact.x + radius, contact.y) - middle).Magnitude
-			ghost.Position = UDim2.fromOffset(middle.X, middle.Y)
-			ghost.Size = UDim2.fromOffset(diameter, diameter)
-			ghost.Visible = true
-			local edgeDiameter = diameter - 2 * Theme.Ui.AimOutline
-			ghostEdge.Position = ghost.Position
-			ghostEdge.Size = UDim2.fromOffset(edgeDiameter, edgeDiameter)
-			ghostEdge.Visible = true
-			dot.Position = ghost.Position
-			dot.Visible = true
-		end
-		local hit = contact.hit
-		if not (contact.ball and hit) then
-			return
-		end
-		local hitX, hitY = TableSpace.toTable(felt, ballParts[contact.ball].Position)
-		if calling and not calling.clicked and contact.ball == 8 then
-			calling.pocket = Preview.aimedPocket(layout, hitX, hitY, contact.pushX :: number, contact.pushY :: number)
-		end
-		-- Each line is its longest times the share of the speed its ball gets, but never shorter than the minimum
-		local function length(share: number, longest: number): number
-			return math.max(Config.Aim.LineMinLength, share * longest) * radius
-		end
-		if Config.Aim.ShowCueLine then
-			local afterLength = length(hit.cueShare, Config.Aim.CueLineLength)
-			showLine(
-				cueLine,
-				contact.x,
-				contact.y,
-				contact.x + hit.cueX * afterLength,
-				contact.y + hit.cueY * afterLength
-			)
-		end
-		if Config.Aim.ShowTargetLine then
-			local ballLength = length(hit.ballShare, Config.Aim.TargetLineLength)
-			showLine(
-				targetLine,
-				hitX,
-				hitY,
-				hitX + (contact.pushX :: number) * ballLength,
-				hitY + (contact.pushY :: number) * ballLength
-			)
-		end
 	end
 
 	local function canShoot(): boolean
@@ -563,19 +335,13 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			local t = followThrough.t
 			-- Slowing as it goes, from the tip touching the ball to CueFollowThrough past it
 			local back = cueBack - radius * (Config.Aim.CueTipGap + Config.Aim.CueFollowThrough * t * (2 - t))
-			local cueAim = followThrough.aim
-			cue.CFrame = TableSpace.toWorld(
-				felt,
-				followThrough.x - math.cos(cueAim) * back,
-				followThrough.y - math.sin(cueAim) * back,
-				cueHeight
-			) * CFrame.Angles(0, -cueAim, 0)
-			cue.Transparency = t
+			Cue.place(cue, felt, followThrough.x, followThrough.y, followThrough.aim, back)
+			cue.part.Transparency = t
 			if t >= 1 then
 				followThrough = nil
 			end
 		else
-			cue.Transparency = if hidden or placing then 1 else 0
+			cue.part.Transparency = if hidden or placing then 1 else 0
 		end
 		controlsGui.Enabled = not hidden
 		Hud.setPower(if hidden then nil else pull)
@@ -592,33 +358,26 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 				else hints.aiming
 		)
 		lockButton.Text = if held then "Unlock" else "Lock"
-		hideIndicator()
+		indicator.hide()
 		if hidden then
 			return
 		end
 		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
 		if calling then
-			local pocket = Geometry.build(PhysicsTestAccess.params().Table).pockets[calling.pocket]
-			local middle = toScreen(pocket.x, pocket.y)
-			local diameter = 2
-				* (toScreen(pocket.x + Config.Aim.PocketPickRadius * radius, pocket.y) - middle).Magnitude
-			pocketRing.Position = UDim2.fromOffset(middle.X, middle.Y)
-			pocketRing.Size = UDim2.fromOffset(diameter, diameter)
-			pocketRing.Visible = true
+			indicator.showPocketRing(calling.pocket)
 		end
 		if placing then
-			local middle = toScreen(cueX, cueY)
-			local diameter = 2 * (toScreen(cueX + Config.Aim.PlaceRingRadius * radius, cueY) - middle).Magnitude
-			placeRing.Position = UDim2.fromOffset(middle.X, middle.Y)
-			placeRing.Size = UDim2.fromOffset(diameter, diameter)
-			placeRing.Visible = true
+			indicator.showPlaceRing(cueX, cueY)
 			return
 		end
-		fadeIndicator(cancelling or not held)
-		drawIndicator(cueX, cueY)
+		indicator.fade(cancelling or not held)
+		-- On the 8, the called pocket follows the 8's yellow line until a click picks one
+		local aimed = indicator.draw(cueX, cueY, aim, shownBalls())
+		if aimed and calling and not calling.clicked then
+			calling.pocket = aimed
+		end
 		local back = cueBack + (pull + strikeOffset) * radius * Config.Aim.CuePullBack
-		cue.CFrame = TableSpace.toWorld(felt, cueX - math.cos(aim) * back, cueY - math.sin(aim) * back, cueHeight)
-			* CFrame.Angles(0, -aim, 0)
+		Cue.place(cue, felt, cueX, cueY, aim, back)
 	end
 
 	local function pointerBegan(input: InputObject, gameProcessed: boolean)
@@ -698,13 +457,13 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	lockButton.Activated:Connect(toggleLock)
 
 	local function leaveView()
-		if not saved then
+		if not view.isOn() then
 			return
 		end
-		local camera = workspace.CurrentCamera
-		for _, connection in saved.connections do
+		for _, connection in connections do
 			connection:Disconnect()
 		end
+		connections = {}
 		ContextActionService:UnbindAction(LOCK_ACTION)
 		-- A shot you've let go of still goes
 		if strike then
@@ -713,37 +472,26 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		followThrough = nil
 		-- Leaving mid-pull cancels the shot, and the view starts over unlocked
 		drag, pulling, pull, locked = nil, nil, 0, false
-		cue.Transparency = 1
+		cue.part.Transparency = 1
 		controlsGui.Enabled = false
 		Hud.setPower(nil)
-		hideIndicator()
-		camera.CameraType = saved.cameraType
-		camera.CFrame = saved.cframe
-		camera.FieldOfView = saved.fieldOfView
-		saved = nil
+		indicator.hide()
+		view.leave()
 		characterInput.Enabled = true
 		controls:Enable()
 		onView(false)
 	end
 
 	local function enterView()
-		local camera = workspace.CurrentCamera
-		saved = {
-			cameraType = camera.CameraType,
-			cframe = camera.CFrame,
-			fieldOfView = camera.FieldOfView,
-			connections = {
-				camera:GetPropertyChangedSignal("ViewportSize"):Connect(frame),
-				RunService.RenderStepped:Connect(render),
-				UserInputService.InputBegan:Connect(pointerBegan),
-				UserInputService.InputChanged:Connect(pointerMoved),
-				UserInputService.InputEnded:Connect(pointerEnded),
-				-- Esc opens Roblox's menu, which the game can't bind, so opening the menu is what cancels
-				GuiService.MenuOpened:Connect(cancelPull),
-			},
+		view.enter()
+		connections = {
+			RunService.RenderStepped:Connect(render),
+			UserInputService.InputBegan:Connect(pointerBegan),
+			UserInputService.InputChanged:Connect(pointerMoved),
+			UserInputService.InputEnded:Connect(pointerEnded),
+			-- Esc opens Roblox's menu, which the game can't bind, so opening the menu is what cancels
+			GuiService.MenuOpened:Connect(cancelPull),
 		}
-		camera.CameraType = Enum.CameraType.Scriptable
-		frame()
 		characterInput.Enabled = false
 		controls:Disable()
 		onView(true)
@@ -755,29 +503,9 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		end, false, Enum.KeyCode.Space)
 	end
 
-	-- As a game starts the server moves each player to their seat (A1, B1, A2, B2 in turn order), and this turns their
-	-- normal camera to face the table from behind it. Roblox's camera keeps only the direction and stays on the
-	-- character. In the top-down view, it's the camera that leaving the view brings back.
-	local function faceTable(seat: number)
-		local folder = tableModel:FindFirstChild("Seats")
-		local marker = folder and folder:FindFirstChild(`{if seat % 2 == 1 then "A" else "B"}{math.ceil(seat / 2)}`)
-		if not (marker and marker:IsA("BasePart")) then
-			return
-		end
-		local flat = ((felt.Position - marker.Position) * Vector3.new(1, 0, 1)).Unit
-		local pitch = math.rad(Config.Camera.SeatPitch)
-		local look = flat * math.cos(pitch) - Vector3.yAxis * math.sin(pitch)
-		local cframe = CFrame.lookAt(marker.Position, marker.Position + look)
-		if saved then
-			saved.cframe = cframe
-		else
-			workspace.CurrentCamera.CFrame = cframe
-		end
-	end
-
 	ContextActionService:BindAction(VIEW_ACTION, function(_, state: Enum.UserInputState)
 		if state == Enum.UserInputState.Begin then
-			if saved then
+			if view.isOn() then
 				leaveView()
 			else
 				enterView()
@@ -802,7 +530,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			-- Seats with no shooter: the game is over and its result is showing, so nobody shoots
 			turn = if seats then { mine = shooter == Players.LocalPlayer, seated = seated } else nil
 			if seats and seated and not wasSeated then
-				faceTable(table.find(seats, Players.LocalPlayer) :: number)
+				view.faceTable(table.find(seats, Players.LocalPlayer) :: number)
 			end
 			-- Ball in hand starts with the cue ball following the mouse
 			ballInHand, holding = inHand == true, inHand == true
@@ -817,7 +545,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			-- time, and nobody waiting or watching is moved.
 			if (wasSeated and not seated) or (wasMine and shooter ~= nil and not (turn and turn.mine)) then
 				leaveView()
-			elseif turn and turn.mine and not wasMine and not saved then
+			elseif turn and turn.mine and not wasMine and not view.isOn() then
 				enterView()
 			end
 		end
