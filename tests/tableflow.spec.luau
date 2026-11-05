@@ -83,6 +83,60 @@ return function(test, check)
 		check.equal(TableFlow.teammateIn(1, { [1] = true }, 1), nil, "nor Studio solo")
 	end)
 
+	-- After a shot
+
+	local function outcome(fields: { [string]: any }): EightBall.Outcome
+		local result: EightBall.Outcome = { groups = {}, keepsTurn = false, respotEight = false }
+		for key, value in fields do
+			(result :: any)[key] = value
+		end
+		return result
+	end
+
+	local function ballOf(balls: { EightBall.Ball }, id: number): EightBall.Ball
+		for _, ball in balls do
+			if ball.id == id then
+				return ball
+			end
+		end
+		error(`no ball {id}`)
+	end
+
+	test("after a foul the turn passes with ball in hand; after a fair shot, without", function()
+		local balls = EightBall.rack(layout, first)
+		local seat, inHand = TableFlow.afterShot(1, 2, outcome({ foul = "wrongBall" }), balls, layout, tableParams)
+		check.equal(seat, 2)
+		check.truthy(inHand, "foul")
+		seat, inHand = TableFlow.afterShot(1, 2, outcome({ keepsTurn = true }), balls, layout, tableParams)
+		check.equal(seat, 1)
+		check.truthy(not inHand, "a pot that keeps the turn")
+	end)
+
+	test("a sunk cue ball comes back on the head line, unless the game is won", function()
+		local balls = EightBall.rack(layout, first)
+		local cue = ballOf(balls, 0)
+		cue.x, cue.y, cue.pocket = 7, 3, 3
+		TableFlow.afterShot(1, 2, outcome({ foul = "scratch" }), balls, layout, tableParams)
+		check.equal(cue.pocket, nil)
+		check.equal(cue.x, layout.headLineX)
+		cue.pocket = 3
+		TableFlow.afterShot(1, 2, outcome({ winner = "B", reason = "eightOnFoul" }), balls, layout, tableParams)
+		check.equal(cue.pocket, 3, "left down once the game is won")
+	end)
+
+	test("an 8 down on the break goes back on its spot, before a sunk cue ball comes back", function()
+		local balls = EightBall.rack(layout, first)
+		local eight, cue = ballOf(balls, 8), ballOf(balls, 0)
+		eight.pocket, cue.pocket = 2, 5
+		TableFlow.afterShot(1, 2, outcome({ respotEight = true, foul = "scratch" }), balls, layout, tableParams)
+		check.equal(eight.pocket, nil)
+		local spotX, spotY = EightBall.spotEight(balls, tableParams)
+		check.equal(eight.x, spotX)
+		check.equal(eight.y, spotY)
+		check.equal(cue.pocket, nil)
+		check.truthy(EightBall.canPlaceCue(balls, cue.x, cue.y, tableParams), "the cue ball keeps clear of the 8")
+	end)
+
 	-- Joining and the countdown
 
 	test("players join in order, and the one who takes the last seat needed starts the countdown", function()

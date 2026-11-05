@@ -53,6 +53,32 @@ function TableFlow.nextTurn(seat: number, count: number, keepsTurn: boolean, won
 	return if keepsTurn or won then seat else seat % count + 1
 end
 
+-- After a shot: the seat whose turn is next, and whether its shooter has ball in hand, which is after any foul. It
+-- also sets the balls for the next shot: an 8 down on the break goes back on its spot first, so the cue ball keeps
+-- clear of it, then a sunk cue ball goes back on the head line, unless the game is won.
+function TableFlow.afterShot(
+	seat: number,
+	count: number,
+	outcome: EightBall.Outcome,
+	balls: { EightBall.Ball },
+	layout: Geometry.Layout,
+	tableParams: Geometry.TableParams
+): (number, boolean)
+	for _, ball in balls do
+		if ball.id == 8 and outcome.respotEight then
+			ball.pocket = nil
+			ball.x, ball.y = EightBall.spotEight(balls, tableParams)
+		end
+	end
+	for _, ball in balls do
+		if ball.id == 0 and ball.pocket and not outcome.winner then
+			ball.pocket = nil
+			ball.x, ball.y = EightBall.freeSpot(balls, layout.headLineX, tableParams)
+		end
+	end
+	return TableFlow.nextTurn(seat, count, outcome.keepsTurn, outcome.winner ~= nil), outcome.foul ~= nil
+end
+
 -- A seat on the same side as this one whose player is still in, to play on alone after this one presses Leave. Nil
 -- with none, and then the other side wins.
 function TableFlow.teammateIn(seat: number, left: { [number]: boolean }, count: number): number?

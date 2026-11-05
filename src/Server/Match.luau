@@ -195,28 +195,17 @@ local function shoot(
 	if outcome.keepsTurn then
 		log(match, `{player.Name} keeps the turn`)
 	end
-	match.turnSeat = TableFlow.nextTurn(match.turnSeat, #match.seats, outcome.keepsTurn, outcome.winner ~= nil)
-	-- The same seat or the next, and a shooter who left mid-shot hands it to their teammate
+	-- The same seat or the next, with ball in hand after a foul: where the cue ball stopped, or back on the head line
+	-- if it went in. A shooter who left mid-shot hands it to their teammate.
+	local balls = sim.balls
+	match.turnSeat, match.ballInHand =
+		TableFlow.afterShot(match.turnSeat, #match.seats, outcome, balls, layout, params.Table)
 	match.shooter = shooterFor(match, match.turnSeat)
 	if not outcome.keepsTurn and not outcome.winner then
 		log(match, `turn passes to {match.shooter.Name}`)
 	end
-	-- After a foul the next shooter places the cue ball anywhere: where it stopped, or back on the head line if it
-	-- went in. An 8 down on the break goes back first, so the cue ball keeps clear of it.
-	match.ballInHand = outcome.foul ~= nil
-	local balls = sim.balls
-	for _, ball in balls do
-		if ball.id == 8 and outcome.respotEight then
-			ball.pocket = nil
-			ball.x, ball.y = EightBall.spotEight(balls, params.Table)
-			log(match, "the 8 goes back on the foot spot")
-		end
-	end
-	for _, ball in balls do
-		if ball.id == 0 and ball.pocket and not outcome.winner then
-			ball.pocket = nil
-			ball.x, ball.y = EightBall.freeSpot(balls, layout.headLineX, params.Table)
-		end
+	if outcome.respotEight then
+		log(match, "the 8 goes back on the foot spot")
 	end
 	Balls.place(tableModel, balls)
 	Remotes.ShotResolved:FireAllClients(tableModel, balls)
