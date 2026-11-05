@@ -8,16 +8,16 @@ local Config = {
 	Table = {
 		Length = 16,
 		Width = 8,
-		BallRadius = 0.24,
-		CornerPocketMouth = 0.8,
-		SidePocketMouth = 0.75,
-		RackGap = 0.025, -- space between neighboring balls in the rack: 0 is a tight rack
+		BallRadius = 0.22,
+		CornerPocketMouth = 0.68,
+		SidePocketMouth = 0.71,
+		RackGap = 0.01, -- space between neighboring balls in the rack: 0 is a tight rack. 8 Ball Duels' is nearly tight
 	},
 
 	Physics = {
 		-- Measured from 8 Ball Duels, frame by frame
 		FullPowerSpeed = 25,
-		BreakPower = 3, -- the break's full power, as a multiple of a normal shot's
+		BreakPower = 2.5, -- the break's full power, as a multiple of a normal shot's: about 62.5 studs/s, like 8 Ball Duels
 		RollingSlowdown = 1.84, -- studs/s², so full power rolls about 170 studs, about 11 table lengths
 		-- Extra slowdown per stud/s of speed: slowdown = RollingSlowdown + SpeedDrag × speed. Fast balls lose speed
 		-- quicker while slow rolls barely change. 0 is a steady slowdown at every speed, like 8 Ball Duels.
@@ -25,7 +25,10 @@ local Config = {
 		RailBounce = 0.73, -- fraction of speed kept after a rail hit
 		BallBounce = 0.94, -- a full hit leaves the cue ball (1 - BallBounce) / 2 of its speed: 3%, almost dead
 		Follow = 0, -- forward roll a ball keeps after running into another: 0 stops it dead, 0.29 is natural roll
-		PowerCurve = 1.45, -- shot speed is pull ^ PowerCurve of full power: 1 is even, above 1 gives soft shots more pull
+		-- A pull's speed, like 8 Ball Duels: even the softest shot leaves at SoftestShot of full speed (about 5 studs/s,
+		-- rolling about half the table), and the rest of the speed rises with pull ^ PowerCurve
+		SoftestShot = 0.21,
+		PowerCurve = 2,
 		StopSpeed = 0.032,
 		TimeStep = 1 / 960,
 		-- Ball radii the fastest ball may move in one step. A faster ball, like on the break, splits the step into
@@ -129,7 +132,7 @@ local Config = {
 		TestSliders = {
 			{ group = "Physics", name = "RollingSlowdown", min = 1, max = 24, step = 0.01 },
 			{ group = "Physics", name = "SpeedDrag", min = 0, max = 0.1, step = 0.001 },
-			{ group = "Physics", name = "FullPowerSpeed", min = 8, max = 50, step = 0.5 },
+			{ group = "Physics", name = "FullPowerSpeed", min = 8, max = 45, step = 0.5 },
 			{ group = "Physics", name = "BreakPower", min = 1, max = 5, step = 0.1 },
 			{ group = "Physics", name = "RailBounce", min = 0.3, max = 1, step = 0.01 },
 			{ group = "Physics", name = "BallBounce", min = 0.5, max = 1, step = 0.01 },

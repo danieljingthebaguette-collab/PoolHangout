@@ -7,7 +7,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current step:** Phase 2, Normal tables
-- **In progress:** the Claude docs and tools are set up and committed: the docs (BUILD_PLAN, GAME_SPEC, VISION, STYLE, references/), the art-director and style-builder subagents, and a hook that runs lint and tests after any turn that changed code. The join task (join with E, the Leave button, the automatic camera, and the camera turning to face the table from behind your seat) passed Claude's solo playtest on 2026-11-04 and waits for my 2-player test before it's committed. Table1's seat markers are saved in the place, and the game is R6
+- **In progress:** the Claude docs and tools are set up and committed: the docs (BUILD_PLAN, GAME_SPEC, VISION, STYLE, references/), the art-director and style-builder subagents, and a hook that runs lint and tests after any turn that changed code. The join task (join with E, the Leave button, the automatic camera, and the camera turning to face the table from behind your seat) passed Claude's solo playtest on 2026-11-04 and is committed as a checkpoint; it waits for my 2-player test. Table1's seat markers are saved in the place, and the game is R6. On 2026-11-04 the physics was tuned from new 8 Ball Duels recordings: the break at 2.5× power, a nearly tight rack, a softest shot that still rolls about half the table, and 8 Ball Duels' ball and pocket sizes
 - **Dates:** launch moved to Friday, Dec 18 when the plan was reordered. The phase dates are Claude's proposal for that launch
 - **Last session:** 2026-11-03. New CLAUDE.md, R6 avatars only, and the plan reordered: normal tables, then items, then the lodge with a simple tutorial, Mobile and launch on Dec 18, with parties and progression as the first updates after launch and extras later. Then the Claude setup: the docs, two subagents for visual work and the lint-and-test hook
 - **Next up:** my 2-player test of the join task, then Claude's health pass (type check, TableFlow module, whole-game tests, Hud and ShotController split, small known-issue fixes, items-readiness notes), then live aim for everyone at the table. Phase 1's age check is still open: I'll do it when we first publish, before the friends playtest in the Items step
@@ -23,7 +23,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
   - A player who joins mid-game hears nothing about the game until the next turn starts; spectating covers watchers
   - The Output warning about rbxassetid://203785492 ("Pop Close Sound") comes from a Studio plugin or Roblox, not the place: ignore it
   - The GUI needs tweaking. Leave it as it is until I say we'll get to it
-  - Our break sinks about 2.0 balls with the 0.8 / 0.75 pockets (2.35 at 0.85 / 0.95) and the cue ball rebounds further than in 8 Ball Duels' break (0 sunk, cue ball near the middle); no RackGap or BreakPower setting fixed both. `tools/BreakStats.luau` compares
+  - Our break sinks about 1.8 balls (`tools/BreakStats.luau`), against 0.7 in the 3 full-power 8 Ball Duels breaks recorded so far. Since the 2026-11-04 tuning it spreads the rack and brings the cue ball back like theirs; more recorded breaks would show whether the count really differs
   - Not yet checked by me that a slider change reaches both the server and the shooter's screen (part 4 of my physics check). Claude's playtest confirmed it for the pocket sliders
 
 ## Rules that protect quality

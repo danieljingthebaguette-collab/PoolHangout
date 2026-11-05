@@ -9,7 +9,10 @@ local LENGTH, WIDTH, RADIUS = Config.Table.Length, Config.Table.Width, Config.Ta
 local layout = Geometry.build(Config.Table)
 local POWER = 0.5
 -- The farthest a ball moves in one step at that power: how close a stepped contact can be to an exact one
-local STEP_TRAVEL = POWER ^ Config.Physics.PowerCurve * Config.Physics.FullPowerSpeed * Config.Physics.TimeStep
+local SOFT = Config.Physics.SoftestShot
+local STEP_TRAVEL = (SOFT + (1 - SOFT) * POWER ^ Config.Physics.PowerCurve)
+	* Config.Physics.FullPowerSpeed
+	* Config.Physics.TimeStep
 
 local function ball(id: number, x: number, y: number): Simulate.Ball
 	return { id = id, x = x, y = y, vx = 0, vy = 0 }
@@ -168,8 +171,9 @@ return function(test, check)
 
 	test("a pocket: the line stops where the cue ball drops", function()
 		local corner = layout.pockets[6]
-		local dirX, dirY = unit(corner.x, corner.y)
-		local balls = { ball(0, 0, 0) }
+		-- Straight down the corner's diagonal, a quarter of the table's width out along each rail
+		local dirX, dirY = unit(1, 1)
+		local balls = { ball(0, corner.x - WIDTH / 4, corner.y - WIDTH / 4) }
 		local contact = Preview.firstContact(balls, dirX, dirY, Config.Table, layout, Config.Physics)
 		check.equal(contact.kind, "pocket", "kind")
 

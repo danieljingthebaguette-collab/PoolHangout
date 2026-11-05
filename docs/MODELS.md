@@ -40,8 +40,8 @@ The rails are slim: the whole table, cushions and wooden rails included, is abou
 
 | Pocket | Center (X, Z) | Mouth |
 | --- | --- | --- |
-| 4 corners | (±8, ±4) | 0.8 studs, measured diagonally across the opening. The cushions on either side end **0.57 studs** from the corner along each edge |
-| 2 sides | (0, ±4) | 0.75 studs. The cushions on either side end **0.375 studs** from the center of the side |
+| 4 corners | (±8, ±4) | 0.68 studs, measured diagonally across the opening. The cushions on either side end **0.48 studs** from the corner along each edge |
+| 2 sides | (0, ±4) | 0.71 studs. The cushions on either side end **0.355 studs** from the center of the side |
 
 The cushion ends are the pockets' jaws. Inside the pocket, anything that looks like a hole works: a ball disappears once its center is over the opening.
 
@@ -57,11 +57,11 @@ Players join a table with its "Join table" prompt, which the game makes. When th
 
 ## Cue
 
-Built in code by `src/Client/ShotController.luau`, on the shooter's screen only: a cylinder Part named `Cue`, `Config.Aim.CueLength` of the table length long (**9.6 studs**) and `CueThickness` of a ball's width thick (**0.24 studs**), drawn `CueHeight` ball radii (**0.96 studs**) above the felt.
+Built in code by `src/Client/ShotController.luau`, on the shooter's screen only: a cylinder Part named `Cue`, `Config.Aim.CueLength` of the table length long (**9.6 studs**) and `CueThickness` of a ball's width thick (**0.22 studs**), drawn `CueHeight` ball radii (**0.88 studs**) above the felt.
 
 ## Balls
 
-Built at runtime by the server (today in `src/Server/PhysicsTest.luau`): 16 spheres named `Ball0` (the cue ball) to `Ball15`, `2 × Config.Table.BallRadius` across (**0.48 studs**), in the table's `Balls` folder. They're anchored and don't collide; the game moves them.
+Built at runtime by the server (today in `src/Server/PhysicsTest.luau`): 16 spheres named `Ball0` (the cue ball) to `Ball15`, `2 × Config.Table.BallRadius` across (**0.44 studs**), in the table's `Balls` folder. They're anchored and don't collide; the game moves them.
 
 - 1–7 solids, 8 black, 9–15 stripes. Standard colors, flat and matte: 1 and 9 yellow, 2 and 10 blue, 3 and 11 red, 4 and 12 purple, 5 and 13 orange, 6 and 14 green, 7 and 15 maroon.
 - Today's welded-on marks are placeholders, so you can see a ball roll.

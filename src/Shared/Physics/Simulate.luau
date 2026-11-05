@@ -43,9 +43,10 @@ function Simulate.start(balls: { Ball }, shot: Shot, params: Params?): Sim
 	table.sort(copies, function(a: Ball, b: Ball): boolean
 		return a.id < b.id
 	end)
-	-- A curve above 1 gives soft shots more of the pull
+	-- Even the softest shot leaves at SoftestShot of full speed; the rest of the speed rises with pull ^ PowerCurve
 	local fullSpeed = p.Physics.FullPowerSpeed * (if shot.isBreak then p.Physics.BreakPower else 1)
-	local speed = shot.power ^ p.Physics.PowerCurve * fullSpeed
+	local soft = p.Physics.SoftestShot
+	local speed = (soft + (1 - soft) * shot.power ^ p.Physics.PowerCurve) * fullSpeed
 	for _, ball in copies do
 		if ball.id == 0 then
 			ball.vx, ball.vy = shot.dirX * speed, shot.dirY * speed

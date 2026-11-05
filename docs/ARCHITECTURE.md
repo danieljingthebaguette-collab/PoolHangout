@@ -66,17 +66,17 @@ Starting values for Config (tune by feel):
 | Setting | Start | Why |
 | --- | --- | --- |
 | Table length × width | 16 × 8 studs | 2:1 like a real table; about 18.2 × 10.2 with the cushions and rails |
-| Ball radius | 0.24 studs | Real ball-to-table proportion |
-| Pocket mouth, corner / side | 0.8 / 0.75 studs | Tighter than real: about 1.7 and 1.6 ball widths, tuned on the test panel's sliders |
+| Ball radius | 0.22 studs | 8 Ball Duels' ball-to-table proportion, measured from recordings |
+| Pocket mouth, corner / side | 0.68 / 0.71 studs | 8 Ball Duels' mouths in ball widths, about 1.55 and 1.6, measured from recordings. The test panel's sliders tune them |
 | Full-power speed | 25 studs/s | Measured from 8 Ball Duels, like the rows below |
-| Break power | 3 | The break's full power is 3× a normal shot's, about 75 studs/s |
-| Power curve | 1.45 | Speed is pull ^ 1.45: 76% on the meter gives about 67% of full speed |
+| Break power | 2.5 | The break's full power is 2.5× a normal shot's, about 62.5 studs/s |
+| Softest shot / power curve | 0.21 / 2 | Speed is full × (0.21 + 0.79 × pull²): even the softest shot leaves at 21% of full speed and rolls about half the table, 50% on the meter gives about 41% of full speed and 76% about 67% |
 | Rolling slowdown | 1.84 studs/s² | Full power rolls about 170 studs, about 11 table lengths. Matches 8 Ball Duels' rail-to-rail shot |
 | Speed drag | 0 | Optional extra slowdown per stud/s of speed, so fast balls lose speed quicker while slow rolls barely change. 0 is a steady slowdown, like 8 Ball Duels |
 | Rail bounce | 0.73 | Keeps about 73% of the speed, from 8 Ball Duels' rail-to-rail shot |
 | Ball bounce | 0.94 | A full hit leaves the cue ball 3% of its speed, almost dead |
 | Follow | 0 | No follow, like 8 Ball Duels: a cut sends the cue ball along the tangent line. Natural roll in real pool would be 2/7 |
-| Rack gap | 0.025 studs | A hair apart, so the break spreads |
+| Rack gap | 0.01 studs | Nearly tight, like 8 Ball Duels' rack, so the break spreads like theirs |
 | Stop speed / time step / time cap | 0.032 studs/s / 1/960 s / 20 s | 1/960 keeps any normal shot under a third of a radius per step |
 | Max step travel | 1/3 ball radius | A faster ball, like on the break, splits the step into equal sub-steps, so hits stay exact at any speed |
 | Shot clock / warning | 45 s / last 10 s | |

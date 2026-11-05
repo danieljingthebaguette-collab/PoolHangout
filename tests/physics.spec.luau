@@ -23,14 +23,27 @@ local function rack(cueY: number): { Simulate.Ball }
 	return balls
 end
 
--- A shot toward (dx, dy) that would roll `distance` before stopping, if nothing got in the way.
-local function shotRolling(dx: number, dy: number, distance: number): Simulate.Shot
+-- Config without the softest shot, for rolls shorter than any real shot makes
+local NO_FLOOR: Simulate.Params = { Table = Config.Table, Physics = table.clone(PHYSICS) }
+NO_FLOOR.Physics.SoftestShot = 0
+
+-- The speed a pull gives with Config
+local function speedOf(pull: number): number
+	return PHYSICS.FullPowerSpeed * (PHYSICS.SoftestShot + (1 - PHYSICS.SoftestShot) * pull ^ PHYSICS.PowerCurve)
+end
+
+-- A shot toward (dx, dy) that would roll `distance` before stopping, if nothing got in the way, with Config or
+-- `params`. A roll softer than the softest shot needs NO_FLOOR, for the shot and for the run.
+local function shotRolling(dx: number, dy: number, distance: number, params: Simulate.Params?): Simulate.Shot
+	local physics = if params then params.Physics else PHYSICS
 	local length = math.sqrt(dx * dx + dy * dy)
-	local speed = math.sqrt(2 * PHYSICS.RollingSlowdown * distance)
+	local share = math.sqrt(2 * physics.RollingSlowdown * distance) / physics.FullPowerSpeed
+	local soft = physics.SoftestShot
+	assert(share >= soft, `a roll of {distance} is softer than the softest shot: build it with NO_FLOOR`)
 	return {
 		dirX = dx / length,
 		dirY = dy / length,
-		power = (speed / PHYSICS.FullPowerSpeed) ^ (1 / PHYSICS.PowerCurve),
+		power = ((share - soft) / (1 - soft)) ^ (1 / physics.PowerCurve),
 	}
 end
 
@@ -85,7 +98,7 @@ return function(test, check)
 		local follow = 0.29
 		local params = frictionless({ Follow = follow })
 		local keep = 1 - (1 - follow) * (1 + PHYSICS.BallBounce) / 2
-		local speed = PHYSICS.FullPowerSpeed * 0.5 ^ PHYSICS.PowerCurve
+		local speed = speedOf(0.5)
 
 		local sim = Simulate.start(
 			{ ball(0, layout.headLineX, 0), ball(1, 0, 0) },
@@ -155,7 +168,12 @@ return function(test, check)
 	test("the break gets BreakPower times a normal shot's full power", function()
 		local sim = Simulate.start({ ball(0, 0, 0) }, { dirX = 1, dirY = 0, power = 1, isBreak = true })
 		check.near(sim.balls[1].vx, PHYSICS.FullPowerSpeed * PHYSICS.BreakPower, 1e-9, "break")
-		check.truthy(sim.balls[1].vx >= 74, "about 75 studs/s, like 8 Ball Duels")
+		check.near(
+			sim.balls[1].vx / PHYSICS.FullPowerSpeed,
+			2.5,
+			0.05,
+			"about 2.5 times a full normal shot, like 8 Ball Duels"
+		)
 	end)
 
 	test("fast balls can't pass through a ball or a rail", function()
@@ -199,7 +217,7 @@ return function(test, check)
 		stepUntil(sim, function()
 			return cue.vy < 0
 		end)
-		local speed = PHYSICS.FullPowerSpeed * 0.5 ^ PHYSICS.PowerCurve * PHYSICS.RailBounce
+		local speed = speedOf(0.5) * PHYSICS.RailBounce
 		check.near(cue.vx, speed * diagonal, 1e-9, "vx")
 		check.near(cue.vy, -speed * diagonal, 1e-9, "vy")
 		-- Bouncing from the exact point it touched the rail puts it on the mirrored path
@@ -237,12 +255,17 @@ return function(test, check)
 	test("balls already down stay down, and only the balls this shot drops are reported", function()
 		local balls = { ball(0, 0, 0), ball(3, -LENGTH / 2, -WIDTH / 2), ball(5, LENGTH / 4, -WIDTH / 4) }
 		balls[2].pocket = 1
-		local cases = {
+		local cases: { { name: string, shot: Simulate.Shot, dropped: { number }, params: Simulate.Params? } } = {
 			{ name = "a shot that drops the cue ball", shot = shotRolling(0, 1, LENGTH), dropped = { 0 } },
-			{ name = "a shot that drops nothing", shot = shotRolling(0, 1, WIDTH / 4), dropped = {} },
+			{
+				name = "a shot that drops nothing",
+				shot = shotRolling(0, 1, WIDTH / 4, NO_FLOOR),
+				dropped = {},
+				params = NO_FLOOR,
+			},
 		}
 		for _, case in cases do
-			local sim = Simulate.run(balls, case.shot)
+			local sim = Simulate.run(balls, case.shot, case.params)
 			local dropped = Simulate.dropped(sim)
 			check.equal(#dropped, #case.dropped, case.name)
 			for i, id in case.dropped do
@@ -258,7 +281,11 @@ return function(test, check)
 
 	test("a ball that clips the very end of a rail at a pocket stays on the table", function()
 		-- Straight at the +y long rail just past its corner end, so it hits the pocket's jaw
-		local sim = Simulate.run({ ball(0, CORNER_RAIL_END_X + RADIUS / 10, 0) }, shotRolling(0, 1, WIDTH * 3 / 4))
+		local sim = Simulate.run(
+			{ ball(0, CORNER_RAIL_END_X + RADIUS / 10, 0) },
+			shotRolling(0, 1, WIDTH * 3 / 4, NO_FLOOR),
+			NO_FLOOR
+		)
 		check.equal(sim.balls[1].pocket, nil, "pocket")
 		check.truthy(sim.balls[1].y < WIDTH / 2 - RADIUS, "bounced back onto the table")
 	end)
@@ -337,7 +364,8 @@ return function(test, check)
 			events({ ball(0, 0, -WIDTH / 4), ball(1, 0, 0) }, shotRolling(0, 1, WIDTH), frictionless({ Follow = 0.29 }))
 		check.equal(potted, "ball 0, pocket 1, pocket 0", "pot")
 		-- Just reaches the +y long rail, comes off it and stops
-		local banked = events({ ball(0, -LENGTH / 4, 0) }, shotRolling(0, 1, WIDTH / 2 - RADIUS + WIDTH / 8))
+		local banked =
+			events({ ball(0, -LENGTH / 4, 0) }, shotRolling(0, 1, WIDTH / 2 - RADIUS + WIDTH / 8, NO_FLOOR), NO_FLOOR)
 		check.equal(banked, "rail 0", "rail")
 	end)
 
@@ -347,7 +375,7 @@ return function(test, check)
 			-- The cue ball hits 5, which runs on into 2
 			local balls = { ball(0, -4, 0), ball(2, 0, 0), ball(5, -2, 0) }
 			check.equal(Simulate.run(balls, shotRolling(1, 0, LENGTH)).firstHit, 5)
-			check.equal(Simulate.run({ ball(0, -4, 0) }, shotRolling(1, 0, 2)).firstHit, nil)
+			check.equal(Simulate.run({ ball(0, -4, 0) }, shotRolling(1, 0, 2, NO_FLOOR), NO_FLOOR).firstHit, nil)
 		end
 	)
 
@@ -361,12 +389,16 @@ return function(test, check)
 		check.equal(cut.firstHit, 5, "thin cut")
 		check.truthy(Simulate.railAfterFirstHit(cut), "the cue ball's own rail")
 		-- A soft nudge in the middle of the table: both stop well short of the rails
-		local nudge = Simulate.run({ ball(0, -4 * RADIUS, 0), ball(5, 0, 0) }, shotRolling(1, 0, 6 * RADIUS))
+		local nudge =
+			Simulate.run({ ball(0, -4 * RADIUS, 0), ball(5, 0, 0) }, shotRolling(1, 0, 6 * RADIUS, NO_FLOOR), NO_FLOOR)
 		check.equal(nudge.firstHit, 5, "nudge")
 		check.truthy(not Simulate.railAfterFirstHit(nudge), "nudge")
 		-- Off the near long rail first, then gently into 5, which stops short of the far one
-		local banked =
-			Simulate.run({ ball(0, -1, -WIDTH / 2 + 1), ball(5, -1, -WIDTH / 2 + 2.5) }, shotRolling(0, -1, 6))
+		local banked = Simulate.run(
+			{ ball(0, -1, -WIDTH / 2 + 1), ball(5, -1, -WIDTH / 2 + 2.5) },
+			shotRolling(0, -1, 6, NO_FLOOR),
+			NO_FLOOR
+		)
 		check.equal(banked.firstHit, 5, "banked")
 		check.truthy(not Simulate.railAfterFirstHit(banked), "a rail before the hit")
 	end)
@@ -412,15 +444,25 @@ return function(test, check)
 		end
 	end)
 
-	test("PowerCurve: half a pull gives half ^ PowerCurve of full speed", function()
+	test("a pull's speed: the softest shot, plus pull ^ PowerCurve of the rest", function()
+		local soft = PHYSICS.SoftestShot
 		for _, curve in { 1, 2 } do
 			local physics = table.clone(PHYSICS)
 			physics.PowerCurve = curve
-			local sim = Simulate.start({ ball(0, 0, 0) }, { dirX = 1, dirY = 0, power = 0.5 }, {
-				Table = Config.Table,
-				Physics = physics,
-			})
-			check.near(sim.balls[1].vx, PHYSICS.FullPowerSpeed * 0.5 ^ curve, 1e-9, `curve {curve}`)
+			local params = { Table = Config.Table, Physics = physics }
+			for _, pull in { 0, 0.5, 1 } do
+				local sim = Simulate.start({ ball(0, 0, 0) }, { dirX = 1, dirY = 0, power = pull }, params)
+				local expected = PHYSICS.FullPowerSpeed * (soft + (1 - soft) * pull ^ curve)
+				check.near(sim.balls[1].vx, expected, 1e-9, `curve {curve}, pull {pull}`)
+			end
+		end
+	end)
+
+	test("a pull's speed matches 8 Ball Duels', measured as shares of full speed", function()
+		-- From recordings: the meter's % and the cue ball's speed over the first frames
+		local measured = { { 0.1, 0.219 }, { 0.3, 0.281 }, { 0.5, 0.408 }, { 0.6, 0.495 }, { 0.75, 0.652 }, { 1, 1 } }
+		for _, point in measured do
+			check.near(speedOf(point[1]) / PHYSICS.FullPowerSpeed, point[2], 0.015, `{point[1] * 100}% pull`)
 		end
 	end)
 
