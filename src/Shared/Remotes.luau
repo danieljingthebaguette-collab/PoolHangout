@@ -38,6 +38,9 @@ return {
 	TurnStarted = remote("TurnStarted"),
 	-- server → clients: (table model, text, seconds), a message for everyone at the table, like a foul or the winner
 	Banner = remote("Banner"),
+	-- client → server: (), once this player's scripts are listening. The server answers with TurnStarted for every game
+	-- on, and the physics test mode's ball in hand, since what it fired before then may not have reached them.
+	ClientReady = remote("ClientReady"),
 	-- client → server: (), the Leave button. Off the table this player joined, calling off its start, or out of
 	-- their game: the server decides which.
 	LeaveTable = remote("LeaveTable"),

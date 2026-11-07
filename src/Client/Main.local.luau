@@ -25,3 +25,5 @@ require(script.Parent.ShotController).start(tableModel, testMode, function(inVie
 	TableView.showShadows(inView)
 end)
 Hud.start(tableModel)
+-- Everything listens now, so the server can tell this screen about games already on
+require(ReplicatedStorage.Shared.Remotes).ClientReady:FireServer()

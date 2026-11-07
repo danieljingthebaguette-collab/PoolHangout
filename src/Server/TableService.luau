@@ -4,8 +4,8 @@
 -- Leave button leaves, calls off a start, or leaves a game (see Match.leave). Once every seat is taken (one is enough in Studio with Config.Debug.SoloTables and one player in the
 -- server), everyone at the table sees "Starting...", and after the countdown each player is moved once to their
 -- seat's spot, facing the table, and the game starts. Players walk freely the whole time. A game ends once its result
--- has shown, and the table re-racks and opens again. It also ends when one of its players leaves the server, leaving
--- the balls where they are, unless they had already pressed Leave.
+-- has shown, and the table re-racks and opens again. It also ends, with no winner, when one of its players leaves the
+-- server, unless they had already pressed Leave.
 -- ponytail: no sign, end screen or takeovers yet. Phase 3 adds them, with the table's states and its reset.
 
 local Players = game:GetService("Players")
@@ -108,10 +108,20 @@ local function moveToSeat(player: Player, marker: BasePart, felt: BasePart)
 	character:PivotTo(CFrame.lookAt(spot, Vector3.new(felt.Position.X, height, felt.Position.Z)))
 end
 
+-- Ends the game and opens the table, then re-racks once any shot still rolling has stopped, so its last frame can't
+-- land on the new rack. A game started meanwhile has already racked.
 local function endGame(tableModel: Model, match: Match.Match)
 	Match.destroy(match)
 	matches[tableModel] = nil
 	updatePrompt(tableModel)
+	task.spawn(function()
+		while Balls.isRolling(tableModel) do
+			task.wait()
+		end
+		if not matches[tableModel] then
+			rack(tableModel)
+		end
+	end)
 end
 
 -- Every seat is taken: "Starting..." for everyone at the table, then the players go to their seats and the game
@@ -146,7 +156,6 @@ local function startGame(tableModel: Model, token: {})
 			-- A player who left while the result showed has already ended this game
 			if matches[tableModel] == match then
 				endGame(tableModel, match)
-				rack(tableModel)
 			end
 		end)
 		matches[tableModel] = match
@@ -233,6 +242,14 @@ function TableService.start()
 			end
 		end
 		unjoin(player)
+	end)
+
+	-- A player's scripts are running: tell them about every game on, which they joined the server too late to hear.
+	-- ponytail: no rate limit, since it only answers the player who asked.
+	Remotes.ClientReady.OnServerEvent:Connect(function(player: Player)
+		for _, match in matches do
+			Match.showTo(match, player)
+		end
 	end)
 
 	Remotes.LeaveTable.OnServerEvent:Connect(function(player: Player)

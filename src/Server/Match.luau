@@ -92,19 +92,24 @@ local function ballsDown(match: Match): { number }
 	return down
 end
 
-local function startTurn(match: Match)
-	-- Tells the shooter's screen to start the shot at break power before the server's copy arrives. Display only.
-	match.tableModel:SetAttribute("BreakNext", match.isBreak)
-	local callPocket = EightBall.groupCleared(match.groups, sideOf(match, match.shooter), Balls.get(match.tableModel))
-	Remotes.TurnStarted:FireAllClients(
-		match.tableModel,
-		match.shooter,
-		match.ballInHand,
+-- TurnStarted's values for the game as it stands. Once it's over, nobody shoots while its result shows.
+local function turnMessage(match: Match): ...any
+	local shooter = if match.ended then nil else match.shooter
+	local callPocket = shooter ~= nil
+		and EightBall.groupCleared(match.groups, sideOf(match, shooter), Balls.get(match.tableModel))
+	return match.tableModel,
+		shooter,
+		shooter ~= nil and match.ballInHand,
 		seatsShown(match),
 		callPocket,
 		match.groups,
 		ballsDown(match)
-	)
+end
+
+local function startTurn(match: Match)
+	-- Tells the shooter's screen to start the shot at break power before the server's copy arrives. Display only.
+	match.tableModel:SetAttribute("BreakNext", match.isBreak)
+	Remotes.TurnStarted:FireAllClients(turnMessage(match))
 end
 
 -- The game is decided: everyone at the table sees who won and why, with nobody's turn, and then the game ends
@@ -122,15 +127,7 @@ local function finish(match: Match, winner: EightBall.Side, why: string)
 		else `{table.concat(names, " and ")} {if #names == 1 then "wins" else "win"}: {why}`
 	log(match, text)
 	Remotes.Banner:FireAllClients(match.tableModel, text, Config.Timers.ResultSeconds)
-	Remotes.TurnStarted:FireAllClients(
-		match.tableModel,
-		nil,
-		false,
-		seatsShown(match),
-		false,
-		match.groups,
-		ballsDown(match)
-	)
+	Remotes.TurnStarted:FireAllClients(turnMessage(match))
 	task.delay(Config.Timers.ResultSeconds, match.onEnd)
 end
 
@@ -277,6 +274,11 @@ function Match.leave(match: Match, player: Player)
 		return
 	end
 	finish(match, TableFlow.otherSide(TableFlow.sideOf(seat)), `{player.DisplayName} left`)
+end
+
+-- Tells one screen about the game as it stands, for a player who joined the server after it started
+function Match.showTo(match: Match, player: Player)
+	Remotes.TurnStarted:FireClient(player, turnMessage(match))
 end
 
 -- Ends the game at once. A shot still rolling finishes and is shown, but no turn follows it.

@@ -551,8 +551,17 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		end
 	)
 
-	-- A new character gets fresh controls and camera, so start it in the normal view
-	Players.LocalPlayer.CharacterAdded:Connect(leaveView)
+	-- A new character gets fresh controls, so it starts in the normal view, and on your own turn goes back to the
+	-- top-down view. Roblox only points the camera at a new character while the camera isn't Scriptable, so a respawn
+	-- in the view would leave it on the old one: point it here.
+	Players.LocalPlayer.CharacterAdded:Connect(function(character: Model)
+		leaveView()
+		local camera = workspace.CurrentCamera
+		camera.CameraSubject = character:WaitForChild("Humanoid") :: Humanoid
+		if turn and turn.mine then
+			enterView()
+		end
+	end)
 end
 
 return ShotController

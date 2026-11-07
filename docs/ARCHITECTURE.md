@@ -174,6 +174,7 @@ Workspace
 | `RequestShot` | client → server | Aim direction, power, cue ball placement, called pocket |
 | `AimUpdate` | client → server, unreliable | Live aim for everyone at the table |
 | `LeaveTable` | client → server | The Leave button |
+| `ClientReady` | client → server | Once the player's scripts listen. The server answers with `TurnStarted` for every game on, and the test mode's ball in hand, which a player who just joined would have missed |
 | `SayPhrase` | client → server | A quick phrase, by index (Later list) |
 | `UseItem` | client → server | Slot, and a target: a ball id, a point on the felt or a pocket id |
 | `TableChanged` | server → clients | Sign text, state, seats |

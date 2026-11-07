@@ -5,7 +5,6 @@
 -- pocket sizes, which rebuild the table and so wait for those same times. It plays like a game without turns: an
 -- 8-ball rack, the break, and ball in hand after a scratch.
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -60,7 +59,7 @@ function PhysicsTest.start()
 			Remotes.TurnStarted:FireAllClients(tableModel, nil, ballInHand())
 		end
 	end
-	Players.PlayerAdded:Connect(announce)
+	Remotes.ClientReady.OnServerEvent:Connect(announce)
 
 	local random = Random.new()
 	local function rack()

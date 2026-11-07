@@ -15,12 +15,10 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
   - Touch and the new HUD layout haven't been tried on a real phone yet, only in the emulator; it's covered by the Mobile phase
   - The existing touch code isn't tested or extended until the Mobile phase, so it will fall behind the PC features built before then. Ball in hand is mouse-only: on a phone the cue ball can't be moved yet
   - Lighting.Technology has to be set to Future by hand in Studio; scripts can't change it
-  - Leaving the server mid-game ends the game with no winner and leaves the balls where they stopped, until the arena step's takeover rules
+  - Leaving the server mid-game ends the game with no winner (the table re-racks), until the arena step's takeover rules
   - In Studio solo you're always side A, so sinking the 8 early reads "Player1 loses: …" rather than naming a winner
   - In 2v2, two long names don't fit on one card and the second is cut to "…"; the avatars still show both
   - A card's ball icons change when the next turn starts, about a quarter second after the balls stop, not the moment a ball drops; the tray fills as they drop
-  - Respawning mid-game drops you back to the normal view until your next turn starts
-  - A player who joins mid-game hears nothing about the game until the next turn starts; spectating covers watchers
   - The Output warning about rbxassetid://203785492 ("Pop Close Sound") comes from a Studio plugin or Roblox, not the place: ignore it
   - The GUI needs tweaking. Leave it as it is until I say we'll get to it
   - Our break sinks about 1.8 balls (`tools/BreakStats.luau`), against 0.7 in the 3 full-power 8 Ball Duels breaks recorded so far. Since the 2026-11-04 tuning it spreads the rack and brings the cue ball back like theirs; more recorded breaks would show whether the count really differs
