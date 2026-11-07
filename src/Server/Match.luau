@@ -1,11 +1,13 @@
 --!strict
 -- One game of 8-ball on one table: who's seated, whose turn it is, ball in hand, and the shots they ask for. The
 -- server is the referee: a shot only goes once every check in `shoot` passes. Once the 8 decides the game, or a
--- player presses Leave with no teammate left to play on, everyone sees who won and why, and then the game tells
--- TableService it's over.
+-- player presses Leave with no teammate left to play on, its players see the end screen, with who won and why and each
+-- player's stats, and anyone else near the table sees the result as a banner. When every player still in presses
+-- Rematch, or the end screen's time is up, the game tells TableService, which starts the rematch or ends the game.
 -- Each turn has a shot clock: running out is a foul.
 -- ponytail: no takeovers, or removal after 2 timeouts in a row, until Phase 4's leaving rules.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -41,8 +43,14 @@ export type Match = {
 	-- No more shots: the game is over, or was ended
 	ended: boolean,
 	connection: RBXScriptConnection?,
-	-- Called once the result has shown, for TableService to end the game and re-rack
-	onEnd: () -> (),
+	-- Each player's stats for the end screen
+	stats: { [Player]: EightBall.Stats },
+	-- Once the game is over, each player's answer on the end screen: true for Rematch, false for Back to lobby. Closed
+	-- once the end screen is done with, after which nothing more happens.
+	votes: { [Player]: boolean },
+	closed: boolean,
+	-- Called once the end screen closes, for TableService to start the rematch or end the game and re-rack
+	onEnd: (rematch: boolean) -> (),
 }
 
 local Match = {}
@@ -65,6 +73,12 @@ local function log(match: Match, message: string)
 	if Config.Debug.LogShots and RunService:IsStudio() then
 		print(`[{match.tableModel.Name}] {message}`)
 	end
+end
+
+-- Whether a player is in this game and hasn't pressed Leave
+local function playing(match: Match, player: Player): boolean
+	local seat = table.find(match.seats, player)
+	return seat ~= nil and not match.left[seat]
 end
 
 -- A1 and A2 are side A, B1 and B2 side B. In Studio solo you're A.
@@ -120,6 +134,7 @@ local function timeOut(match: Match)
 		return
 	end
 	log(match, `{match.shooter.Name} ran out of time`)
+	EightBall.countTimeout(match.stats[match.shooter])
 	local wasBreak = match.isBreak
 	match.turnSeat, match.ballInHand = TableFlow.afterTimeout(match.turnSeat, #match.seats, match.isBreak)
 	match.shooter = shooterFor(match, match.turnSeat)
@@ -143,7 +158,16 @@ function startTurn(match: Match)
 	Remotes.TurnStarted:FireAllClients(turnMessage(match))
 end
 
--- The game is decided: everyone at the table sees who won and why, with nobody's turn, and then the game ends
+-- The end screen closes, once: with a rematch, or with the game ending
+local function close(match: Match, rematch: boolean)
+	if match.closed then
+		return
+	end
+	match.closed = true
+	match.onEnd(rematch)
+end
+
+-- The game is decided, and nobody's turn is on. Its players see the end screen; anyone else gets a banner.
 local function finish(match: Match, winner: EightBall.Side, why: string)
 	match.ended = true
 	local names = {}
@@ -157,9 +181,31 @@ local function finish(match: Match, winner: EightBall.Side, why: string)
 		then `{match.seats[1].DisplayName} loses: {why}`
 		else `{table.concat(names, " and ")} {if #names == 1 then "wins" else "win"}: {why}`
 	log(match, text)
-	Remotes.Banner:FireAllClients(match.tableModel, text, Config.Timers.ResultSeconds)
 	Remotes.TurnStarted:FireAllClients(turnMessage(match))
-	task.delay(Config.Timers.ResultSeconds, match.onEnd)
+	local rows = {}
+	for seat, player in match.seats do
+		local stats = match.stats[player]
+		table.insert(rows, {
+			player = player,
+			side = TableFlow.sideOf(seat),
+			shots = stats.shots,
+			kept = stats.kept,
+			sunk = stats.sunk,
+			bestRun = stats.bestRun,
+			fouls = stats.fouls,
+		})
+	end
+	-- A rematch needs every player, so not after someone pressed Leave
+	local canRematch = next(match.left) == nil
+	local closesAt = workspace:GetServerTimeNow() + Config.Timers.EndScreenSeconds
+	for _, player in Players:GetPlayers() do
+		if playing(match, player) then
+			Remotes.GameOver:FireClient(player, match.tableModel, text, winner, rows, canRematch, closesAt)
+		else
+			Remotes.Banner:FireClient(player, match.tableModel, text, Config.Timers.ResultSeconds)
+		end
+	end
+	task.delay(Config.Timers.EndScreenSeconds, close, match, false)
 end
 
 local function shoot(
@@ -219,6 +265,7 @@ local function shoot(
 		log(match, `{player.Name} ({side}) takes {outcome.groups[side]}`)
 	end
 	match.groups = outcome.groups
+	EightBall.countShot(match.stats[player], side, outcome, Simulate.dropped(sim))
 	if outcome.foul then
 		log(match, `{player.Name} fouls: {FOUL_TEXT[outcome.foul]}`)
 	end
@@ -252,8 +299,14 @@ local function shoot(
 end
 
 -- Racks the table and starts a game, with a random player breaking. `pick(n)` returns a random whole number from 1
--- to n. `onEnd` is called once a finished game's result has shown; it isn't called for Match.destroy.
-function Match.new(tableModel: Model, seats: { Player }, pick: (number) -> number, onEnd: () -> ()): Match
+-- to n. `onEnd` is called once a finished game's end screen closes, with whether every player pressed Rematch; it isn't
+-- called for Match.destroy.
+function Match.new(
+	tableModel: Model,
+	seats: { Player },
+	pick: (number) -> number,
+	onEnd: (rematch: boolean) -> ()
+): Match
 	local params = PhysicsTestAccess.params()
 	Balls.place(tableModel, EightBall.rack(Geometry.build(params.Table), pick))
 	local breaker = pick(#seats)
@@ -272,8 +325,14 @@ function Match.new(tableModel: Model, seats: { Player }, pick: (number) -> numbe
 		lastRequest = {},
 		ended = false,
 		connection = nil,
+		stats = {},
+		votes = {},
+		closed = false,
 		onEnd = onEnd,
 	}
+	for _, player in seats do
+		match.stats[player] = EightBall.newStats()
+	end
 	match.connection = Remotes.RequestShot.OnServerEvent:Connect(function(player: Player, ...: unknown)
 		shoot(match, player, ...)
 	end)
@@ -311,6 +370,35 @@ function Match.leave(match: Match, player: Player)
 	finish(match, TableFlow.otherSide(TableFlow.sideOf(seat)), `{player.DisplayName} left`)
 end
 
+-- An answer on the end screen, from a player still in the game: Rematch (true) or Back to lobby (false), once each.
+-- Every player still in hears who has answered, and once they've all pressed Rematch, it starts.
+function Match.vote(match: Match, player: Player, rematch: unknown)
+	if
+		not match.ended
+		or match.closed
+		or type(rematch) ~= "boolean"
+		or not playing(match, player)
+		or match.votes[player] ~= nil
+	then
+		return
+	end
+	match.votes[player] = rematch
+	local answers = {}
+	for who, answer in match.votes do
+		table.insert(answers, { player = who, rematch = answer })
+	end
+	local everyone = next(match.left) == nil
+	for _, other in match.seats do
+		everyone = everyone and match.votes[other] == true
+		if playing(match, other) then
+			Remotes.Rematch:FireClient(other, match.tableModel, answers)
+		end
+	end
+	if everyone then
+		close(match, true)
+	end
+end
+
 -- Tells one screen about the game as it stands, for a player who joined the server after it started
 function Match.showTo(match: Match, player: Player)
 	Remotes.TurnStarted:FireClient(player, turnMessage(match))
@@ -319,6 +407,7 @@ end
 -- Ends the game at once. A shot still rolling finishes and is shown, but no turn follows it.
 function Match.destroy(match: Match)
 	match.ended = true
+	match.closed = true
 	match.tableModel:SetAttribute("BreakNext", false)
 	if match.connection then
 		match.connection:Disconnect()

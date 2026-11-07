@@ -109,7 +109,7 @@ Items never change these rules: what counts as a legal shot, a foul or a win is 
 - **Winning:** once your group is cleared, call a pocket and legally sink the 8 there.
 - **Losing on the 8:** sinking it before your group is cleared (except on the break), including on the same shot as your last ball; in a pocket you didn't call; or on a shot that fouls (like the cue ball going in too).
 - A foul while shooting at the 8 that doesn't sink it is just a foul.
-- **Until the end screen (Normal tables step):** when the 8 decides the game, everyone at the table sees who won and why, like "Player1 wins: 8 in the wrong pocket", for 5 seconds, with nobody's turn. Then the game ends, the table re-racks and its prompt opens again; a new game starts only once every seat is joined again.
+- **When the 8 decides the game,** nobody's turn is on, and its players see the end screen at once, headed with who won and why, like "Player1 wins: 8 in the wrong pocket" (see End of a game). Anyone else near the table sees the same words as a banner for 5 seconds.
 
 ## 2v2
 
@@ -189,9 +189,10 @@ Each player has one item bar. At 12 points it gives an item, and leftover points
   - **Balls sunk:** balls you sank on shots that weren't fouls
   - **Best run:** the most balls you sank in one turn
   - **Fouls:** your fouls, timeouts included
-- The end screen offers Rematch and other options *(default: Rematch and Back to lobby)*, and stays up 10 seconds *(default)*.
-- **Rematch:** if every player at the table presses it before the end screen closes, the table re-racks and the same players play again, with a random breaker *(default)*. It's a replay for the same players, not "winner stays on".
-- Otherwise everyone goes back to the lobby, the balls are re-racked, the prompt opens again and the sign goes back to "0/2 players" or "0/4 players". Joining again starts a new game.
+- The end screen opens at once when the game is decided, for its players only, headed with who won and why. The winners' lines are highlighted. It offers Rematch and Back to lobby *(default)*, and stays up 10 seconds *(default)*, counting down. It shows in both views.
+- **Rematch:** if every player at the table presses it before the end screen closes, the table re-racks and the same players are moved to their seats and play again, with a random breaker *(default)*. It's a replay for the same players, not "winner stays on". Each player's screen says who has pressed it, like "Player2 wants a rematch". There's no Rematch once someone has pressed Leave.
+- **Back to lobby** closes your end screen and rules out the rematch; the others see "Player1 went back to the lobby". Nobody is moved: the room is the lobby.
+- When the end screen closes without a rematch, the balls are re-racked, the prompt opens again and the sign goes back to "0/2 players" or "0/4 players". Joining again starts a new game.
 - Each player's lifetime stats are saved for future levels and ranked mode, but not shown anywhere yet.
 
 ## Leaving

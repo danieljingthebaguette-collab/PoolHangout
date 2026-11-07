@@ -3,10 +3,10 @@
 -- "Join table" prompt over its centre: the first takes side A, the next side B. The prompt only joins; the HUD's
 -- Leave button leaves, calls off a start, or leaves a game (see Match.leave). Once every seat is taken (one is enough in Studio with Config.Debug.SoloTables and one player in the
 -- server), everyone at the table sees "Starting...", and after the countdown each player is moved once to their
--- seat's spot, facing the table, and the game starts. Players walk freely the whole time. A game ends once its result
--- has shown, and the table re-racks and opens again. It also ends, with no winner, when one of its players leaves the
+-- seat's spot, facing the table, and the game starts. Players walk freely the whole time. When a game is decided its
+-- end screen shows, then the same players play again if they all pressed Rematch, or the table re-racks and opens. It also ends, with no winner, when one of its players leaves the
 -- server, unless they had already pressed Leave.
--- ponytail: no sign, end screen or takeovers yet. Phase 3 adds them, with the table's states and its reset.
+-- ponytail: no sign or takeovers yet. Phase 4 adds them, with the table's states and its reset.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -124,6 +124,33 @@ local function endGame(tableModel: Model, match: Match.Match)
 	end)
 end
 
+-- Starts a game on the table with these players in seat order, moving each to their seat. When it's over and its end
+-- screen closes, it's a rematch with the same players, or the game ends and the table opens.
+local function startMatch(tableModel: Model, players: { Player })
+	local felt = tableModel:FindFirstChild("Felt") :: BasePart
+	for i, player in players do
+		local marker = seatMarker(tableModel, i)
+		if marker then
+			moveToSeat(player, marker, felt)
+		end
+	end
+	local match: Match.Match
+	match = Match.new(tableModel, players, pick, function(rematch: boolean)
+		-- A player who left while the end screen showed has already ended this game
+		if matches[tableModel] ~= match then
+			return
+		end
+		if rematch then
+			Match.destroy(match)
+			startMatch(tableModel, players)
+		else
+			endGame(tableModel, match)
+		end
+	end)
+	matches[tableModel] = match
+	updatePrompt(tableModel)
+end
+
 -- Every seat is taken: "Starting..." for everyone at the table, then the players go to their seats and the game
 -- starts. A player who leaves meanwhile calls it off (see unjoin), and the rest stay joined.
 local function startGame(tableModel: Model, token: {})
@@ -143,23 +170,10 @@ local function startGame(tableModel: Model, token: {})
 			updatePrompt(tableModel)
 			return
 		end
-		local felt = tableModel:FindFirstChild("Felt") :: BasePart
-		for i, player in players do
+		for _, player in players do
 			player:SetAttribute("JoinedTable", nil)
-			local marker = seatMarker(tableModel, i)
-			if marker then
-				moveToSeat(player, marker, felt)
-			end
 		end
-		local match: Match.Match
-		match = Match.new(tableModel, players, pick, function()
-			-- A player who left while the result showed has already ended this game
-			if matches[tableModel] == match then
-				endGame(tableModel, match)
-			end
-		end)
-		matches[tableModel] = match
-		updatePrompt(tableModel)
+		startMatch(tableModel, players)
 	end)
 end
 
@@ -249,6 +263,15 @@ function TableService.start()
 	Remotes.ClientReady.OnServerEvent:Connect(function(player: Player)
 		for _, match in matches do
 			Match.showTo(match, player)
+		end
+	end)
+
+	-- Rematch or Back to lobby on the end screen. Each player answers once per game, so it needs no rate limit.
+	Remotes.Rematch.OnServerEvent:Connect(function(player: Player, rematch: unknown)
+		for _, match in matches do
+			if table.find(match.seats, player) then
+				Match.vote(match, player, rematch)
+			end
 		end
 	end)
 

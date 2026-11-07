@@ -115,10 +115,10 @@ local Config = {
 		CountdownSeconds = 3, -- the "Starting..." banner once every seat is taken, before the game starts
 		TakeoverSeconds = 5,
 		OpenSpotWaitSeconds = 15,
-		EndScreenSeconds = 10,
+		EndScreenSeconds = 10, -- the end screen, before the table re-racks unless every player pressed Rematch
 		FoulBannerSeconds = 3, -- the banner naming a foul and who has ball in hand
 		NoticeSeconds = 3, -- short banners, like a start called off because someone left
-		ResultSeconds = 5, -- "Player1 wins" and why, before the table re-racks. Until the end screen replaces it
+		ResultSeconds = 5, -- the banner with who won and why, for anyone near the table who wasn't playing
 	},
 
 	-- Studio only; the server also checks RunService:IsStudio() before using these, except PhysicsTestLive.

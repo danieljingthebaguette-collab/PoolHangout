@@ -282,4 +282,40 @@ function EightBall.resolveShot(groups: Groups, side: Side, facts: ShotFacts): Ou
 	return outcome
 end
 
+-- One player's stats for the end screen: their shots and how many kept the turn or won, balls sunk on shots that weren't
+-- fouls, the most of those in one turn and the run this turn so far, and fouls, timeouts included
+export type Stats = { shots: number, kept: number, sunk: number, bestRun: number, run: number, fouls: number }
+
+function EightBall.newStats(): Stats
+	return { shots = 0, kept = 0, sunk = 0, bestRun = 0, run = 0, fouls = 0 }
+end
+
+-- Counts a shot into its shooter's stats, from its outcome and the balls that dropped
+function EightBall.countShot(stats: Stats, side: Side, outcome: Outcome, dropped: { { id: number, pocket: number } })
+	stats.shots += 1
+	if outcome.keepsTurn or outcome.winner == side then
+		stats.kept += 1
+	end
+	if outcome.foul then
+		stats.fouls += 1
+	else
+		for _, drop in dropped do
+			if drop.id ~= 0 then
+				stats.sunk += 1
+				stats.run += 1
+			end
+		end
+		stats.bestRun = math.max(stats.bestRun, stats.run)
+	end
+	if not outcome.keepsTurn then
+		stats.run = 0
+	end
+end
+
+-- The shot clock ran out: a foul that ends the turn, but not a shot
+function EightBall.countTimeout(stats: Stats)
+	stats.fouls += 1
+	stats.run = 0
+end
+
 return EightBall

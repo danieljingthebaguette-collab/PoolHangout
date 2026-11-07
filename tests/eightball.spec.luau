@@ -511,4 +511,57 @@ return function(test, check)
 		check.equal(EightBall.groupOf(0), nil, "the cue ball")
 		check.equal(EightBall.groupOf(8), nil, "the 8")
 	end)
+
+	-- End-screen stats
+
+	local function result(keepsTurn: boolean, foul: EightBall.Foul?, winner: EightBall.Side?): EightBall.Outcome
+		return { groups = {}, keepsTurn = keepsTurn, foul = foul, winner = winner, reason = nil, respotEight = false }
+	end
+	local function drops(...: number): { { id: number, pocket: number } }
+		local list = {}
+		for _, id in { ... } do
+			table.insert(list, { id = id, pocket = 1 })
+		end
+		return list
+	end
+
+	test("stats count shots that kept the turn, balls sunk on fair shots, and the best run in one turn", function()
+		local stats = EightBall.newStats()
+		EightBall.countShot(stats, "A", result(true), drops(3))
+		EightBall.countShot(stats, "A", result(true), drops(5, 6))
+		EightBall.countShot(stats, "A", result(false), drops())
+		check.equal(stats.shots, 3)
+		check.equal(stats.kept, 2)
+		check.equal(stats.sunk, 3)
+		check.equal(stats.bestRun, 3, "three balls in the first turn")
+		check.equal(stats.run, 0, "the miss ended the turn")
+		EightBall.countShot(stats, "A", result(true), drops(1))
+		check.equal(stats.bestRun, 3, "a shorter run later doesn't lower it")
+	end)
+
+	test("stats: a foul's balls don't count as sunk, the cue ball never does, and a timeout is a foul", function()
+		local stats = EightBall.newStats()
+		EightBall.countShot(stats, "A", result(false, "scratch"), drops(0, 4))
+		check.equal(stats.sunk, 0)
+		check.equal(stats.fouls, 1)
+		check.equal(stats.kept, 0)
+		EightBall.countShot(stats, "A", result(true), drops(0, 2))
+		check.equal(stats.sunk, 1, "only the 2: a cue ball down on a fair shot isn't sunk")
+		EightBall.countTimeout(stats)
+		check.equal(stats.fouls, 2)
+		check.equal(stats.shots, 2, "a timeout isn't a shot")
+		check.equal(stats.run, 0)
+	end)
+
+	test("stats: winning on the 8 counts as a kept shot and a ball sunk; losing on it doesn't", function()
+		local stats = EightBall.newStats()
+		EightBall.countShot(stats, "B", result(false, nil, "B"), drops(8))
+		check.equal(stats.kept, 1)
+		check.equal(stats.sunk, 1)
+		local loser = EightBall.newStats()
+		EightBall.countShot(loser, "A", result(false, "scratch", "B"), drops(8, 0))
+		check.equal(loser.kept, 0)
+		check.equal(loser.sunk, 0)
+		check.equal(loser.fouls, 1)
+	end)
 end

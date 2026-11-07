@@ -37,8 +37,16 @@ return {
 	-- shoots. No seats means no game is on the table: the game just ended, the player left it, or the physics test mode
 	-- is saying whether testers have ball in hand.
 	TurnStarted = remote("TurnStarted"),
-	-- server → clients: (table model, text, seconds), a message for everyone at the table, like a foul or the winner
+	-- server → clients: (table model, text, seconds), a message for everyone at the table, like a foul, or who won for
+	-- anyone near the table who wasn't playing
 	Banner = remote("Banner"),
+	-- server → each player still in a game that's just been decided: (table model, who won and why, winning side, rows,
+	-- can rematch, closes at), rows being each seat's { player, side, shots, kept, sunk, bestRun, fouls } in turn order,
+	-- can rematch false once someone pressed Leave, and closes at the end screen's close time in the server's time
+	GameOver = remote("GameOver"),
+	-- client → server: (rematch), true for Rematch and false for Back to lobby, once per game. server → each player still
+	-- in the game: (table model, answers), the list of { player, rematch } answers so far
+	Rematch = remote("Rematch"),
 	-- client → server: (), once this player's scripts are listening. The server answers with TurnStarted for every game
 	-- on, and the physics test mode's ball in hand, since what it fired before then may not have reached them.
 	ClientReady = remote("ClientReady"),
