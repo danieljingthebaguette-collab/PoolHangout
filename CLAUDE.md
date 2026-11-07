@@ -73,6 +73,7 @@ Script Sync mirrors src/Server → ServerScriptService/Server, src/Client → St
 
 ## Before launch
 - Turn off Config.Debug.PhysicsTestLive in src/Shared/Config.luau (owner-only test tool).
+- Check that Coach only plays in the tutorial. The testing Coach (Config.Debug.Coach) runs only in Studio, or for the owner while PhysicsTestLive is on, so it goes off with PhysicsTestLive.
 
 ## Always loaded
 - Game spec: @docs/GAME_SPEC.md

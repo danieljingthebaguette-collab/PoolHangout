@@ -51,7 +51,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 ## First join: the tutorial
 
 - New players start with a short solo tutorial against Coach, the game's only bot, before they reach the lodge. It replaces the earlier plan of tips during a player's first match.
-- **Where:** a private server of their own, just them and Coach at one table in the lodge *(default: a reserved server of the same place, running in tutorial mode, so there's one place and one copy of the code; a separate tutorial place would be a second place to keep in step)*.
+- **Where:** a private room in the same server, out of sight of the lodge: one table and Coach, just for them. Nobody else can get in, and several new players can each have their own room at once. Staying in the same server means no extra loading screens, and a new player stays with the friend they joined.
 - **The flow,** about 3 minutes *(default)*. Coach walks them through a short game one step at a time. Each step has a tip card, shows the control it teaches, and sets the table up for it:
   1. **Aiming:** the cue follows the mouse. Aim at an easy ball.
   2. **Power:** hold, drag back and let go, and sink it.
@@ -61,7 +61,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
   6. **Items:** Coach gives them an item to try *(default: Power Shot)*, and their card shows the item bar filling.
   - Coach takes short, easy turns between steps, slow enough to watch. A miss just tries the step again.
 - **Skip:** a Skip button top right, any time.
-- **After:** at the end, or on Skip, they're sent to a public lodge server. Finishing or skipping is saved, so each player sees it once *(saving needs my OK when it's built)*. Returning players go straight to the lodge.
+- **After:** at the end, or on Skip, they're put straight into the lodge, at its spawn, and their room goes away. Finishing or skipping is saved, so each player sees it once *(saving needs my OK when it's built)*. Returning players start in the lodge.
 - Coach only ever plays in the tutorial, never in a normal match. In Studio, Coach is also my test opponent (`Config.Debug.Coach`).
 - On phones, the tips name the touch controls (Mobile phase).
 
@@ -88,7 +88,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 
 - **Items:** before each shot, the shooter can use one item (see Items).
 - **Top-down only:** you can only aim and shoot from the top-down view. The cue and the power meter only show there, and leaving the view in the middle of a pull cancels it with no shot.
-- **Shot clock:** 45 seconds per shot (I said 30–60). It covers placing and aiming and stops when the shot fires, hiding while the balls roll. The next shot gets a fresh 45. Running out is a foul, so the next shooter gets ball in hand, and everyone at the table sees "Time's up. Player2 has ball in hand." On the break there's no ball in hand: the next player breaks instead *(default)*. 2 timeouts in a row remove the player, the same as leaving (Phase 4). The clock is a dark box in the middle of the top bar that always shows the seconds left, turning coral with bigger numbers for the last 10.
+- **Shot clock:** 45 seconds per shot (I said 30–60). It covers placing and aiming and stops when the shot fires, hiding while the balls roll. The next shot gets a fresh 45. Running out is a foul, so the next shooter gets ball in hand, and everyone at the table sees "Time's up. Player2 has ball in hand." On the break there's no ball in hand: the next player breaks instead. 2 timeouts in a row remove the player, the same as leaving (Phase 4). The clock is a dark box in the middle of the top bar that always shows the seconds left, turning coral with bigger numbers for the last 10.
 - **Between turns:** players can press F to leave the top-down view and walk around, sit or grab a drink.
 - **No spin** in the base build. The top-right corner of the screen stays free for a spin control later.
 
@@ -184,7 +184,7 @@ Each player has one item bar. At 12 points it gives an item, and leftover points
 ## Watching and hanging out
 
 - In a real game, the other players and anyone watching from the top-down view see the shooter's cue and aim indicator move live while they aim (Taking a shot, step 7).
-- Anyone can watch a game in 3D from where they stand, or switch to the same top-down view *(default: a "Watch from above" button when you're near a table with a game on)*.
+- Anyone can watch a game in 3D from where they stand, or press F for the same top-down view, with the shooter's live aim. A "Watch from above" button near a table with a game on comes in the first week after launch *(default)*.
 - While the shooter aims, their character moves around the table edge to stand behind the cue ball in a ready-to-shoot pose, so 3D watchers see it (a planned Phase 2 task).
 - Roblox's own emotes, text chat and voice chat. Quick phrases (like "Nice shot!" and "GG") are on the Later list.
 - Public servers have no way to lock a table.

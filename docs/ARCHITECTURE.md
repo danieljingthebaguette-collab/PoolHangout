@@ -55,7 +55,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Client/Effects.luau` | Effects on the table, built from parts in code once per effect and destroyed when it ends. Today: chunky sparks on hard hits and a pop at the pocket, from `TableView`'s loudest few events per frame, capped at `Theme.Effects.MaxParts`. Later the item effects and screen shake: flame trail, blast, frozen balls, oil patches, pocket lids |
 | `Client/Slider.luau` | A labelled slider row for mouse and touch, for the settings and the test panel |
 | `Client/Card.luau` | The card look from `docs/STYLE.md`: cream or dark, with corner brackets and a faint dot texture |
-| `Client/Spectate.luau` | "Watch from above" |
+| `Client/Spectate.luau` | "Watch from above" (first week after launch; until then F) |
 | `Client/PhysicsTestPanel.luau` | Physics test mode controls (Studio, or the owner in a published server) |
 
 Pure modules require each other only by relative string path, like `require("./Geometry")` or `require("../Config")`. That form works in both Roblox and Lune.
@@ -222,17 +222,17 @@ Workspace
 
 ## Tutorial (Phase 4, planned)
 
-- **One place, two modes.** A new player who joins the lodge is sent with `TeleportService` to a reserved server of the same place (`ReserveServer`), with teleport data marking it as the tutorial. That server sees it's reserved and runs in tutorial mode: one table, Coach in the other seat, no prompt to join. It's the same synced code, so there's no second place to keep in step.
-- **The steps** are a small scripted layer over a normal `Match` with Coach: each step places the balls it needs (like Studio's test racks), shows its tip card, waits for the shot it teaches, and tries again on a miss. Coach's turns use `ShotPicker` and the live aim, as in Studio. The item step gives the player an item through `Items.luau`.
-- **Skip and the end** teleport the player to a public lodge server. Whether they've finished or skipped is one more saved field, `tutorialDone`, in `StatsService`, which needs my OK before it's added. If saving fails, the player gets the tutorial again, never an error.
-- Teleports and reserved servers only work in a published game, so they're tested in a private published version, not in Studio. In Studio a debug switch runs tutorial mode directly.
+- **Rooms in the same server.** When a new player joins, the server builds them a room far out of sight of the lodge, in its own slot so several fit at once: walls, a floor, and a 1v1 table built by `TableBuilder` (named like `Tutorial_<UserId>`, with no join prompt), with Coach in the other seat. The player is moved in; nobody else can reach it, and it's too far away for proximity voice. The client's active-table pick follows them there like any table.
+- **The steps** are a small scripted layer over a normal `Match` with Coach: each step places the balls it needs (like Studio's test racks), shows its tip card, waits for the shot it teaches, and tries again on a miss. Coach's turns use `ShotPicker` and the live aim. The item step gives the player an item through `Items.luau`.
+- **Skip and the end** move the player to the lodge's spawn and destroy the room, its Match and its Coach; so does leaving the server. Whether they've finished or skipped is one more saved field, `tutorialDone`, in `StatsService`, which needs my OK before it's added. If saving fails, the player gets the tutorial again, never an error. Each step logs an analytics funnel step.
+- Everything runs in Studio playtests; a debug switch starts the tutorial for a player who has already done it.
 
 ## Saving and analytics
 
 - `StatsService` is the only module that touches DataStores. Use ProfileStore for session locking, copied into `src/Server/Packages/` once I approve adding it.
 - Saved per player: `{ version = 1, gamesPlayed, wins, shots, successfulShots, ballsSunk, fouls, bestRun }`. Bump `version` and migrate old data when the shape changes.
 - If saving fails, the game carries on. For saving to work in Studio playtests, I turn on Game Settings → Security → Enable Studio Access to API Services.
-- Analytics (Phase 4): server-side `AnalyticsService:LogOnboardingFunnelStepEvent` with steps 1 joined, 2 first game started, 3 first game finished, 4 second game started. It only reports from published games.
+- Analytics (Phase 4): server-side `AnalyticsService:LogOnboardingFunnelStepEvent` with steps: joined, then each tutorial step finished (or the tutorial skipped), then first game started, first game finished and second game started. It only reports from published games.
 
 ## Performance
 

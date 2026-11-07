@@ -20,7 +20,7 @@ Eight colors carry the whole game. Everything else is a lighter or darker tone o
 | Ink | `#241C16` | Text on cards and buttons, card brackets, outlines |
 | Near-black | `#201A16` | Dark boxes: key boxes, the % readout, the tray, the timer |
 | Sunny gold | `#FFC42E` | The main accent: buttons, the power meter's fill, the turn glow, the called pocket |
-| Coral | `#FF8A76` | Buttons that leave or undo, like Leave and Yes on "Leave and lose this game?" **(approve)** |
+| Coral | `#FF8A76` | Buttons that leave or undo, like Leave and Yes on "Leave and lose this game?", and the shot clock's last 10 seconds |
 | Felt green | `#327A4C` | The playing surface, the strongest color in the room |
 | Cushion green | `#225834` | Cushions |
 | Painted wood | `#7A4628` | The table's rails and wood; its darker tone is the body and legs |
@@ -80,7 +80,7 @@ Every value lives in `src/Shared/Theme.luau`, and UI is built in code. `src/Clie
 | Timer | A dark box at the top center, between the top bar's two cards |
 | Control hints | Down the right side, stacked from the bottom: a slightly see-through cream label box, then a dark key box with the key or a short word, like "Lock aim" `Space` |
 | Item slots | Bottom center: square dark slots with bright corner brackets, a small number tag on each, and a dashed outline for an empty slot |
-| Buttons | A bright accent with ink text. The main accent is sunny gold (255, 196, 46). Other bright, slightly pastel accents like mint, sky blue or coral can mark other kinds of buttons; never neon |
+| Buttons | A bright accent with ink text: sunny gold (255, 196, 46) for the main action, coral for leaving or undoing. A second choice beside a gold one, like Back to lobby beside Rematch, is a near-black button with cream text, so the gold one leads. Only the palette's colors; never neon |
 | Text over the world | Always on a card or a dark box, never bare, so it reads on any background |
 
 **Screen layout:**
