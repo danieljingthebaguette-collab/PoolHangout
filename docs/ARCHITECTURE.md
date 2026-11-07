@@ -50,7 +50,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Client/Hints.luau` | The control hints, bottom right |
 | `Client/SettingsPanel.luau` | The gear and its card with the sound volume |
 | `Client/Ui.luau` | Small shared builders: rounded corners, labels, accent buttons and ball icons |
-| `Client/Effects.luau` | Item effects and screen shake: flame trail, blast, frozen balls, oil patches, pocket lids. Built in code once per effect and destroyed when it ends |
+| `Client/Effects.luau` | Effects on the table, built from parts in code once per effect and destroyed when it ends. Today: chunky sparks on hard hits and a pop at the pocket, from `TableView`'s loudest few events per frame, capped at `Theme.Effects.MaxParts`. Later the item effects and screen shake: flame trail, blast, frozen balls, oil patches, pocket lids |
 | `Client/Slider.luau` | A labelled slider row for mouse and touch, for the settings and the test panel |
 | `Client/Card.luau` | The card look from `docs/STYLE.md`: cream or dark, with corner brackets and a faint dot texture |
 | `Client/Spectate.luau` | "Watch from above" |

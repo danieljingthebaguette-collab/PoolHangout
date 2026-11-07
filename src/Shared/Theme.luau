@@ -111,6 +111,36 @@ local Theme = {
 		Transparency = 0.55,
 	},
 
+	-- The hit effects on the table (Effects.luau). Sizes, distances and heights are in ball radii, so they scale
+	-- with the table; heights are above the felt and stay under the cue's (Config.Aim.CueHeight).
+	Effects = {
+		SparkShare = 0.5, -- ball and rail hits softer than this share of full-power speed get no sparks
+		SparkMinCount = 3, -- sparks from a hit at SparkShare
+		SparkMaxCount = 5, -- sparks from a full-power hit or harder, so even the break stays a few chunky bits
+		SparkColors = { ACCENT, CREAM }, -- taken in turn, so each burst mixes gold and cream
+		SparkLength = 1.3,
+		SparkThickness = 0.55,
+		SparkHeight = 1, -- where they start: ball center height
+		SparkRise = 0.8, -- how much higher they end
+		SparkReachMin = 2, -- how far they fly, from a hit at SparkShare...
+		SparkReachMax = 4, -- ...up to a full-power one
+		-- Degrees off the line between the two balls: sparks squirt out sideways from where they touch, clear of both
+		BallSprayMin = 55,
+		BallSprayMax = 125,
+		-- Degrees off the line straight out from the cushion: sparks squirt along it, clear of the ball
+		RailSprayMin = 35,
+		RailSprayMax = 85,
+		SparkSeconds = 0.25,
+		PopColor = CREAM, -- the ring that pops out where a ball drops into a pocket
+		PopStartDiameter = 2,
+		PopEndDiameter = 5,
+		PopLine = 0.35, -- the ring's thickness
+		PopHeight = 1.8, -- just over the corner plates, so they never cover it
+		PopTransparency = 0.1, -- at the start; it fades to nothing
+		PopSeconds = 0.25,
+		MaxParts = 30, -- the most effect parts alive at once, so a full-power break stays cheap on phones
+	},
+
 	-- By ball id. Each stripe shares its solid's color.
 	BallColors = {
 		[0] = Color3.fromRGB(245, 242, 230),

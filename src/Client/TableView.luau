@@ -1,7 +1,7 @@
 --!strict
 -- Replays each shot on a table's ball parts by stepping the same simulation the server ran, in real time,
 -- then snaps them to the server's final positions. Balls spin as they roll, sink into pockets, and click,
--- thud and drop with sound. The shooter's screen starts the shot itself the moment the cue strikes (predict),
+-- thud and drop with sound and a small effect (Effects). The shooter's screen starts the shot itself the moment the cue strikes (predict),
 -- then switches to the server's copy when it arrives. Only this screen draws the soft shadows under the balls.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,6 +12,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Simulate = require(ReplicatedStorage.Shared.Physics.Simulate)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
+local Effects = require(script.Parent.Effects)
 
 type View = { felt: BasePart, parts: { [number]: BasePart } }
 type Replay = {
@@ -116,10 +117,10 @@ local function show(view: View, ball: Simulate.Ball, radius: number)
 	end
 end
 
--- Plays the sounds of this frame's new events: only the loudest few, so a break doesn't fire dozens at once
+-- Plays the sounds and effects of this frame's new events: only the loudest few, so a break doesn't fire dozens at once
 local function playEvents(replay: Replay)
 	local events, physics = replay.sim.events, replay.sim.params.Physics
-	local sounds: { { part: BasePart, name: string, share: number } } = {}
+	local sounds: { { part: BasePart, name: string, share: number, kind: string } } = {}
 	for i = replay.heard + 1, #events do
 		local event = events[i]
 		local part = replay.view.parts[event.id]
@@ -130,7 +131,7 @@ local function playEvents(replay: Replay)
 				elseif event.kind == "pocket" then "Pocket"
 				elseif share < Config.Sounds.LightHitShare then "BallHitLight"
 				else "BallHit"
-			table.insert(sounds, { part = part, name = name, share = share })
+			table.insert(sounds, { part = part, name = name, share = share, kind = event.kind :: string })
 		end
 	end
 	replay.heard = #events
@@ -138,7 +139,9 @@ local function playEvents(replay: Replay)
 		return a.share > b.share
 	end)
 	for i = 1, math.min(#sounds, Config.Sounds.MaxPerFrame) do
-		TableView.playSound(sounds[i].part, sounds[i].name, sounds[i].share)
+		local sound = sounds[i]
+		TableView.playSound(sound.part, sound.name, sound.share)
+		Effects.hit(sound.kind, sound.part, replay.view.felt, sound.share)
 	end
 end
 
