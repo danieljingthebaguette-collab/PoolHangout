@@ -197,6 +197,13 @@ Workspace
 | `TestTune` | client → server, and server → client | Physics test mode: a slider's name and value. Its attributes hold every slider's current value. Back to one client, with nothing, when the server turned its change down, so its panel shows the kept values |
 | `TestPrint` | client → server | Physics test mode: the server prints every slider's value to the Output |
 
+## Tutorial (Phase 4, planned)
+
+- **One place, two modes.** A new player who joins the lodge is sent with `TeleportService` to a reserved server of the same place (`ReserveServer`), with teleport data marking it as the tutorial. That server sees it's reserved and runs in tutorial mode: one table, Coach in the other seat, no prompt to join. It's the same synced code, so there's no second place to keep in step.
+- **The steps** are a small scripted layer over a normal `Match` with Coach: each step places the balls it needs (like Studio's test racks), shows its tip card, waits for the shot it teaches, and tries again on a miss. Coach's turns use `ShotPicker` and the live aim, as in Studio. The item step gives the player an item through `Items.luau`.
+- **Skip and the end** teleport the player to a public lodge server. Whether they've finished or skipped is one more saved field, `tutorialDone`, in `StatsService`, which needs my OK before it's added. If saving fails, the player gets the tutorial again, never an error.
+- Teleports and reserved servers only work in a published game, so they're tested in a private published version, not in Studio. In Studio a debug switch runs tutorial mode directly.
+
 ## Saving and analytics
 
 - `StatsService` is the only module that touches DataStores. Use ProfileStore for session locking, copied into `src/Server/Packages/` once I approve adding it.

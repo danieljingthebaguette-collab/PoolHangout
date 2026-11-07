@@ -48,9 +48,22 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 - No waiting line and no "winner stays on": whoever has joined when the last seat is taken plays.
 - **Parties** (the first update after launch): when a party's leader joins a table, their partner joins too: as their teammate on a 2v2 table, or their opponent on a 1v1 table *(default)*. A player on their own can take an open seat on a 2v2 table and get a random partner.
 
-## First join
+## First join: the tutorial
 
-- A simple tutorial, before launch: on-screen tips during a player's first match cover the basics as they come up: aiming, power, ball in hand, groups and the 8, and items *(default list)*.
+- New players start with a short solo tutorial against Coach, the game's only bot, before they reach the lodge. It replaces the earlier plan of tips during a player's first match.
+- **Where:** a private server of their own, just them and Coach at one table in the lodge *(default: a reserved server of the same place, running in tutorial mode, so there's one place and one copy of the code; a separate tutorial place would be a second place to keep in step)*.
+- **The flow,** about 3 minutes *(default)*. Coach walks them through a short game one step at a time. Each step has a tip card, shows the control it teaches, and sets the table up for it:
+  1. **Aiming:** the cue follows the mouse. Aim at an easy ball.
+  2. **Power:** hold, drag back and let go, and sink it.
+  3. **Ball in hand:** Coach scratches on purpose; they place the cue ball and shoot.
+  4. **Groups:** their first legal pot gives them solids or stripes, shown on their card.
+  5. **Calling the 8:** with only their last ball and the 8 left, they call a pocket and sink the 8 there.
+  6. **Items:** Coach gives them an item to try *(default: Power Shot)*, and their card shows the item bar filling.
+  - Coach takes short, easy turns between steps, slow enough to watch. A miss just tries the step again.
+- **Skip:** a Skip button top right, any time.
+- **After:** at the end, or on Skip, they're sent to a public lodge server. Finishing or skipping is saved, so each player sees it once *(saving needs my OK when it's built)*. Returning players go straight to the lodge.
+- Coach only ever plays in the tutorial, never in a normal match. In Studio, Coach is also my test opponent (`Config.Debug.Coach`).
+- On phones, the tips name the touch controls (Mobile phase).
 
 ## Starting a game
 
@@ -227,7 +240,7 @@ The planned updates after launch, parties and progression first and extras like 
 
 ## Decided against (don't re-propose)
 
-- Bots or computer opponents.
+- Bots or computer opponents in normal matches. The only bot is Coach, in the tutorial (and as my test opponent in Studio).
 - A waiting line or "winner stays on". Every game ends with the table reset.
 - Locking tables in public servers.
 - Where you stand changing your aim, or walking to a spot to shoot or to place the cue ball.

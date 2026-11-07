@@ -22,5 +22,5 @@ Roblox players aged about 10 to 15, and a little older, who play with friends an
 - **Not a grind.** Progression rewards playing; it never decides who wins a game.
 - **Not a copy.** Other games are references for feel only. Everything in Pool! is made for Pool!.
 - **Not violent or adult.** No guns, no weapon items, no alcohol.
-- **Not a game against bots.** Every opponent is a real player.
+- **Not a game against bots.** Every opponent in a real match is a real player. The only bot is Coach, who teaches new players in the tutorial.
 - **Not settled on money yet.** What, if anything, is for sale is still open; nothing is built for it.

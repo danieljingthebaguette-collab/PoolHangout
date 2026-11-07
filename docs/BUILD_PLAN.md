@@ -1,6 +1,6 @@
 # Build plan
 
-Launch Friday, Dec 18, 2026, with 1v1 and 2v2 pool, 5 items and a simple tutorial, in one lodge room with 6 tables and 24-player servers. The shot came first, then normal tables, then items. Features freeze Dec 11, and the last week is only for fixing. This assumes about 10 hours a week from me, with Claude writing most of the code and building the models. There's no commissioned modeler: the game is made entirely with AI.
+Launch Friday, Dec 18, 2026, with 1v1 and 2v2 pool, 5 items and a short tutorial with Coach, in one lodge room with 6 tables and 24-player servers. The shot came first, then normal tables, then items. Features freeze Dec 11, and the last week is only for fixing. This assumes about 10 hours a week from me, with Claude writing most of the code and building the models. There's no commissioned modeler: the game is made entirely with AI.
 
 This file started as a copy of my "Pool! Build Plan" doc and is now the working copy: Claude ticks tasks and keeps Status current here. The label after each task says who does it. A step ends only when I say its "Done when" test passed.
 
@@ -96,7 +96,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 **Done when:** every rule and item test passes, and 2 friends finish 3 full games on PC, items included, without me explaining anything.
 
-## Phase 4, Nov 30–Dec 6: the lodge, every table, a simple tutorial, and polish
+## Phase 4, Nov 30–Dec 6: the lodge, every table, the tutorial, and polish
 
 **Goal:** it looks, sounds and feels warm and punchy, every table runs itself even when people leave, and people want to stay.
 
@@ -104,7 +104,8 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] The lodge in the `docs/STYLE.md` look: timber beams, a plank floor, lanterns over each table, seating, and a counter serving sodas, milkshakes and coffee (Claude)
 - [ ] Plants and other organic props: Claude writes prompts for Studio's AI model and texture tools, I run them, and the arena builder places the results (Me + Claude)
 - [ ] All 6 tables: `tools/BuildTable.luau` builds 3 for 1v1 and 3 for 2v2, with their seat markers, on the lodge's table spots (Claude)
-- [ ] Simple tutorial: on-screen tips during a player's first match, covering aiming, power, ball in hand, groups and the 8, and items as each first comes up (Claude)
+- [ ] Tutorial server: a new player is sent from the lodge to a private tutorial server of the same place, with Coach at one table. Skip or finishing sends them to a public lodge server, and finishing or skipping is saved (needs my OK on saving data). Teleports only work in a published game, so I publish a private test version to try them (Claude; I publish and test)
+- [ ] Tutorial steps with Coach: aiming, power, ball in hand, groups, calling the 8 and items, each with a tip card and the table set up for it, and a Skip button (Claude)
 - [ ] "0/2" or "0/4" signs above each table, counting the players who have joined (Claude)
 - [ ] Spectating: watch in 3D or switch to the top-down view (Claude)
 - [ ] Leaving: the leaver's seat opens on the prompt as "Take seat", and the first player to press E takes over. After 15 seconds with nobody, the other player wins a 1v1, or the teammate plays on alone in 2v2. Disconnects count as leaving, and 2 timeouts in a row removes a player (Claude)
@@ -124,7 +125,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 **Goal:** everything built so far works by touch on my phone, held sideways.
 
-- [ ] Touch controls: bring the existing touch code (drag to aim, a touch near the cue ball to pull, the Lock button, the F button) up to date with everything built since Phase 1, and make the first-match tips name the touch controls on phones (Claude)
+- [ ] Touch controls: bring the existing touch code (drag to aim, a touch near the cue ball to pull, the Lock button, the F button) up to date with everything built since Phase 1, and make the tutorial's tips name the touch controls on phones (Claude)
 - [ ] Touch for items: tap a slot to use an item, and tap a ball, a spot on the felt or a pocket to pick a target, choosing the nearest one within a finger's reach (Claude)
 - [ ] Phone HUD layout: the power meter with the Lock button beside it, the item slots, the cards with their item bars, the hints and the top bar all fit a phone held sideways, with touch targets of at least 44 px (Claude)
 - [ ] Power Shot near-rail check on a phone: a 150% pull fits on screen for a cue ball against a long rail shooting straight across; if it doesn't, make the extra 50% take less pull (Claude)
