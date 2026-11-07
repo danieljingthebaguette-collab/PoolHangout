@@ -296,6 +296,46 @@ return function(test, check)
 		check.equal(called("junk", false), -1, "off the 8 the shot goes, calling nothing")
 	end)
 
+	-- Live aim
+
+	test("live aim needs a real angle, a pull from 0 to 1, and two true-or-false values", function()
+		local function read(aim: unknown, pull: unknown, held: unknown, placing: unknown)
+			return TableFlow.readAim(aim, pull, held, placing, nil, nil, nil, false, layout, tableParams)
+		end
+		local state = read(1, 0.5, true, false) :: TableFlow.AimState
+		check.truthy(state, "a fair update")
+		check.equal(state.aim, 1)
+		check.equal(state.pull, 0.5)
+		check.equal(read(0 / 0, 0.5, true, false), nil, "NaN angle")
+		check.equal(read(math.huge, 0.5, true, false), nil, "infinite angle")
+		check.equal(read(1, 1.5, true, false), nil, "pull past full")
+		check.equal(read(1, -0.1, true, false), nil, "negative pull")
+		check.equal(read(1, 0 / 0, true, false), nil, "NaN pull")
+		check.equal(read("1", 0.5, true, false), nil, "angle as text")
+		check.equal(read(1, 0.5, 1, false), nil, "held as a number")
+		local turned = read(-math.pi / 2, 0, false, false) :: TableFlow.AimState
+		check.near(turned.aim, 3 * math.pi / 2, 1e-9, "the angle comes back from 0 to 2π")
+	end)
+
+	test("live aim takes a cue ball spot on the felt only with ball in hand, and a pocket only if it exists", function()
+		local function read(cueX: unknown, cueY: unknown, pocket: unknown, inHand: boolean)
+			return TableFlow.readAim(0, 0, false, true, cueX, cueY, pocket, inHand, layout, tableParams)
+		end
+		local state = read(1, 2, 3, true) :: TableFlow.AimState
+		check.equal(state.cueX, 1)
+		check.equal(state.cueY, 2)
+		check.equal(state.pocket, 3)
+		check.truthy(state.placing, "placing with ball in hand")
+		check.equal(read(1, 2, nil, false), nil, "a spot without ball in hand")
+		check.equal(read(1, nil, nil, true), nil, "half a spot")
+		check.equal(read(tableParams.Length, 0, nil, true), nil, "off the felt")
+		check.equal(read(0 / 0, 0, nil, true), nil, "NaN spot")
+		check.equal(read(nil, nil, 7, true), nil, "a pocket that doesn't exist")
+		check.equal(read(nil, nil, 1.5, true), nil, "half a pocket")
+		local noHand = TableFlow.readAim(0, 0, false, true, nil, nil, nil, false, layout, tableParams) :: TableFlow.AimState
+		check.truthy(not noHand.placing, "no placing without ball in hand")
+	end)
+
 	test("with no spot the cue ball stays put, the only choice without ball in hand", function()
 		local balls = EightBall.rack(layout, first)
 		check.truthy(TableFlow.cueSpotAllowed(false, nil, nil, balls, tableParams), "no ball in hand")

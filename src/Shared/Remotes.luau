@@ -23,6 +23,17 @@ local function remote(name: string): RemoteEvent
 	return folder:WaitForChild(name) :: RemoteEvent
 end
 
+-- For updates that can be dropped, like live aim: the next one replaces any that's lost
+local function unreliable(name: string): UnreliableRemoteEvent
+	if RunService:IsServer() then
+		local event = Instance.new("UnreliableRemoteEvent")
+		event.Name = name
+		event.Parent = folder
+		return event
+	end
+	return folder:WaitForChild(name) :: UnreliableRemoteEvent
+end
+
 return {
 	-- client → server: (dirX, dirY, power, cueX?, cueY?, calledPocket?), a direction in table space and power 0–1,
 	-- with ball in hand where the shooter placed the cue ball (nil leaves it where it is, and is the only choice
@@ -53,6 +64,14 @@ return {
 	-- client → server: (), the Leave button. Off the table this player joined, calling off its start, or out of
 	-- their game: the server decides which.
 	LeaveTable = remote("LeaveTable"),
+	-- client → server, unreliable: (aim, pull, held, placing, cueX?, cueY?, pocket?), the shooter's live aim at most
+	-- Config.Aim.RelayRate times a second: the angle in table space, the pull 0–1, whether the aim is locked or
+	-- pulling, whether the cue ball is following the mouse with ball in hand, where they've moved it, and on the 8 the
+	-- pocket called. Display only: the shot is checked again when it's asked for.
+	AimUpdate = unreliable("AimUpdate"),
+	-- server → clients, unreliable: (table model, aim), that shooter's live aim as TableFlow.AimState, to everyone but
+	-- the shooter, so anyone in the top-down view sees their cue and aim indicator move
+	AimRelay = unreliable("AimRelay"),
 	-- server → clients: (table model, starting balls, shot, physics params) to replay
 	ShotStarted = remote("ShotStarted"),
 	-- server → clients: (table model, final balls)

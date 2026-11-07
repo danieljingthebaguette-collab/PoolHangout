@@ -133,6 +133,7 @@ local function show(
 	buttonList.FillDirection = Enum.FillDirection.Horizontal
 	buttonList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	buttonList.Padding = UDim.new(0, ui.Padding)
+	buttonList.SortOrder = Enum.SortOrder.LayoutOrder
 	buttonList.Parent = buttons
 	local rematch = Ui.accentButton("Rematch", Theme.Colors.Button, buttons)
 	rematch.Name = "Rematch"
@@ -140,6 +141,7 @@ local function show(
 	rematch.Visible = canRematch
 	local lobby = Ui.accentButton("Back to lobby", Theme.Colors.LobbyButton, buttons)
 	lobby.Name = "Lobby"
+	lobby.LayoutOrder = 1 -- after Rematch
 	lobby.Size = UDim2.fromOffset(ui.EndButtonWidth, ui.ButtonHeight)
 
 	local countdown = Ui.label("", content)

@@ -42,7 +42,10 @@ export type Match = {
 	lastRequest: { [Player]: number },
 	-- No more shots: the game is over, or was ended
 	ended: boolean,
+	-- The game's RequestShot and AimUpdate connections, and when the shooter's last live aim was passed on
 	connection: RBXScriptConnection?,
+	aimConnection: RBXScriptConnection?,
+	lastAim: number,
 	-- Each player's stats for the end screen
 	stats: { [Player]: EightBall.Stats },
 	-- Once the game is over, each player's answer on the end screen: true for Rematch, false for Back to lobby. Closed
@@ -156,6 +159,46 @@ function startTurn(match: Match)
 		end
 	end)
 	Remotes.TurnStarted:FireAllClients(turnMessage(match))
+end
+
+-- Sends the shooter's live aim to every screen but their own, for anyone in the top-down view to draw
+function Match.sendAim(match: Match, state: TableFlow.AimState)
+	for _, other in Players:GetPlayers() do
+		if other ~= match.shooter then
+			Remotes.AimRelay:FireClient(other, match.tableModel, state)
+		end
+	end
+end
+
+-- The shooter's screen sent where they're aiming. Display only, so a bad or late one is simply dropped.
+local function relayAim(match: Match, player: Player, ...: unknown)
+	local now = os.clock()
+	if
+		match.ended
+		or player ~= match.shooter
+		or Balls.isRolling(match.tableModel)
+		or now - match.lastAim < Config.Aim.RelayMinGap
+	then
+		return
+	end
+	match.lastAim = now
+	local tableParams = PhysicsTestAccess.params().Table
+	local aim, pull, held, placing, cueX, cueY, pocket = ...
+	local state = TableFlow.readAim(
+		aim,
+		pull,
+		held,
+		placing,
+		cueX,
+		cueY,
+		pocket,
+		match.ballInHand,
+		Geometry.build(tableParams),
+		tableParams
+	)
+	if state then
+		Match.sendAim(match, state)
+	end
 end
 
 -- The end screen closes, once: with a rematch, or with the game ending
@@ -325,6 +368,8 @@ function Match.new(
 		lastRequest = {},
 		ended = false,
 		connection = nil,
+		aimConnection = nil,
+		lastAim = -math.huge,
 		stats = {},
 		votes = {},
 		closed = false,
@@ -335,6 +380,9 @@ function Match.new(
 	end
 	match.connection = Remotes.RequestShot.OnServerEvent:Connect(function(player: Player, ...: unknown)
 		shoot(match, player, ...)
+	end)
+	match.aimConnection = Remotes.AimUpdate.OnServerEvent:Connect(function(player: Player, ...: unknown)
+		relayAim(match, player, ...)
 	end)
 	local names = {}
 	for _, player in seats do
@@ -411,6 +459,9 @@ function Match.destroy(match: Match)
 	match.tableModel:SetAttribute("BreakNext", false)
 	if match.connection then
 		match.connection:Disconnect()
+	end
+	if match.aimConnection then
+		match.aimConnection:Disconnect()
 	end
 	Remotes.TurnStarted:FireAllClients(match.tableModel, nil, false)
 end

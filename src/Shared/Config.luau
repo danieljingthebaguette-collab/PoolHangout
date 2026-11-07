@@ -81,6 +81,11 @@ local Config = {
 		CuePullBack = 6, -- ball radii the cue slides back at a full pull
 		CueFollowThrough = 2, -- ball radii the cue carries on past where the cue ball was, after the strike
 		CueHeight = 4, -- ball radii above the felt, clear of the rails; from straight above it looks the same as ball height
+		-- Live aim for everyone in the top-down view: how often the shooter's screen sends its aim, the closest together
+		-- the server passes updates on, and how quickly other screens catch up with the latest one
+		RelayRate = 10, -- updates a second
+		RelayMinGap = 0.08, -- seconds
+		RelaySmoothSeconds = 0.1,
 	},
 
 	-- Placeholder sounds, the free "Pool Table SFX" set by m6oru on the Creator Store. Final ones come in Phase 4.

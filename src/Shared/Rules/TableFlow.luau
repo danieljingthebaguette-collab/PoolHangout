@@ -13,6 +13,19 @@ export type Lobby<T> = { joined: { T }, countdown: {}? }
 -- A shot request's values once they've passed every check, with the direction made unit length
 export type ShotRequest = { dirX: number, dirY: number, power: number, calledPocket: number? }
 
+-- A shooter's live aim once it has passed every check, for the other screens to draw: the angle, the pull, whether the
+-- aim is held (locked or pulling), whether the cue ball is following the mouse with ball in hand, where they've moved
+-- it, and on the 8 the pocket called
+export type AimState = {
+	aim: number,
+	pull: number,
+	held: boolean,
+	placing: boolean,
+	cueX: number?,
+	cueY: number?,
+	pocket: number?,
+}
+
 local TableFlow = {}
 
 -- Seats in turn order, by the names of their markers. A 1v1 table has the first two.
@@ -192,6 +205,53 @@ function TableFlow.readShot(
 		called = calledPocket
 	end
 	return { dirX = dirX / length, dirY = dirY / length, power = power, calledPocket = called }
+end
+
+-- A shooter's live aim, as their client sent it: an angle, a pull from 0 to 1 and two true-or-false values, then with
+-- ball in hand an optional spot on the felt, and an optional pocket that exists. Nil if anything is wrong. Display only:
+-- the shot is checked again when it's asked for.
+function TableFlow.readAim(
+	aim: unknown,
+	pull: unknown,
+	held: unknown,
+	placing: unknown,
+	cueX: unknown,
+	cueY: unknown,
+	pocket: unknown,
+	ballInHand: boolean,
+	layout: Geometry.Layout,
+	tableParams: Geometry.TableParams
+): AimState?
+	if
+		type(aim) ~= "number"
+		or not isFinite(aim)
+		or type(pull) ~= "number"
+		or not (pull >= 0 and pull <= 1)
+		or type(held) ~= "boolean"
+		or type(placing) ~= "boolean"
+	then
+		return nil
+	end
+	local state: AimState = { aim = aim % (2 * math.pi), pull = pull, held = held, placing = placing and ballInHand }
+	if cueX ~= nil or cueY ~= nil then
+		-- NaN fails the size checks
+		if
+			not ballInHand
+			or type(cueX) ~= "number"
+			or type(cueY) ~= "number"
+			or not (math.abs(cueX) <= tableParams.Length / 2 and math.abs(cueY) <= tableParams.Width / 2)
+		then
+			return nil
+		end
+		state.cueX, state.cueY = cueX, cueY
+	end
+	if pocket ~= nil then
+		if type(pocket) ~= "number" or pocket % 1 ~= 0 or not layout.pockets[pocket] then
+			return nil
+		end
+		state.pocket = pocket
+	end
+	return state
 end
 
 -- Whether a shot may put the cue ball here: no spot (nil, nil) leaves it where it rests, the only choice without

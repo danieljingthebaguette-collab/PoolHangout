@@ -175,7 +175,7 @@ Workspace
 | Remote | Direction | Carries |
 | --- | --- | --- |
 | `RequestShot` | client → server | Aim direction, power, cue ball placement, called pocket |
-| `AimUpdate` | client → server, unreliable | Live aim for everyone at the table |
+| `AimUpdate` | client → server, unreliable | The shooter's live aim, at most `Config.Aim.RelayRate` (10) a second and only on change: angle, pull, locked or pulling, placing, the placed cue ball and the called pocket. The server checks it with `TableFlow.readAim`, drops ones closer than `RelayMinGap` and passes it on |
 | `LeaveTable` | client → server | The Leave button |
 | `ClientReady` | client → server | Once the player's scripts listen. The server answers with `TurnStarted` for every game on, and the test mode's ball in hand, which a player who just joined would have missed |
 | `SayPhrase` | client → server | A quick phrase, by index (Later list) |
@@ -188,7 +188,7 @@ Workspace
 | `Banner` | server → clients | A message for everyone at the table and how many seconds to show it: a foul and who has ball in hand, or until the end screen, who won and why |
 | `GameOver` | server → clients | To each player still in a decided game: who won and why, the winning side, each seat's stats, whether a rematch is possible, and when the end screen closes |
 | `Rematch` | client → server, and server → clients | Rematch (true) or Back to lobby (false), once per game. Back to the game's players: every answer so far |
-| `AimRelay` | server → clients, unreliable | Live aim for everyone at the table |
+| `AimRelay` | server → clients, unreliable | That aim to everyone but the shooter. Screens in the top-down view draw the cue and aim indicator from it, easing towards each update over `RelaySmoothSeconds` |
 | `TestRack` | client → server | Physics test mode: rack Table1 |
 | `TestShoot` | client → server | Physics test mode: direction, power and cue ball placement |
 | `TestTune` | client → server, and server → client | Physics test mode: a slider's name and value. Its attributes hold every slider's current value. Back to one client, with nothing, when the server turned its change down, so its panel shows the kept values |

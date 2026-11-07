@@ -16,6 +16,9 @@
 -- at, until a click on a pocket calls that one for the rest of the shot. With no game on, the physics test mode lets
 -- testers shoot any time. TopDownView moves the camera, AimIndicator draws the indicator and the rings, and Cue is the
 -- stick; this module decides what they show.
+-- Live aim: in a game the shooter's screen sends its aim, pull, placed cue ball and called pocket a few times a second,
+-- and every other screen in the top-down view draws the shooter's cue and aim indicator from it, easing towards each
+-- update so a slow connection only makes it lag. Display only: the shot itself goes by RequestShot.
 
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
@@ -32,6 +35,7 @@ local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Preview = require(ReplicatedStorage.Shared.Physics.Preview)
 local Pull = require(ReplicatedStorage.Shared.Pull)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local TableFlow = require(ReplicatedStorage.Shared.Rules.TableFlow)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local AimIndicator = require(script.Parent.AimIndicator)
@@ -165,6 +169,11 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	-- On the 8, from TurnStarted: the pocket called for it, and whether a click chose it, after which it stops
 	-- following the aim. Nil when it's not this player's turn on the 8.
 	local calling: { pocket: number, clicked: boolean }? = nil
+	-- Live aim while someone else shoots: the latest update the server passed on, what this screen draws as it eases
+	-- towards it, and where the cue ball was before the update moved it here. Nil until one arrives this turn.
+	local relayed: { target: TableFlow.AimState, aim: number, pull: number, x: number?, y: number?, from: CFrame? }? = nil
+	-- When this player's own live aim was last sent, and what it said, so only changes go out
+	local sentAt, lastSent = -math.huge, ""
 
 	-- The top-down view's camera, and everything the view connected while it's on
 	local view = TopDownView.new(tableModel, felt)
@@ -299,6 +308,54 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		pulling = nil
 	end
 
+	-- The shooter's live aim, for everyone else at the table: at most Config.Aim.RelayRate times a second, and only
+	-- when something changed
+	local function sendAim(held: boolean, placing: boolean)
+		local now = os.clock()
+		if now - sentAt < 1 / Config.Aim.RelayRate then
+			return
+		end
+		local cueX, cueY = if placed then placed.x else nil, if placed then placed.y else nil
+		local pocket = if calling then calling.pocket else nil
+		local said = `{aim} {pull} {held} {placing} {cueX} {cueY} {pocket}`
+		if said == lastSent then
+			return
+		end
+		sentAt, lastSent = now, said
+		Remotes.AimUpdate:FireServer(aim, pull, held, placing, cueX, cueY, pocket)
+	end
+
+	-- Draws someone else's live aim, easing towards the latest update, while the balls are still
+	local function drawRelayed(dt: number)
+		if not (relayed and turn and not turn.mine) or TableView.isBusy(tableModel) or cueBall.Transparency == 1 then
+			return
+		end
+		local target = relayed.target
+		local ease = 1 - math.exp(-dt / Config.Aim.RelaySmoothSeconds)
+		relayed.aim += ((target.aim - relayed.aim + math.pi) % (2 * math.pi) - math.pi) * ease
+		relayed.pull += (target.pull - relayed.pull) * ease
+		if target.cueX and target.cueY then
+			-- With ball in hand, the cue ball follows the shooter's mouse here too, until the server places it
+			relayed.from = relayed.from or cueBall.CFrame
+			local x = if relayed.x then relayed.x + (target.cueX - relayed.x) * ease else target.cueX
+			local y = if relayed.y then relayed.y + (target.cueY - relayed.y) * ease else target.cueY
+			relayed.x, relayed.y = x, y
+			cueBall.CFrame = cueBall.CFrame.Rotation + TableSpace.toWorld(felt, x, y, radius).Position
+		end
+		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
+		if target.pocket then
+			indicator.showPocketRing(target.pocket)
+		end
+		if target.placing then
+			indicator.showPlaceRing(cueX, cueY)
+			return
+		end
+		indicator.fade(not target.held)
+		indicator.draw(cueX, cueY, relayed.aim, shownBalls())
+		Cue.place(cue, felt, cueX, cueY, relayed.aim, cueBack + relayed.pull * radius * Config.Aim.CuePullBack)
+		cue.part.Transparency = 0
+	end
+
 	local function render(dt: number)
 		if pulling and not stillHeld(pulling.input) then
 			cancelPull()
@@ -360,7 +417,11 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		lockButton.Text = if held then "Unlock" else "Lock"
 		indicator.hide()
 		if hidden then
+			drawRelayed(dt)
 			return
+		end
+		if turn and turn.mine then
+			sendAim(held, placing)
 		end
 		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
 		if calling then
@@ -524,6 +585,10 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			if placed then
 				cueBall.CFrame = placed.from
 			end
+			if relayed and relayed.from then
+				cueBall.CFrame = relayed.from
+			end
+			relayed, lastSent = nil, ""
 			local wasSeated = turn ~= nil and turn.seated
 			local wasMine = turn ~= nil and turn.mine
 			local seated = table.find(seats or {}, Players.LocalPlayer) ~= nil
@@ -550,6 +615,22 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			end
 		end
 	)
+
+	Remotes.AimRelay.OnClientEvent:Connect(function(model: Model?, state: TableFlow.AimState)
+		if model ~= tableModel or not (turn and not turn.mine) then
+			return
+		elseif relayed then
+			relayed.target = state
+		else
+			relayed = { target = state, aim = state.aim, pull = state.pull, x = nil, y = nil, from = nil }
+		end
+	end)
+	-- Once the shot goes, the replay places the balls and the live aim is done with
+	Remotes.ShotStarted.OnClientEvent:Connect(function(model: Model?)
+		if model == tableModel then
+			relayed = nil
+		end
+	end)
 
 	-- A new character gets fresh controls, so it starts in the normal view, and on your own turn goes back to the
 	-- top-down view. Roblox only points the camera at a new character while the camera isn't Scriptable, so a respawn
