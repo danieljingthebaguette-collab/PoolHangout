@@ -60,7 +60,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 
 ## Taking a shot
 
-1. A "Turn" arrow appears over the shooter's head and their shot clock starts.
+1. A "Turn" arrow appears over the shooter's head and their shot clock starts. The arrow is a small gold "Turn" card pointing down at the head; everyone sees it in the normal view, and the top-down view hides it, since the top bar's glow shows the turn there.
 2. The shooter is already in the top-down view (step 10). F (phones: an on-screen button) switches between it and the normal view from anywhere. Where they stand doesn't matter.
 3. The top-down view shows the whole table, fixed and horizontal on screen, the same for everyone *(default)*.
 4. Ball in hand only comes after a foul, like a scratch, and lets the shooter place the cue ball anywhere on the table. The cue ball follows the mouse, stopping at the nearest spot it's allowed, with a faint white ring around it: never overlapping a ball or in a pocket's mouth. The hint reads "Place ball · Click". A click sets it down, then they aim and shoot as normal. Until they shoot, clicking on or near the cue ball (within 3 ball radii of its center) picks it up again. (Phones: the Mobile phase.)
@@ -75,7 +75,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 
 - **Items:** before each shot, the shooter can use one item (see Items).
 - **Top-down only:** you can only aim and shoot from the top-down view. The cue and the power meter only show there, and leaving the view in the middle of a pull cancels it with no shot.
-- **Shot clock:** 45 seconds per shot (I said 30–60). It covers placing and aiming, shows a countdown for the last 10 seconds, and stops when the shot fires. The next shot gets a fresh 45. Running out is a foul, so the next shooter gets ball in hand, and 2 timeouts in a row remove the player, the same as leaving. The clock shows in the middle of the top bar.
+- **Shot clock:** 45 seconds per shot (I said 30–60). It covers placing and aiming and stops when the shot fires, hiding while the balls roll. The next shot gets a fresh 45. Running out is a foul, so the next shooter gets ball in hand, and everyone at the table sees "Time's up. Player2 has ball in hand." On the break there's no ball in hand: the next player breaks instead *(default)*. 2 timeouts in a row remove the player, the same as leaving (Phase 4). The clock is a dark box in the middle of the top bar that always shows the seconds left, turning coral with bigger numbers for the last 10.
 - **Between turns:** players can press F to leave the top-down view and walk around, sit or grab a drink.
 - **No spin** in the base build. The top-right corner of the screen stays free for a spin control later.
 
@@ -88,10 +88,10 @@ Laid out like 8 Ball Duels, in the look `docs/STYLE.md` describes: cream cards, 
   - the power meter on the left, with a % readout under it; on phones the Lock button sits next to it
   - a tray on the right where sunk balls collect, the first one sunk at the bottom
   - soft shadows under the balls (the normal view has Roblox's own shadows)
+  - the shot clock in the middle of the top bar, between the two cards
   - a Leave button top right while you're at a table, in both views (see Leaving)
   - a settings button bottom-left with a sound volume slider. The volume lasts for the session and isn't saved *(default)*. It shows only in the top-down view, so it never covers the phones' thumbstick.
 - **Coming next:**
-  - the shot clock in the middle of the top bar, between the two cards (Normal tables)
   - your group's balls pulse white briefly when your turn starts (Normal tables)
   - item slots 1 and 2 at the bottom center (Items), with icons drawn in code, and every player's slots and item bar on their card
 

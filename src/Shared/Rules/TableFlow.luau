@@ -79,6 +79,12 @@ function TableFlow.afterShot(
 	return TableFlow.nextTurn(seat, count, outcome.keepsTurn, outcome.winner ~= nil), outcome.foul ~= nil
 end
 
+-- The shot clock ran out: a foul, so the turn passes and the next shooter has ball in hand. On the break there's no
+-- ball in hand, so the next player breaks instead.
+function TableFlow.afterTimeout(seat: number, count: number, isBreak: boolean): (number, boolean)
+	return TableFlow.nextTurn(seat, count, false, false), not isBreak
+end
+
 -- A seat on the same side as this one whose player is still in, to play on alone after this one presses Leave. Nil
 -- with none, and then the other side wins.
 function TableFlow.teammateIn(seat: number, left: { [number]: boolean }, count: number): number?

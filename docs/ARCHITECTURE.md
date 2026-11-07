@@ -38,7 +38,9 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Client/TopDownView.luau` | The top-down camera: framing the table between the HUD's reserves, saving and bringing back the normal camera, and turning it to face the table from a seat |
 | `Client/AimIndicator.luau` | The aim indicator (the line, circle and dot, and the cue ball's and hit ball's lines), the faint ring with ball in hand and the called pocket's ring, drawn on the screen |
 | `Client/Cue.luau` | The cue stick, a Part only the shooter's screen sees, and laying it along the aim |
-| `Client/Hud.luau` | Starts the HUD's parts below, shows them in the top-down view, and "TEST MODE"; later the shot clock, item slots with icons drawn in code, the item's name shown big and the end screen |
+| `Client/Hud.luau` | Starts the HUD's parts below, shows them in the top-down view, and "TEST MODE"; later item slots with icons drawn in code, the item's name shown big and the end screen |
+| `Client/ShotClock.luau` | The shot clock between the top bar's cards, counting to the server's clock end time |
+| `Client/TurnArrow.luau` | The gold "Turn" card over each table's shooter in the normal view |
 | `Client/TopBar.luau` | Each side's card: avatars, names, the turn glow, and the group with its balls; later every card's item slots and bar with its "+4" pops |
 | `Client/Banner.luau` | The banner under the top bar for the server's messages, for everyone at the table |
 | `Client/LeaveButton.luau` | The Leave button and the question it asks mid-game |

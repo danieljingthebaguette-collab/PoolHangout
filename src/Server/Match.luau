@@ -3,7 +3,8 @@
 -- server is the referee: a shot only goes once every check in `shoot` passes. Once the 8 decides the game, or a
 -- player presses Leave with no teammate left to play on, everyone sees who won and why, and then the game tells
 -- TableService it's over.
--- ponytail: no shot clock or leaving yet; they come with later Phase 2 and Phase 3 tasks.
+-- Each turn has a shot clock: running out is a foul.
+-- ponytail: no takeovers, or removal after 2 timeouts in a row, until Phase 4's leaving rules.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -29,6 +30,10 @@ export type Match = {
 	left: { [number]: boolean },
 	-- Whether the shooter may place the cue ball anywhere before their next shot, after a foul
 	ballInHand: boolean,
+	-- When the turn's shot clock runs out, in the server's time, and a token for it while it runs: a timer that finds
+	-- another token, or none because the shot went, does nothing
+	clockEndsAt: number,
+	clock: {}?,
 	isBreak: boolean,
 	groups: EightBall.Groups,
 	-- When each player last asked for a shot, for the rate limit
@@ -103,12 +108,38 @@ local function turnMessage(match: Match): ...any
 		seatsShown(match),
 		callPocket,
 		match.groups,
-		ballsDown(match)
+		ballsDown(match),
+		if shooter then match.clockEndsAt else nil
 end
 
-local function startTurn(match: Match)
+local startTurn: (Match) -> ()
+
+-- The shot clock ran out: a foul, so the turn passes with ball in hand, or on the break the next player breaks
+local function timeOut(match: Match)
+	if match.ended then
+		return
+	end
+	log(match, `{match.shooter.Name} ran out of time`)
+	local wasBreak = match.isBreak
+	match.turnSeat, match.ballInHand = TableFlow.afterTimeout(match.turnSeat, #match.seats, match.isBreak)
+	match.shooter = shooterFor(match, match.turnSeat)
+	local name = match.shooter.DisplayName
+	local text = if wasBreak then `Time's up. {name} breaks.` else `Time's up. {name} has ball in hand.`
+	Remotes.Banner:FireAllClients(match.tableModel, text, Config.Timers.FoulBannerSeconds)
+	startTurn(match)
+end
+
+function startTurn(match: Match)
 	-- Tells the shooter's screen to start the shot at break power before the server's copy arrives. Display only.
 	match.tableModel:SetAttribute("BreakNext", match.isBreak)
+	local clock = {}
+	match.clock = clock
+	match.clockEndsAt = workspace:GetServerTimeNow() + Config.Shot.ClockSeconds
+	task.delay(Config.Shot.ClockSeconds, function()
+		if match.clock == clock then
+			timeOut(match)
+		end
+	end)
 	Remotes.TurnStarted:FireAllClients(turnMessage(match))
 end
 
@@ -167,6 +198,8 @@ local function shoot(
 		return
 	end
 
+	-- The shot goes, so the clock stops
+	match.clock = nil
 	match.ballInHand = false
 	local called = request.calledPocket
 	local shot: Simulate.Shot =
@@ -232,6 +265,8 @@ function Match.new(tableModel: Model, seats: { Player }, pick: (number) -> numbe
 		left = {},
 		-- The break is from the middle of the head line, where the rack put the cue ball
 		ballInHand = false,
+		clockEndsAt = 0,
+		clock = nil,
 		isBreak = true,
 		groups = {},
 		lastRequest = {},

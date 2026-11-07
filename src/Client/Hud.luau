@@ -1,8 +1,9 @@
 --!strict
 -- The HUD around the top-down view, in the style of docs/STYLE.md, built from its parts: TopBar (each side's card),
--- Banner (fouls and the winner, under the top bar), LeaveButton (top right while you're at a table), PowerMeter (left),
+-- ShotClock (between the cards), Banner (fouls and the winner, under the top bar), LeaveButton (top right while you're at a table), PowerMeter (left),
 -- Tray (right, where sunk balls collect), Hints (the control hints, bottom right) and SettingsPanel (the gear
 -- bottom-left, with the sound volume), and beside the gear "TEST MODE" while the physics test mode has the table.
+-- It also starts TurnArrow, the "Turn" card over each shooter's head in the normal view.
 
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -15,7 +16,9 @@ local Hints = require(script.Parent.Hints)
 local LeaveButton = require(script.Parent.LeaveButton)
 local PowerMeter = require(script.Parent.PowerMeter)
 local SettingsPanel = require(script.Parent.SettingsPanel)
+local ShotClock = require(script.Parent.ShotClock)
 local TopBar = require(script.Parent.TopBar)
+local TurnArrow = require(script.Parent.TurnArrow)
 local Tray = require(script.Parent.Tray)
 local Ui = require(script.Parent.Ui)
 
@@ -35,6 +38,7 @@ function Hud.showTable(visible: boolean)
 	end
 	-- Prompts float over the table, so in the top-down view "Table in use" would sit on the felt
 	ProximityPromptService.Enabled = not visible
+	TurnArrow.setHidden(visible)
 end
 
 -- Shows the pull on the power meter, 0 to 1, or hides the meter with nil while you can't shoot
@@ -88,6 +92,7 @@ function Hud.start(tableModel: Model)
 	gui.Enabled = false
 	TopBar.build(gui)
 	TopBar.show(nil, nil, nil, nil)
+	ShotClock.build(gui)
 	Hints.build(gui)
 	testModeLabel(gui)
 	gui.Parent = playerGui
@@ -104,6 +109,7 @@ function Hud.start(tableModel: Model)
 
 	PowerMeter.build(playerGui)
 	LeaveButton.build(playerGui)
+	TurnArrow.start()
 	Banner.start(playerGui, tableModel, function(): boolean
 		return inView
 	end)
@@ -134,12 +140,14 @@ function Hud.start(tableModel: Model)
 			seats: { Player }?,
 			_: boolean?,
 			groups: { [string]: string }?,
-			down: { number }?
+			down: { number }?,
+			clockEndsAt: number?
 		)
 			if model ~= tableModel then
 				return
 			end
 			TopBar.show(shooter, seats, groups, down)
+			ShotClock.show(if shooter then clockEndsAt else nil)
 			-- In a game still being played, and in 2v2 with a teammate still in: seats alternate sides, and a teammate
 			-- who left shows as this player
 			local seat = seats and table.find(seats, player)
@@ -150,6 +158,13 @@ function Hud.start(tableModel: Model)
 			LeaveButton.update(seat ~= nil and shooter ~= nil, teammate)
 		end
 	)
+
+	-- The clock stops when the shot goes
+	Remotes.ShotStarted.OnClientEvent:Connect(function(model: Model?)
+		if model == tableModel then
+			ShotClock.show(nil)
+		end
+	end)
 
 	-- Waits for the table's balls, so it goes last
 	Tray.build(gui, tableModel)

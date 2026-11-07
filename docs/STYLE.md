@@ -93,7 +93,7 @@ Every value lives in `src/Shared/Theme.luau`, and UI is built in code. `src/Clie
 
 Touch targets stay at least 44 px, and everything fits a phone held sideways. Both are checked in the Mobile phase; until then the UI is built and tested on PC.
 
-**Built so far:** cards, the font, dark boxes, control hints, accent buttons, the top bar's side cards and the banner. **Not built yet:** the timer, item slots and the ring at players' feet.
+**Built so far:** cards, the font, dark boxes, control hints, accent buttons, the top bar's side cards, the banner, the timer and the gold "Turn" card over the shooter's head. **Not built yet:** item slots and the ring at players' feet.
 
 ## Effects
 
