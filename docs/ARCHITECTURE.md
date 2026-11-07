@@ -97,7 +97,7 @@ Starting values for Config (tune by feel):
 | Max step travel | 1/3 ball radius | A faster ball, like on the break, splits the step into equal sub-steps, so hits stay exact at any speed |
 | Shot clock / warning | 45 s / last 10 s | |
 | Coach | 1.5 s pause, 1.5 s aim, 1 s pull; 0.25° aim error; cuts up to 70° | Slow enough to watch. Coach-vs-Coach keeps the turn on about 55% of shots after the break, about 20 shots a game |
-| Countdown / takeover / open-spot wait / end screen | 5 / 5 / 15 / 10 s | |
+| Countdown / takeover / open-spot wait / end screen | 3 / 5 / 15 / 10 s | |
 | Cancel zone | 2.5 ball radii | The first stretch of pull back, roughly fingertip size on a phone. Letting go back inside it cancels |
 | Full-power pull | 6 studs past the cancel zone, straight back from the shot | 6.6 studs in all, about 41% of the table length. Measured on the table, so it's the same share of the screen on every device. Tuned on the test panel's slider |
 
@@ -146,6 +146,29 @@ Starting values for `Config.Items`, every one a default to tune by feel. Distanc
 | `OilRadius`, `OilSlowdown` | 5 ball radii (5 ball widths across); 0.25 × the normal rate | "Much less", while balls still stop |
 | `NameSeconds` | 1.5 s for the item's name on screen | Long enough to read, short enough to keep play moving |
 | `ShakeSpeed` | Shake on hits and rail bounces faster than 60% of full-power speed | The break, blasts and Power Shots shake; normal shots don't |
+
+### Ready for items: where they plug in (written 2026-11-07)
+
+Notes from the health pass on where each part of the Items phase joins today's code, so it starts without a refactor.
+
+- **Turn hooks in `Match`:**
+  - `startTurn` runs once at the start of every turn: after a shot passes it, after a timeout, for Coach, and for the 2v2 teammate taking over a leaver's turn. `TurnPoints` go in here.
+  - `shoot` already has what `Items.luau` needs for the sink points: the `EightBall.resolveShot` outcome and `Simulate.dropped(sim)`, next to `EightBall.countShot`.
+  - The point where `shoot` clears `match.clock` (the shot has gone) is where "an item was used this shot" resets.
+  - Effects that last "until the end of the other side's next turn" end where the turn passes: `TableFlow.afterShot` or `TableFlow.afterTimeout` returning a different seat.
+- **Key item state by seat number, not by player.** `stats` and `votes` are keyed by the seat's occupant (a Player or Coach's model). GAME_SPEC gives a player who takes over a leaver's spot that spot's items and bar, so slots and bars belong to the seat.
+- **`TurnStarted` gets a table.** It already carries 8 values in order, and items add held items, bars, the points just added and the active effects. Switch it to one table argument in a single change: `Remotes.luau`, `Match`'s `turnMessage`, `PhysicsTest`, and the client listeners in `ShotController`, `Hud`, `TurnArrow` and `EndScreen`.
+- **`effects` through the simulation.** `Simulate.start(balls, shot, params)` and `Preview` take no effects yet. Add an `effects` argument, where an empty table gives today's behavior, and pass it through `Balls.shoot`, `ShotStarted` and `TableView`'s replay and `predict`, so every screen simulates the same shot. Coach's `ShotPicker` can ignore effects at first.
+- **Power past 100%.** Four places cap power at 1, and each needs `PowerShotMax` while the shooter's Power Shot is on:
+  - `Pull.power`
+  - `TableFlow.readShot` (power) and `TableFlow.readAim` (live-aim pull)
+  - the speed formula in `Simulate.start`, which is linear above 1
+- **Client:**
+  - `ShotController` owns input. Keys 1 and 2 bind only in the top-down view, like Space. Target picking catches the click in `pointerBegan` before a pull starts, the way ball in hand does.
+  - `TopBar.showSide` draws each card, and the slots and bar go under the names.
+  - The item slots sit bottom center, clear of the hints bottom right.
+  - Item effects and screen shake join `Effects.luau`, which already caps live parts.
+- **Tests.** The whole-game bots in `tests/games.spec.luau` can use a random held item now and then, to fuzz the item rules the way they fuzz the 8-ball rules.
 
 ## Tables
 

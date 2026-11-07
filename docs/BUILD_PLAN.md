@@ -7,10 +7,10 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current step:** Phase 2, Normal tables
-- **In progress:** the full 1v1 loop on Table1, so I can feel joining, playing and ending a table: the last health-pass fixes, then the Turn arrow and shot clock, the end screen, live aim, and hit effects, then Coach, a bot opponent so I can play the loop alone. The join task passed my 2-player test on 2026-11-04: joining and leaving, calling off the start, the start camera, turns switching the view, a full game with fouls and ball in hand, and Leave → Yes. On 2026-11-04 the physics was also tuned from new 8 Ball Duels recordings: the break at 2.5× power, a nearly tight rack, a softest shot that still rolls about half the table, and 8 Ball Duels' ball and pocket sizes
+- **In progress:** the full 1v1 loop on Table1 is built and Coach can play it with me: the health-pass fixes, the Turn arrow and 45-second shot clock, the end screen with Rematch, live aim for everyone at the table, and hit sparks and pocket pops. Coach is a grey bot that takes the other seat of a 1v1 table when I'm alone in the server. The join task passed my 2-player test on 2026-11-04. On 2026-11-04 the physics was also tuned from new 8 Ball Duels recordings: the break at 2.5× power, a nearly tight rack, a softest shot that still rolls about half the table, and 8 Ball Duels' ball and pocket sizes
 - **Dates:** launch moved to Friday, Dec 18 when the plan was reordered. The phase dates are Claude's proposal for that launch
-- **Last session:** 2026-11-07. The health pass (type check, TableFlow, whole-game tests, the Hud and ShotController split) and the physics tuning are committed, and Phase 2 is reordered: the full 1v1 loop on Table1 first, then Coach, then 2v2. A tutorial with Coach is planned for Phase 4
-- **Next up:** the health pass's known-issue fixes, then the 1v1 loop tasks below in order, then Coach, then the items-readiness notes. Phase 1's age check is still open: I'll do it when we first publish, before the friends playtest in the Items step
+- **Last session:** 2026-11-07. The health pass is finished (fixes for ending a table, respawning on your turn and late joiners) and the 1v1 loop and Coach are committed, one commit per step. The tutorial with Coach is planned in GAME_SPEC and Phase 4, replacing the tips-only tutorial, and ARCHITECTURE has notes on where items plug in
+- **Next up:** my 2-player test of the new multiplayer parts (live aim, a late joiner seeing the game, the result banner for watchers, Rematch with two players), and my call on the art director's fixes and on what moves out of Phase 4 to make room for the tutorial. Then 2v2 on Table2, the R6 shot pose and the ball pulse, then the Phase 2 2-player test. Phase 1's age check is still open: I'll do it when we first publish, before the friends playtest in the Items step
 - **Known issues:**
   - Touch and the new HUD layout haven't been tried on a real phone yet, only in the emulator; it's covered by the Mobile phase
   - The existing touch code isn't tested or extended until the Mobile phase, so it will fall behind the PC features built before then. Ball in hand is mouse-only: on a phone the cue ball can't be moved yet
@@ -21,6 +21,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
   - A card's ball icons change when the next turn starts, about a quarter second after the balls stop, not the moment a ball drops; the tray fills as they drop
   - The Output warning about rbxassetid://203785492 ("Pop Close Sound") comes from a Studio plugin or Roblox, not the place: ignore it
   - The GUI needs tweaking. Leave it as it is until I say we'll get to it
+  - Coach's avatar on the top bar is an empty dark square, since a bot has no avatar picture
   - Our break sinks about 1.8 balls (`tools/BreakStats.luau`), against 0.7 in the 3 full-power 8 Ball Duels breaks recorded so far. Since the 2026-11-04 tuning it spreads the rack and brings the cue ball back like theirs; more recorded breaks would show whether the count really differs
   - Not yet checked by me that a slider change reaches both the server and the shooter's screen (part 4 of my physics check). Claude's playtest confirmed it for the pocket sliders
 
