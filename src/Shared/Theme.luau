@@ -11,6 +11,7 @@ local MAROON = Color3.fromRGB(120, 25, 35)
 
 local CREAM = Color3.fromRGB(246, 239, 224)
 local INK = Color3.fromRGB(36, 28, 22)
+local NEAR_BLACK = Color3.fromRGB(32, 26, 22)
 local ACCENT = Color3.fromRGB(255, 196, 46) -- sunny gold
 
 local Theme = {
@@ -21,13 +22,13 @@ local Theme = {
 	Colors = {
 		Panel = CREAM, -- cards and panels
 		Text = INK, -- text on cards and accent buttons, and the cards' corner brackets and dot texture
-		Dark = Color3.fromRGB(32, 26, 22), -- dark boxes: key boxes, the % readout, the tray
+		Dark = NEAR_BLACK, -- dark boxes: key boxes, the % readout, the tray
 		DarkText = CREAM, -- text and corner brackets on dark boxes
 		Button = ACCENT, -- bright accent buttons
 		LeaveButton = Color3.fromRGB(255, 138, 118), -- coral, for leaving a table
 		ClockWarning = Color3.fromRGB(255, 138, 118), -- coral, the shot clock's last seconds
 		TurnArrow = ACCENT, -- the "Turn" card over the shooter's head
-		LobbyButton = Color3.fromRGB(150, 205, 240), -- sky blue, the end screen's Back to lobby
+		LobbyButton = NEAR_BLACK, -- the end screen's Back to lobby, with DarkText, so gold Rematch leads
 		WinnerRow = ACCENT, -- behind the winners' lines on the end screen
 		Coach = Color3.fromRGB(150, 150, 150), -- Coach's plain grey body
 		Fill = ACCENT, -- the power meter's and the sliders' fill
@@ -116,15 +117,23 @@ local Theme = {
 	-- with the table; heights are above the felt and stay under the cue's (Config.Aim.CueHeight).
 	Effects = {
 		SparkShare = 0.5, -- ball and rail hits softer than this share of full-power speed get no sparks
-		SparkMinCount = 3, -- sparks from a hit at SparkShare
-		SparkMaxCount = 5, -- sparks from a full-power hit or harder, so even the break stays a few chunky bits
+		SparkMinCount = 3, -- ball-hit sparks at SparkShare...
+		SparkMaxCount = 5, -- ...up to a full-power hit
+		SparkRailMinCount = 4, -- rail hits never get fewer
+		-- A hit faster than full power is the break (it leaves at Config.Physics.BreakPower): more, bigger sparks
+		SparkBreakCount = 6,
 		SparkColors = { ACCENT, CREAM }, -- taken in turn, so each burst mixes gold and cream
-		SparkLength = 1.3,
-		SparkThickness = 0.55,
+		SparkOutlineColor = INK, -- a block just under each spark, so they read on the white and yellow balls
+		-- Squat blocks, never longer than 2:1. A ball width is 2 ball radii.
+		SparkLength = 0.9,
+		SparkThickness = 0.5, -- across and tall
+		SparkBreakLength = 1.4,
+		SparkBreakThickness = 0.8,
+		SparkOutline = 0.12, -- the ink edge round each spark, about 2 px from the top-down view at 1080p
 		SparkHeight = 1, -- where they start: ball center height
 		SparkRise = 0.8, -- how much higher they end
-		SparkReachMin = 2, -- how far they fly, from a hit at SparkShare...
-		SparkReachMax = 4, -- ...up to a full-power one
+		SparkReach = 2.4, -- how far they fly
+		SparkBreakReach = 4,
 		-- Degrees off the line between the two balls: sparks squirt out sideways from where they touch, clear of both
 		BallSprayMin = 55,
 		BallSprayMax = 125,
@@ -132,14 +141,18 @@ local Theme = {
 		RailSprayMin = 35,
 		RailSprayMax = 85,
 		SparkSeconds = 0.25,
-		PopColor = CREAM, -- the ring that pops out where a ball drops into a pocket
-		PopStartDiameter = 2,
-		PopEndDiameter = 5,
-		PopLine = 0.35, -- the ring's thickness
+		-- The ring that pops out round a pocket a ball drops into: it grows and thins as it fades, never holding still
+		PopColor = CREAM, -- never gold, so it isn't mistaken for the called-pocket ring
+		PopStartScale = 1, -- times the pocket's mouth...
+		PopEndScale = 1.7, -- ...growing to this
+		PopLineStart = 5, -- screen pixels across its line...
+		PopLineEnd = 1, -- ...thinning to this
 		PopHeight = 1.8, -- just over the corner plates, so they never cover it
 		PopTransparency = 0.1, -- at the start; it fades to nothing
 		PopSeconds = 0.25,
-		MaxParts = 30, -- the most effect parts alive at once, so a full-power break stays cheap on phones
+		-- The most effect parts alive at once, so a full-power break stays cheap on phones: 18 outlined sparks, the
+		-- break's first three bursts. Uncapped, a full-power break would reach about 100
+		MaxParts = 36,
 	},
 
 	-- By ball id. Each stripe shares its solid's color.

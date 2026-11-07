@@ -115,6 +115,8 @@ Keep them short so the game stays readable, and keep particle counts low for pho
 | Item name | 1.5 s on screen (GAME_SPEC) |
 | Banners | 3 s for fouls and notices, 5 s for the result (`Config.Timers`) |
 
+**Hit effects (built):** chunky gold and cream spark blocks with a thin ink edge on hard ball and rail hits (bigger and farther on the break), and a cream ring that pops out of a pocket, growing and fading in 0.25 s. Values in `Theme.Effects`.
+
 **Big effects only for big moments:** the break, a winning 8, an item, a foul. A normal pot gets a small pop and its sound, nothing more.
 
 ## Never

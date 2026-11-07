@@ -1,34 +1,32 @@
 --!strict
 -- Effects on the table, in docs/STYLE.md's look, built from parts in code and only on this screen. For now the hit
--- effects: small chunky sparks where a ball hits another ball or a rail hard, and a small pop where one drops into a
--- pocket. Item effects and screen shake come in the Items and polish phases. Every look and timing is Theme.Effects.
+-- effects: small chunky ink-edged sparks where a ball hits another ball or a rail hard, bigger on the break, and a
+-- ring that pops out of a pocket a ball drops into. Item effects and screen shake come in the Items and polish phases. Every look and timing is Theme.Effects.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
+local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 
 local Effects = {}
 
 local look = Theme.Effects
--- Canvas pixels across the pop ring's line: enough to keep its edge crisp
-local RING_PIXELS = 8
 -- How far away, in ball radii, the other ball of a hit can be by the end of the frame: about one frame's travel at
 -- break speed
 local PARTNER_REACH = 7
+local TINY = Vector3.new(0.001, 0.001, 0.001)
 
 -- Effect parts alive now, kept under look.MaxParts
 local live = 0
 -- Which spark color comes next
 local nextColor = 0
 
--- A bare anchored part for an effect, that nothing can touch or click, parented to the felt so it goes if the table does. It destroys
--- itself after `seconds`. Nil when too many effect parts are alive already.
-local function newPart(felt: BasePart, seconds: number): Part?
-	if live >= look.MaxParts then
-		return nil
-	end
+-- A bare anchored part for an effect, that nothing can touch or click, parented to the felt so it goes if the table
+-- does. It destroys itself after `seconds`. Callers check look.MaxParts first.
+local function newPart(felt: BasePart, seconds: number, color: Color3, size: Vector3, cframe: CFrame): Part
 	live += 1
 	local part = Instance.new("Part")
 	part.Anchored = true
@@ -37,6 +35,9 @@ local function newPart(felt: BasePart, seconds: number): Part?
 	part.CanQuery = false
 	part.CastShadow = false
 	part.Material = Enum.Material.SmoothPlastic
+	part.Color = color
+	part.Size = size
+	part.CFrame = cframe
 	part.Parent = felt
 	task.delay(seconds, function()
 		live -= 1
@@ -45,8 +46,9 @@ local function newPart(felt: BasePart, seconds: number): Part?
 	return part
 end
 
--- A few chunky sparks from (x, y) in table space, flying at an angle of sprayMin to sprayMax degrees either side
--- of the direction (ax, ay). `t` is how hard, 0 at SparkShare to 1 at full power.
+-- `count` chunky sparks from (x, y) in table space, flying at an angle of sprayMin to sprayMax degrees either side of
+-- the direction (ax, ay). `big` is the break's bigger, farther-flying look. Each spark sits on a slightly bigger ink
+-- block, its outline.
 local function sparks(
 	felt: BasePart,
 	r: number,
@@ -54,18 +56,24 @@ local function sparks(
 	y: number,
 	ax: number,
 	ay: number,
-	t: number,
+	count: number,
+	big: boolean,
 	sprayMin: number,
 	sprayMax: number
 )
-	local count = math.round(look.SparkMinCount + (look.SparkMaxCount - look.SparkMinCount) * t)
-	local reach = (look.SparkReachMin + (look.SparkReachMax - look.SparkReachMin) * t) * r
+	local length = (if big then look.SparkBreakLength else look.SparkLength) * r
+	local thickness = (if big then look.SparkBreakThickness else look.SparkThickness) * r
+	local reach = (if big then look.SparkBreakReach else look.SparkReach) * r
+	local edge = look.SparkOutline * r
+	local size = Vector3.new(length, thickness, thickness)
+	local outlineSize = size + Vector3.new(2 * edge, 0, 2 * edge)
+	-- The outline sits an edge lower, so from above it shows only round the spark
+	local under = CFrame.new(0, -edge, 0)
 	local base = math.atan2(ay, ax)
 	local info = TweenInfo.new(look.SparkSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	local shrink = TweenInfo.new(look.SparkSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 	for i = 1, count do
-		local part = newPart(felt, look.SparkSeconds)
-		if not part then
+		if live + 2 > look.MaxParts then
 			return
 		end
 		-- Alternate sides, so even three sparks spray both ways
@@ -75,31 +83,51 @@ local function sparks(
 		local far = reach * (0.75 + 0.25 * math.random())
 		-- Long along its path. A turn about Y by θ takes the part's X axis to (cos θ, 0, -sin θ).
 		local turn = CFrame.Angles(0, math.atan2(-dy, dx), 0)
-		nextColor = nextColor % #look.SparkColors + 1
-		part.Color = look.SparkColors[nextColor]
-		part.Size = Vector3.new(look.SparkLength, look.SparkThickness, look.SparkThickness) * r
-		part.CFrame = TableSpace.toWorld(felt, x, y, look.SparkHeight * r) * turn
+		local start = TableSpace.toWorld(felt, x, y, look.SparkHeight * r) * turn
 		local finish = TableSpace.toWorld(felt, x + dx * far, y + dy * far, (look.SparkHeight + look.SparkRise) * r)
-		TweenService:Create(part, info, { CFrame = finish * turn }):Play()
-		TweenService:Create(part, shrink, { Size = Vector3.new(0.001, 0.001, 0.001) }):Play()
+			* turn
+		nextColor = nextColor % #look.SparkColors + 1
+		local outline = newPart(felt, look.SparkSeconds, look.SparkOutlineColor, outlineSize, start * under)
+		local spark = newPart(felt, look.SparkSeconds, look.SparkColors[nextColor], size, start)
+		TweenService:Create(outline, info, { CFrame = finish * under }):Play()
+		TweenService:Create(outline, shrink, { Size = TINY }):Play()
+		TweenService:Create(spark, info, { CFrame = finish }):Play()
+		TweenService:Create(spark, shrink, { Size = TINY }):Play()
 	end
 end
 
--- A flat cream ring that pops out from (x, y) in table space and fades
+-- A flat cream ring round the pocket nearest (x, y) in table space, that grows and thins as it fades
 local function pop(felt: BasePart, r: number, x: number, y: number)
-	local part = newPart(felt, look.PopSeconds)
-	if not part then
+	if live >= look.MaxParts then
 		return
 	end
-	local line = look.PopLine * r
+	-- The pockets of the table the shot used, sliders and all
+	local pocket: Geometry.Pocket? = nil
+	local nearest = math.huge
+	for _, each in Geometry.build(PhysicsTestAccess.params().Table).pockets do
+		local distSq = (each.x - x) ^ 2 + (each.y - y) ^ 2
+		if distSq < nearest then
+			pocket, nearest = each, distSq
+		end
+	end
+	if not pocket then
+		return
+	end
+	local mouth = 2 * pocket.radius
+	local start = look.PopStartScale * mouth
+	local finish = look.PopEndScale * mouth
+	local cframe = TableSpace.toWorld(felt, pocket.x, pocket.y, look.PopHeight * r)
+	local part = newPart(felt, look.PopSeconds, look.PopColor, Vector3.new(start, 0.001, start), cframe)
 	part.Transparency = 1
-	part.Size = Vector3.new(look.PopStartDiameter * r, 0.001, look.PopStartDiameter * r)
-	part.CFrame = TableSpace.toWorld(felt, x, y, look.PopHeight * r)
+	-- Canvas pixels the size of screen pixels here, so the line's width is in screen pixels from any view
+	local camera = workspace.CurrentCamera
+	local a = camera:WorldToViewportPoint(cframe.Position)
+	local b = camera:WorldToViewportPoint(cframe.Position + camera.CFrame.RightVector)
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Top
 	gui.LightInfluence = 0
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	gui.PixelsPerStud = RING_PIXELS / line
+	gui.PixelsPerStud = math.max(Vector2.new(b.X - a.X, b.Y - a.Y).Magnitude, 1)
 	local ring = Instance.new("Frame")
 	ring.Size = UDim2.fromScale(1, 1)
 	ring.BackgroundTransparency = 1
@@ -108,21 +136,21 @@ local function pop(felt: BasePart, r: number, x: number, y: number)
 	corner.Parent = ring
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = look.PopColor
-	stroke.Thickness = RING_PIXELS
+	stroke.Thickness = look.PopLineStart
 	stroke.Transparency = look.PopTransparency
 	stroke.Parent = ring
 	ring.Parent = gui
 	gui.Parent = part
-	local diameter = look.PopEndDiameter * r
+	-- Fast out of the gate and fading from the first frame, so it never holds still at full strength
 	TweenService:Create(
 		part,
 		TweenInfo.new(look.PopSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-		{ Size = Vector3.new(diameter, 0.001, diameter) }
+		{ Size = Vector3.new(finish, 0.001, finish) }
 	):Play()
 	TweenService:Create(
 		stroke,
-		TweenInfo.new(look.PopSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-		{ Transparency = 1 }
+		TweenInfo.new(look.PopSeconds, Enum.EasingStyle.Linear),
+		{ Thickness = look.PopLineEnd, Transparency = 1 }
 	):Play()
 end
 
@@ -139,16 +167,24 @@ local function show(kind: string, part: BasePart, felt: BasePart, share: number)
 	if share < look.SparkShare then
 		return
 	end
-	local t = math.clamp((share - look.SparkShare) / (1 - look.SparkShare), 0, 1)
+	-- Only the break, at Config.Physics.BreakPower, hits harder than full power
+	local big = share > 1
+	local count = if big
+		then look.SparkBreakCount
+		else math.round(
+			look.SparkMinCount
+				+ (look.SparkMaxCount - look.SparkMinCount) * (share - look.SparkShare) / (1 - look.SparkShare)
+		)
 	if kind == "rail" then
+		count = math.max(count, look.SparkRailMinCount)
 		-- The nearest cushion: an end rail if the ball is closer to the felt's end than its side
 		local halfLength, halfWidth = felt.Size.X / 2, felt.Size.Z / 2
 		if halfLength - math.abs(x) < halfWidth - math.abs(y) then
 			local sign = math.sign(x)
-			sparks(felt, r, sign * halfLength, y, -sign, 0, t, look.RailSprayMin, look.RailSprayMax)
+			sparks(felt, r, sign * halfLength, y, -sign, 0, count, big, look.RailSprayMin, look.RailSprayMax)
 		else
 			local sign = math.sign(y)
-			sparks(felt, r, x, sign * halfWidth, 0, -sign, t, look.RailSprayMin, look.RailSprayMax)
+			sparks(felt, r, x, sign * halfWidth, 0, -sign, count, big, look.RailSprayMin, look.RailSprayMax)
 		end
 		return
 	end
@@ -167,12 +203,13 @@ local function show(kind: string, part: BasePart, felt: BasePart, share: number)
 	if nearest < (PARTNER_REACH * r) ^ 2 then
 		local dx, dy = otherX - x, otherY - y
 		local edge = r / math.sqrt(nearest)
-		sparks(felt, r, x + dx * edge, y + dy * edge, dx, dy, t, look.BallSprayMin, look.BallSprayMax)
+		sparks(felt, r, x + dx * edge, y + dy * edge, dx, dy, count, big, look.BallSprayMin, look.BallSprayMax)
 	end
 end
 
 -- A hit from a replay, for the loudest few each frame. `kind` is "ball", "rail" or "pocket", `part` the ball that hit
--- or dropped, at the moment it happened, and `share` how hard, 0 to 1 of a full-power hit (1 for a pocket).
+-- or dropped, at the moment it happened, and `share` how hard, as a share of a full-power hit: up to 1 for a normal
+-- shot, about Config.Physics.BreakPower on the break, and 1 for a pocket.
 function Effects.hit(kind: string, part: BasePart, felt: BasePart, share: number)
 	-- Deferred to the end of this frame, once the replay has drawn the balls where the hit left them: at break speed
 	-- the frame before can be a whole stud away

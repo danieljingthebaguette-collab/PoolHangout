@@ -14,7 +14,8 @@ local Card = require(script.Parent.Card)
 local Ui = require(script.Parent.Ui)
 
 -- A seat's line on the end screen, as GameOver sends it
-type Row = { player: Seat.Seat, side: string, shots: number, kept: number, sunk: number, bestRun: number, fouls: number }
+type Row =
+	{ player: Seat.Seat, side: string, shots: number, kept: number, sunk: number, bestRun: number, fouls: number }
 type Answer = { player: Seat.Seat, rematch: boolean }
 
 local EndScreen = {}
@@ -142,6 +143,7 @@ local function show(
 	rematch.Visible = canRematch
 	local lobby = Ui.accentButton("Back to lobby", Theme.Colors.LobbyButton, buttons)
 	lobby.Name = "Lobby"
+	lobby.TextColor3 = Theme.Colors.DarkText
 	lobby.LayoutOrder = 1 -- after Rematch
 	lobby.Size = UDim2.fromOffset(ui.EndButtonWidth, ui.ButtonHeight)
 
