@@ -29,6 +29,7 @@ local Theme = {
 		TurnArrow = ACCENT, -- the "Turn" card over the shooter's head
 		LobbyButton = Color3.fromRGB(150, 205, 240), -- sky blue, the end screen's Back to lobby
 		WinnerRow = ACCENT, -- behind the winners' lines on the end screen
+		Coach = Color3.fromRGB(150, 150, 150), -- Coach's plain grey body
 		Fill = ACCENT, -- the power meter's and the sliders' fill
 		Track = Color3.fromRGB(214, 200, 176), -- a slider's bar, on a cream card
 		Cue = Color3.fromRGB(214, 170, 112), -- light maple

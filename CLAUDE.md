@@ -54,7 +54,7 @@ Script Sync mirrors src/Server → ServerScriptService/Server, src/Client → St
 ## Testing
 - Use the Studio MCP tools (the Roblox_Studio server) to playtest, screenshot and run Luau: call list_roblox_studios first and pass its studio_id on every call. /playtest runs a standard playtest. Check your own work before reporting.
 - Tests: `lune run tests/run` (add a word to filter, like `lune run tests/run physics`). Lint: `selene src`. Type check: luau-lsp, with the command in .claude/hooks/check.sh. All three must pass before you say you're done. A hook runs StyLua on every .luau file you edit, and another runs lint, the type check and tests at the end of any turn that changed Luau code.
-- The MCP controls one player, so solo playtests rely on Config.Debug.SoloTables. Its mouse input uses GUI points below Roblox's top bar; do a whole drag in one user_mouse_input call.
+- The MCP controls one player, so solo playtests rely on Config.Debug.Coach (Coach, a bot, takes the other seat of a 1v1 table) or, with Coach off, Config.Debug.SoloTables. Its mouse input uses GUI points below Roblox's top bar; do a whole drag in one user_mouse_input call.
 - A playtest started before Script Sync picks up an edit runs the old code: restart it and check the change is live.
 - Multiplayer changes need a 2-player playtest. If you can't run it, give Daniel the steps (Test ▾ → Server & Clients → 2 players → Play, then End Session) and say exactly what to check.
 - Visual changes get an art-director review. Put its top 3 fixes in your report.

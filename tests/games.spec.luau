@@ -1,7 +1,7 @@
 --!strict
--- Whole games, played by seeded bots through the real rules, physics and table flow: 1v1 and 2v2, with players
--- pressing Leave now and then. Every game must end with a winner, the turn must never get stuck, and no ball may
--- leave the table or stop being a real number.
+-- Whole games, played by seeded bots through the real rules, physics and table flow: random players in 1v1 and 2v2,
+-- pressing Leave now and then, and Coach against Coach. Every game must end with a winner, the turn must never get
+-- stuck, and no ball may leave the table or stop being a real number. Coach must also pot like a sensible player.
 --     lune run tests/run games                    20 games
 --     GAMES=1000 lune run tests/run games         1,000 games, a few minutes
 --     SEED=37 lune run tests/run games            replays one game, as a failure names it
@@ -11,6 +11,7 @@ local Config = require("../src/Shared/Config")
 local EightBall = require("../src/Shared/Rules/EightBall")
 local Geometry = require("../src/Shared/Physics/Geometry")
 local Simulate = require("../src/Shared/Physics/Simulate")
+local ShotPicker = require("../src/Shared/Rules/ShotPicker")
 local TableFlow = require("../src/Shared/Rules/TableFlow")
 
 local MAX_SHOTS = 500
@@ -20,6 +21,8 @@ local LEAVE_CHANCE = 0.003
 local WILD_CHANCE = 0.05
 -- On the 8, the chance the bot calls the pocket nearest the 8 rather than any pocket
 local NEAREST_CALL_CHANCE = 0.75
+-- The least share of Coach's shots after the break that must keep the turn
+local COACH_POT_SHARE = 0.4
 
 -- A seeded random source, since Lune has no Random
 local function random(seed: number)
@@ -68,26 +71,11 @@ return function(test, check)
 		error(`no ball {id}`)
 	end
 
-	-- The balls the shooter may hit first: their group's, the 8 once it's cleared, or on an open table any but the 8
-	local function targets(
-		balls: { EightBall.Ball },
-		groups: EightBall.Groups,
-		side: EightBall.Side
-	): { EightBall.Ball }
-		local onEight = EightBall.groupCleared(groups, side, balls)
-		local list = {}
-		for _, ball in balls do
-			local group = EightBall.groupOf(ball.id)
-			local legal = if onEight then ball.id == 8 elseif groups[side] then group == groups[side] else group ~= nil
-			if legal and not ball.pocket then
-				table.insert(list, ball)
-			end
-		end
-		return list
-	end
+	local params: Simulate.Params = { Table = Config.Table, Physics = Config.Physics }
 
-	-- Plays one game and returns the winning side and how many shots it took
-	local function play(seed: number, count: number): (EightBall.Side, number)
+	-- Plays one game and returns the winning side, how many shots it took, and how many shots after the break kept the
+	-- turn. With `coach`, Coach plays every shot and nobody leaves.
+	local function play(seed: number, count: number, coach: boolean?): (EightBall.Side, number, number)
 		local float, int = random(seed)
 		local balls: { EightBall.Ball } = EightBall.rack(layout, function(n: number): number
 			return int(1, n)
@@ -96,11 +84,12 @@ return function(test, check)
 		local left: { [number]: boolean } = {}
 		local groups: EightBall.Groups = {}
 		local ballInHand, isBreak = false, true
+		local kept = 0
 
 		for shots = 1, MAX_SHOTS do
 			-- Now and then someone presses Leave: their teammate plays on, or with nobody left on their side, the
 			-- other side wins
-			if float() < LEAVE_CHANCE then
+			if not coach and float() < LEAVE_CHANCE then
 				local still = {}
 				for seat = 1, count do
 					if not left[seat] then
@@ -123,9 +112,14 @@ return function(test, check)
 			local side = TableFlow.sideOf(shooter)
 			local onEight = EightBall.groupCleared(groups, side, balls)
 
-			-- Ball in hand: a random spot the rules allow
+			local coachShot = if coach
+				then ShotPicker.coach(balls, groups, side, isBreak, ballInHand, Config.Coach, params, float)
+				else nil
+			-- Ball in hand: a random spot the rules allow, or where Coach puts it
 			local cueX, cueY = nil, nil
-			if ballInHand then
+			if coachShot then
+				cueX, cueY = coachShot.cueX, coachShot.cueY
+			elseif ballInHand then
 				for _ = 1, 20 do
 					local x, y = EightBall.nearestCueSpot(
 						balls,
@@ -152,8 +146,10 @@ return function(test, check)
 			-- then it aims anywhere, for misses and scratches.
 			local cue = ballOf(balls, 0)
 			local aimX, aimY
-			local list = if isBreak then { ballOf(balls, 1) } else targets(balls, groups, side)
-			if #list > 0 and float() >= WILD_CHANCE then
+			local list = if isBreak then { ballOf(balls, 1) } else ShotPicker.targets(balls, groups, side)
+			if coachShot then
+				aimX, aimY = coachShot.dirX, coachShot.dirY
+			elseif #list > 0 and float() >= WILD_CHANCE then
 				local target = list[int(1, #list)]
 				local toX, toY = target.x - cue.x, target.y - cue.y
 				local length = math.sqrt(toX * toX + toY * toY)
@@ -163,9 +159,14 @@ return function(test, check)
 				local angle = float() * 2 * math.pi
 				aimX, aimY = math.cos(angle), math.sin(angle)
 			end
-			local power = if isBreak then 0.3 + 0.7 * float() else 0.05 + 0.95 * float()
+			local power = if coachShot
+				then coachShot.power
+				elseif isBreak then 0.3 + 0.7 * float()
+				else 0.05 + 0.95 * float()
 			local called = int(1, #layout.pockets)
-			if float() < NEAREST_CALL_CHANCE then
+			if coachShot then
+				called = coachShot.calledPocket or called
+			elseif float() < NEAREST_CALL_CHANCE then
 				local eight, best = ballOf(balls, 8), math.huge
 				for index, pocket in layout.pockets do
 					local distSq = (pocket.x - eight.x) ^ 2 + (pocket.y - eight.y) ^ 2
@@ -188,6 +189,9 @@ return function(test, check)
 				balls = balls,
 				calledPocket = shot.calledPocket,
 			})
+			if not isBreak and outcome.keepsTurn then
+				kept += 1
+			end
 			isBreak = false
 			groups = outcome.groups
 			balls = sim.balls
@@ -207,7 +211,7 @@ return function(test, check)
 				end
 			end
 			if outcome.winner then
-				return outcome.winner, shots
+				return outcome.winner, shots, kept
 			end
 			check.truthy(not ballOf(balls, 0).pocket, `shot {shots}: the cue ball is still down`)
 			check.truthy(not ballOf(balls, 8).pocket, `shot {shots}: the 8 is down with the game still on`)
@@ -231,4 +235,18 @@ return function(test, check)
 			check.truthy(winner == "A" or winner == "B")
 		end)
 	end
+
+	-- Coach against Coach: every game ends, and Coach pots like a sensible player
+	test("Coach against Coach: every game ends with a winner, and Coach pots most turns", function()
+		local games = tonumber(process.env.COACH_GAMES) or 10
+		local shots, kept, wins = 0, 0, { A = 0, B = 0 }
+		for seed = 1, games do
+			local winner, gameShots, gameKept = play(1000 + seed, 2, true)
+			wins[winner] += 1
+			shots += gameShots - 1
+			kept += gameKept
+		end
+		print(`    Coach: {games} games, {string.format("%.1f", shots / games)} shots a game after the break, {string.format("%.0f", kept / shots * 100)}% kept the turn`)
+		check.truthy(kept / shots >= COACH_POT_SHARE, `Coach kept the turn on {kept} of {shots} shots`)
+	end)
 end

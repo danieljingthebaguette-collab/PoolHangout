@@ -126,9 +126,27 @@ local Config = {
 		ResultSeconds = 5, -- the banner with who won and why, for anyone near the table who wasn't playing
 	},
 
+	-- Coach, the bot opponent: for testing alone (see Debug.Coach), and later the tutorial's bot. Never in normal
+	-- matches. How it plays, for Shared/Rules/ShotPicker.
+	Coach = {
+		-- Its turn, slow enough to follow, with its aim showing live: it waits, swings its aim onto the shot from AimSwing
+		-- degrees off, draws the cue back, then shoots
+		ReadySeconds = 1.5,
+		AimSeconds = 1.5,
+		PullSeconds = 1,
+		AimSwing = 20,
+		MaxCut = 70, -- degrees: the thinnest cut it tries
+		AimError = 0.25, -- degrees: its aim is off by up to this much either way, so it misses now and then
+		PowerMargin = 1.3, -- times the speed a pot needs, so the ball reaches the pocket with some to spare
+		PlaceDistances = { 1, 1.8, 2.8 }, -- studs behind the ball it places the cue ball with ball in hand
+	},
+
 	-- Studio only; the server also checks RunService:IsStudio() before using these, except PhysicsTestLive.
 	Debug = {
 		SoloTables = true,
+		-- Coach takes the other seat when a tester (PhysicsTestAccess) alone in the server joins a 1v1 table, instead of
+		-- solo play. Like the test mode, it also works in published servers for the owner while PhysicsTestLive is on.
+		Coach = true,
 		LogShots = true,
 		PhysicsTest = true, -- R racks Table1, the shot controls work on it, sliders tune the physics live
 		-- Also runs the physics test mode in published servers, for the place's owner only. Off before launch.

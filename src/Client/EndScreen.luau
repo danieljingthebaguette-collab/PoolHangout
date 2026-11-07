@@ -8,13 +8,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Seat = require(ReplicatedStorage.Shared.Seat)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Card = require(script.Parent.Card)
 local Ui = require(script.Parent.Ui)
 
 -- A seat's line on the end screen, as GameOver sends it
-type Row = { player: Player, side: string, shots: number, kept: number, sunk: number, bestRun: number, fouls: number }
-type Answer = { player: Player, rematch: boolean }
+type Row = { player: Seat.Seat, side: string, shots: number, kept: number, sunk: number, bestRun: number, fouls: number }
+type Answer = { player: Seat.Seat, rematch: boolean }
 
 local EndScreen = {}
 
@@ -115,7 +116,7 @@ local function show(
 	for i, row in rows do
 		local accuracy = if row.shots > 0 then `{math.round(row.kept / row.shots * 100)}%` else "–"
 		local cells =
-			{ row.player.DisplayName, accuracy, tostring(row.sunk), tostring(row.bestRun), tostring(row.fouls) }
+			{ Seat.name(row.player), accuracy, tostring(row.sunk), tostring(row.bestRun), tostring(row.fouls) }
 		statsRow(content, cells, 2 + i, row.side == winner)
 	end
 
@@ -189,9 +190,9 @@ local function showAnswers(model: Model, answers: { Answer })
 		if answer.player == me then
 			mine = answer.rematch
 		elseif answer.rematch then
-			table.insert(wanting, answer.player.DisplayName)
+			table.insert(wanting, Seat.name(answer.player))
 		else
-			table.insert(leaving, answer.player.DisplayName)
+			table.insert(leaving, Seat.name(answer.player))
 		end
 	end
 	if #leaving > 0 then

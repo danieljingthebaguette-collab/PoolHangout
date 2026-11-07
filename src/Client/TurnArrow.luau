@@ -7,13 +7,14 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Seat = require(ReplicatedStorage.Shared.Seat)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Ui = require(script.Parent.Ui)
 
 local TurnArrow = {}
 
 -- Each table's arrow, its shooter, and the connection that moves it onto their new character after a respawn
-type Arrow = { gui: BillboardGui, shooter: Player?, connection: RBXScriptConnection? }
+type Arrow = { gui: BillboardGui, shooter: Seat.Seat?, connection: RBXScriptConnection? }
 local arrows: { [Model]: Arrow } = {}
 local hidden = false
 local playerGui: Instance? = nil
@@ -47,7 +48,7 @@ local function build(): BillboardGui
 end
 
 local function update(arrow: Arrow)
-	local character = arrow.shooter and arrow.shooter.Character
+	local character = arrow.shooter and Seat.character(arrow.shooter)
 	local head = character and character:FindFirstChild("Head")
 	-- Nil takes the arrow off, though the type says an Adornee is always there
 	arrow.gui.Adornee = head :: Instance
@@ -55,7 +56,7 @@ local function update(arrow: Arrow)
 end
 
 -- Puts a table's arrow over its shooter, or takes it away with nil
-local function show(tableModel: Model, shooter: Player?)
+local function show(tableModel: Model, shooter: Seat.Seat?)
 	local arrow = arrows[tableModel]
 	if not arrow then
 		arrow = { gui = build(), shooter = nil, connection = nil }
@@ -66,7 +67,7 @@ local function show(tableModel: Model, shooter: Player?)
 		arrow.connection = nil
 	end
 	arrow.shooter = shooter
-	if shooter then
+	if shooter and shooter:IsA("Player") then
 		arrow.connection = shooter.CharacterAdded:Connect(function(character: Model)
 			character:WaitForChild("Head")
 			update(arrow)
@@ -85,7 +86,7 @@ end
 
 function TurnArrow.start()
 	playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-	Remotes.TurnStarted.OnClientEvent:Connect(function(model: Model?, shooter: Player?)
+	Remotes.TurnStarted.OnClientEvent:Connect(function(model: Model?, shooter: Seat.Seat?)
 		if model then
 			show(model, shooter)
 		end

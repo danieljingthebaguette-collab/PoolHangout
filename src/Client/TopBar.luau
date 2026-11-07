@@ -6,6 +6,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Seat = require(ReplicatedStorage.Shared.Seat)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Card = require(script.Parent.Card)
 local Ui = require(script.Parent.Ui)
@@ -136,8 +137,13 @@ local function sideCard(gui: ScreenGui, left: boolean): SideCard
 end
 
 -- Puts a player's picture on an avatar. Asking Roblox for it can wait or fail; the card works without it.
-local function showAvatar(avatar: ImageLabel, userId: number)
+local function showAvatar(avatar: ImageLabel, userId: number?)
 	if shownUsers[avatar] == userId then
+		return
+	elseif not userId then
+		-- Coach, the bot, has no avatar picture
+		shownUsers[avatar] = nil
+		avatar.Image = ""
 		return
 	end
 	shownUsers[avatar] = userId
@@ -167,8 +173,8 @@ end
 -- down. No players hides the card.
 local function showSide(
 	side: SideCard,
-	players: { Player },
-	shooter: Player?,
+	players: { Seat.Seat },
+	shooter: Seat.Seat?,
 	group: string?,
 	down: { [number]: boolean }?
 )
@@ -178,12 +184,12 @@ local function showSide(
 	side.outline.Enabled = turn
 	local names = {}
 	for i, avatar in side.avatars do
-		local player: Player? = players[i]
+		local player: Seat.Seat? = players[i]
 		avatar.Visible = player ~= nil
-		side.rings[i].Enabled = player ~= nil and player == shooter
+		side.rings[i].Enabled = player ~= nil and shooter ~= nil and player == shooter
 		if player then
-			table.insert(names, player.DisplayName)
-			showAvatar(avatar, player.UserId)
+			table.insert(names, Seat.name(player))
+			showAvatar(avatar, Seat.userId(player))
 		end
 	end
 	side.names.Text = table.concat(names, " · ")
@@ -238,7 +244,12 @@ end
 
 -- Draws the bar from a TurnStarted message: this player's side on the left and the other side on the right, or side A
 -- on the left for anyone watching. With no game on, only this player's own card shows.
-function TopBar.show(shooter: Player?, seats: { Player }?, groups: { [string]: string }?, downIds: { number }?)
+function TopBar.show(
+	shooter: Seat.Seat?,
+	seats: { Seat.Seat }?,
+	groups: { [string]: string }?,
+	downIds: { number }?
+)
 	local me = Players.LocalPlayer
 	if not seats then
 		showSide(sideCards[1], { me }, nil, nil, nil)
@@ -246,7 +257,7 @@ function TopBar.show(shooter: Player?, seats: { Player }?, groups: { [string]: s
 		return
 	end
 	-- Seats go A1, B1, A2, B2. A 2v2 player who left shows as the teammate playing for them, so only once.
-	local sides: { [string]: { Player } } = { A = {}, B = {} }
+	local sides: { [string]: { Seat.Seat } } = { A = {}, B = {} }
 	for i, player in seats do
 		local side = sides[if i % 2 == 1 then "A" else "B"]
 		if not table.find(side, player) then

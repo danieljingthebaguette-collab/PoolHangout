@@ -4,7 +4,8 @@
 -- player presses Leave with no teammate left to play on, its players see the end screen, with who won and why and each
 -- player's stats, and anyone else near the table sees the result as a banner. When every player still in presses
 -- Rematch, or the end screen's time is up, the game tells TableService, which starts the rematch or ends the game.
--- Each turn has a shot clock: running out is a foul.
+-- Each turn has a shot clock: running out is a foul. A seat can hold Coach, the bot (Seat.luau), which plays its turns
+-- here with ShotPicker's shots, through the same checks as a player's.
 -- ponytail: no takeovers, or removal after 2 timeouts in a row, until Phase 4's leaving rules.
 
 local Players = game:GetService("Players")
@@ -16,6 +17,8 @@ local EightBall = require(ReplicatedStorage.Shared.Rules.EightBall)
 local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
 local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Seat = require(ReplicatedStorage.Shared.Seat)
+local ShotPicker = require(ReplicatedStorage.Shared.Rules.ShotPicker)
 local Simulate = require(ReplicatedStorage.Shared.Physics.Simulate)
 local TableFlow = require(ReplicatedStorage.Shared.Rules.TableFlow)
 local Balls = require(script.Parent.Balls)
@@ -23,10 +26,10 @@ local Balls = require(script.Parent.Balls)
 export type Match = {
 	tableModel: Model,
 	-- In turn order: A1, B1, then A2 and B2 on a 2v2 table
-	seats: { Player },
+	seats: { Seat.Seat },
 	-- The seat whose turn it is, and who shoots for it: its own player, or their teammate once they've left
 	turnSeat: number,
-	shooter: Player,
+	shooter: Seat.Seat,
 	-- The seats of 2v2 players who pressed Leave while a teammate played on. They keep their seat, so the sides stay
 	-- put.
 	left: { [number]: boolean },
@@ -39,7 +42,7 @@ export type Match = {
 	isBreak: boolean,
 	groups: EightBall.Groups,
 	-- When each player last asked for a shot, for the rate limit
-	lastRequest: { [Player]: number },
+	lastRequest: { [Seat.Seat]: number },
 	-- No more shots: the game is over, or was ended
 	ended: boolean,
 	-- The game's RequestShot and AimUpdate connections, and when the shooter's last live aim was passed on
@@ -47,16 +50,19 @@ export type Match = {
 	aimConnection: RBXScriptConnection?,
 	lastAim: number,
 	-- Each player's stats for the end screen
-	stats: { [Player]: EightBall.Stats },
+	stats: { [Seat.Seat]: EightBall.Stats },
 	-- Once the game is over, each player's answer on the end screen: true for Rematch, false for Back to lobby. Closed
 	-- once the end screen is done with, after which nothing more happens.
-	votes: { [Player]: boolean },
+	votes: { [Seat.Seat]: boolean },
 	closed: boolean,
 	-- Called once the end screen closes, for TableService to start the rematch or end the game and re-rack
 	onEnd: (rematch: boolean) -> (),
 }
 
 local Match = {}
+
+-- Coach's aim error
+local random = Random.new()
 
 -- The banner's words for each foul, and for how a game ended
 local FOUL_TEXT: { [EightBall.Foul]: string } = {
@@ -79,23 +85,23 @@ local function log(match: Match, message: string)
 end
 
 -- Whether a player is in this game and hasn't pressed Leave
-local function playing(match: Match, player: Player): boolean
+local function playing(match: Match, player: Seat.Seat): boolean
 	local seat = table.find(match.seats, player)
 	return seat ~= nil and not match.left[seat]
 end
 
 -- A1 and A2 are side A, B1 and B2 side B. In Studio solo you're A.
-local function sideOf(match: Match, player: Player): EightBall.Side
+local function sideOf(match: Match, player: Seat.Seat): EightBall.Side
 	return TableFlow.sideOf(table.find(match.seats, player) :: number)
 end
 
 -- Who shoots for a seat: its own player, or once they've left, their teammate
-local function shooterFor(match: Match, seat: number): Player
+local function shooterFor(match: Match, seat: number): Seat.Seat
 	return match.seats[TableFlow.shooterSeat(seat, match.left, #match.seats)]
 end
 
 -- The seats as every screen sees them: a player who left shows as the teammate playing for them
-local function seatsShown(match: Match): { Player }
+local function seatsShown(match: Match): { Seat.Seat }
 	local shown = {}
 	for seat in match.seats do
 		shown[seat] = shooterFor(match, seat)
@@ -141,10 +147,70 @@ local function timeOut(match: Match)
 	local wasBreak = match.isBreak
 	match.turnSeat, match.ballInHand = TableFlow.afterTimeout(match.turnSeat, #match.seats, match.isBreak)
 	match.shooter = shooterFor(match, match.turnSeat)
-	local name = match.shooter.DisplayName
+	local name = Seat.name(match.shooter)
 	local text = if wasBreak then `Time's up. {name} breaks.` else `Time's up. {name} has ball in hand.`
 	Remotes.Banner:FireAllClients(match.tableModel, text, Config.Timers.FoulBannerSeconds)
 	startTurn(match)
+end
+
+local shoot: (Match, Seat.Seat, ...unknown) -> ()
+
+-- Sends the shooter's live aim to every screen but their own, for anyone in the top-down view to draw
+function Match.sendAim(match: Match, state: TableFlow.AimState)
+	for _, other: Seat.Seat in Players:GetPlayers() do
+		if other ~= match.shooter and other:IsA("Player") then
+			Remotes.AimRelay:FireClient(other, match.tableModel, state)
+		end
+	end
+end
+
+-- Coach's turn, slow enough to follow, with its aim showing live: it waits ReadySeconds (with ball in hand, holding the
+-- cue ball where it'll go), swings its aim onto its shot over AimSeconds, draws the cue back over PullSeconds, then
+-- shoots through the same checks as a player's shot. A turn that's over by then (the game ended) stops it.
+local function botTurn(match: Match, clock: {})
+	local bot = match.shooter
+	local float = function(): number
+		return random:NextNumber()
+	end
+	local shot = ShotPicker.coach(
+		Balls.get(match.tableModel),
+		match.groups,
+		sideOf(match, bot),
+		match.isBreak,
+		match.ballInHand,
+		Config.Coach,
+		PhysicsTestAccess.params(),
+		float
+	)
+	local coach = Config.Coach
+	local aim = math.atan2(shot.dirY, shot.dirX)
+	local fromAim = aim + math.rad(coach.AimSwing) * (if random:NextNumber() < 0.5 then -1 else 1)
+	task.spawn(function()
+		local started = os.clock()
+		while match.clock == clock do
+			local t = os.clock() - started
+			local aiming = math.clamp((t - coach.ReadySeconds) / coach.AimSeconds, 0, 1)
+			local drawing = math.clamp((t - coach.ReadySeconds - coach.AimSeconds) / coach.PullSeconds, 0, 1)
+			-- Easing in, so it settles onto the shot
+			local settled = 1 - (1 - aiming) ^ 2
+			Match.sendAim(match, {
+				aim = (fromAim + (aim - fromAim) * settled) % (2 * math.pi),
+				pull = drawing * shot.power,
+				held = drawing > 0,
+				placing = shot.cueX ~= nil and t < coach.ReadySeconds,
+				cueX = shot.cueX,
+				cueY = shot.cueY,
+				pocket = shot.calledPocket,
+			})
+			if t >= coach.ReadySeconds + coach.AimSeconds + coach.PullSeconds then
+				break
+			end
+			task.wait(1 / Config.Aim.RelayRate)
+		end
+		if match.clock == clock then
+			shoot(match, bot, shot.dirX, shot.dirY, shot.power, shot.cueX, shot.cueY, shot.calledPocket)
+		end
+	end)
 end
 
 function startTurn(match: Match)
@@ -159,19 +225,13 @@ function startTurn(match: Match)
 		end
 	end)
 	Remotes.TurnStarted:FireAllClients(turnMessage(match))
-end
-
--- Sends the shooter's live aim to every screen but their own, for anyone in the top-down view to draw
-function Match.sendAim(match: Match, state: TableFlow.AimState)
-	for _, other in Players:GetPlayers() do
-		if other ~= match.shooter then
-			Remotes.AimRelay:FireClient(other, match.tableModel, state)
-		end
+	if Seat.isBot(match.shooter) then
+		botTurn(match, clock)
 	end
 end
 
 -- The shooter's screen sent where they're aiming. Display only, so a bad or late one is simply dropped.
-local function relayAim(match: Match, player: Player, ...: unknown)
+local function relayAim(match: Match, player: Seat.Seat, ...: unknown)
 	local now = os.clock()
 	if
 		match.ended
@@ -216,12 +276,12 @@ local function finish(match: Match, winner: EightBall.Side, why: string)
 	local names = {}
 	for _, player in match.seats do
 		if sideOf(match, player) == winner then
-			table.insert(names, player.DisplayName)
+			table.insert(names, Seat.name(player))
 		end
 	end
 	-- In Studio solo the one player is side A, so side B can win with nobody on it
 	local text = if #names == 0
-		then `{match.seats[1].DisplayName} loses: {why}`
+		then `{Seat.name(match.seats[1])} loses: {why}`
 		else `{table.concat(names, " and ")} {if #names == 1 then "wins" else "win"}: {why}`
 	log(match, text)
 	Remotes.TurnStarted:FireAllClients(turnMessage(match))
@@ -249,11 +309,17 @@ local function finish(match: Match, winner: EightBall.Side, why: string)
 		end
 	end
 	task.delay(Config.Timers.EndScreenSeconds, close, match, false)
+	-- Coach always wants a rematch
+	for _, seat in match.seats do
+		if Seat.isBot(seat) then
+			Match.vote(match, seat, true)
+		end
+	end
 end
 
-local function shoot(
+function shoot(
 	match: Match,
-	player: Player,
+	player: Seat.Seat,
 	dirX: unknown,
 	dirY: unknown,
 	power: unknown,
@@ -335,7 +401,7 @@ local function shoot(
 		finish(match, outcome.winner, REASON_TEXT[outcome.reason])
 		return
 	elseif outcome.foul then
-		local text = `Foul: {FOUL_TEXT[outcome.foul]}. {match.shooter.DisplayName} has ball in hand.`
+		local text = `Foul: {FOUL_TEXT[outcome.foul]}. {Seat.name(match.shooter)} has ball in hand.`
 		Remotes.Banner:FireAllClients(tableModel, text, Config.Timers.FoulBannerSeconds)
 	end
 	startTurn(match)
@@ -346,7 +412,7 @@ end
 -- called for Match.destroy.
 function Match.new(
 	tableModel: Model,
-	seats: { Player },
+	seats: { Seat.Seat },
 	pick: (number) -> number,
 	onEnd: (rematch: boolean) -> ()
 ): Match
@@ -415,12 +481,12 @@ function Match.leave(match: Match, player: Player)
 		end
 		return
 	end
-	finish(match, TableFlow.otherSide(TableFlow.sideOf(seat)), `{player.DisplayName} left`)
+	finish(match, TableFlow.otherSide(TableFlow.sideOf(seat)), `{Seat.name(player)} left`)
 end
 
 -- An answer on the end screen, from a player still in the game: Rematch (true) or Back to lobby (false), once each.
 -- Every player still in hears who has answered, and once they've all pressed Rematch, it starts.
-function Match.vote(match: Match, player: Player, rematch: unknown)
+function Match.vote(match: Match, player: Seat.Seat, rematch: unknown)
 	if
 		not match.ended
 		or match.closed
@@ -438,7 +504,7 @@ function Match.vote(match: Match, player: Player, rematch: unknown)
 	local everyone = next(match.left) == nil
 	for _, other in match.seats do
 		everyone = everyone and match.votes[other] == true
-		if playing(match, other) then
+		if playing(match, other) and other:IsA("Player") then
 			Remotes.Rematch:FireClient(other, match.tableModel, answers)
 		end
 	end

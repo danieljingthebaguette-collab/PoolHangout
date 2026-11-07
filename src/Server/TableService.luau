@@ -1,11 +1,13 @@
 --!strict
 -- Finds the tables, makes and racks their balls, and starts and ends their games. Players join a table with the
 -- "Join table" prompt over its centre: the first takes side A, the next side B. The prompt only joins; the HUD's
--- Leave button leaves, calls off a start, or leaves a game (see Match.leave). Once every seat is taken (one is enough in Studio with Config.Debug.SoloTables and one player in the
--- server), everyone at the table sees "Starting...", and after the countdown each player is moved once to their
--- seat's spot, facing the table, and the game starts. Players walk freely the whole time. When a game is decided its
--- end screen shows, then the same players play again if they all pressed Rematch, or the table re-racks and opens. It also ends, with no winner, when one of its players leaves the
--- server, unless they had already pressed Leave.
+-- Leave button leaves, calls off a start, or leaves a game (see Match.leave). Once every seat is taken, everyone at the
+-- table sees "Starting...", and after the countdown each player is moved once to their seat's spot, facing the table,
+-- and the game starts. Players walk freely the whole time. When a game is decided its end screen shows, then the same
+-- players play again if they all pressed Rematch, or the table re-racks and opens. It also ends, with no winner, when
+-- one of its players leaves the server, unless they had already pressed Leave.
+-- Testing alone (Config.Debug): with Coach on, Coach, the bot, takes the other seat of a 1v1 table a tester joins while
+-- alone in the server; otherwise, in Studio with SoloTables, one player is enough and takes every turn.
 -- ponytail: no sign or takeovers yet. Phase 4 adds them, with the table's states and its reset.
 
 local Players = game:GetService("Players")
@@ -17,7 +19,9 @@ local EightBall = require(ReplicatedStorage.Shared.Rules.EightBall)
 local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
 local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Seat = require(ReplicatedStorage.Shared.Seat)
 local TableFlow = require(ReplicatedStorage.Shared.Rules.TableFlow)
+local Theme = require(ReplicatedStorage.Shared.Theme)
 local Balls = require(script.Parent.Balls)
 local Match = require(script.Parent.Match)
 
@@ -25,7 +29,7 @@ local TableService = {}
 
 local matches: { [Model]: Match.Match } = {}
 -- The players who have joined each table and are waiting for its game, and its countdown, when nobody can join
-local lobbies: { [Model]: TableFlow.Lobby<Player> } = {}
+local lobbies: { [Model]: TableFlow.Lobby<Seat.Seat> } = {}
 local prompts: { [Model]: ProximityPrompt } = {}
 local random = Random.new()
 
@@ -64,9 +68,17 @@ local function seatMarker(tableModel: Model, seat: number): BasePart?
 	return if marker and marker:IsA("BasePart") then marker else nil
 end
 
--- How many players a game on this table needs: one per seat, or one in Studio solo
+-- Whether Coach plays here, for a tester alone in the server: on 1v1 tables while Config.Debug.Coach is on
+local function coachTable(tableModel: Model): boolean
+	return Config.Debug.Coach and seatCount(tableModel) == 2 and #Players:GetPlayers() == 1
+end
+
+-- How many players a game on this table needs: one per seat, or one in Studio solo where Coach doesn't play
 local function needed(tableModel: Model): number
-	local solo = RunService:IsStudio() and Config.Debug.SoloTables and #Players:GetPlayers() == 1
+	local solo = RunService:IsStudio()
+		and Config.Debug.SoloTables
+		and #Players:GetPlayers() == 1
+		and not coachTable(tableModel)
 	return TableFlow.needed(seatCount(tableModel), solo)
 end
 
@@ -94,8 +106,8 @@ end
 
 -- Puts a player's character on a seat's spot, facing the table's centre. Only once, as the game starts: they walk
 -- freely after.
-local function moveToSeat(player: Player, marker: BasePart, felt: BasePart)
-	local character = player.Character
+local function moveToSeat(player: Seat.Seat, marker: BasePart, felt: BasePart)
+	local character = Seat.character(player)
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not (character and humanoid and root and root:IsA("BasePart")) then
@@ -108,10 +120,35 @@ local function moveToSeat(player: Player, marker: BasePart, felt: BasePart)
 	character:PivotTo(CFrame.lookAt(spot, Vector3.new(felt.Position.X, height, felt.Position.Z)))
 end
 
+-- Coach's figure: a plain grey R6 character, standing still on the table's B1 spot
+local function spawnCoach(tableModel: Model): Model
+	local description = Instance.new("HumanoidDescription")
+	for _, bodyPart in { "HeadColor", "TorsoColor", "LeftArmColor", "RightArmColor", "LeftLegColor", "RightLegColor" } do
+		(description :: any)[bodyPart] = Theme.Colors.Coach
+	end
+	local model = Players:CreateHumanoidModelFromDescription(description, Enum.HumanoidRigType.R6)
+	model.Name = "Coach"
+	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
+	humanoid.DisplayName = "Coach"
+	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart
+	root.Anchored = true
+	model.Parent = workspace
+	local marker = seatMarker(tableModel, 2)
+	if marker then
+		moveToSeat(model, marker, tableModel:FindFirstChild("Felt") :: BasePart)
+	end
+	return model
+end
+
 -- Ends the game and opens the table, then re-racks once any shot still rolling has stopped, so its last frame can't
--- land on the new rack. A game started meanwhile has already racked.
+-- land on the new rack. A game started meanwhile has already racked. Coach goes too.
 local function endGame(tableModel: Model, match: Match.Match)
 	Match.destroy(match)
+	for _, seat in match.seats do
+		if Seat.isBot(seat) then
+			seat:Destroy()
+		end
+	end
 	matches[tableModel] = nil
 	updatePrompt(tableModel)
 	task.spawn(function()
@@ -126,7 +163,7 @@ end
 
 -- Starts a game on the table with these players in seat order, moving each to their seat. When it's over and its end
 -- screen closes, it's a rematch with the same players, or the game ends and the table opens.
-local function startMatch(tableModel: Model, players: { Player })
+local function startMatch(tableModel: Model, players: { Seat.Seat })
 	local felt = tableModel:FindFirstChild("Felt") :: BasePart
 	for i, player in players do
 		local marker = seatMarker(tableModel, i)
@@ -178,7 +215,7 @@ local function startGame(tableModel: Model, token: {})
 end
 
 -- Takes a player off the table they joined and are waiting at, if any. During the countdown that calls the start off
--- at once, and the others stay joined.
+-- at once, and the others stay joined, except Coach, who only came to play them.
 local function unjoin(player: Player)
 	for tableModel, lobby in lobbies do
 		local wasJoined, calledOff = TableFlow.unjoin(lobby, player)
@@ -192,6 +229,12 @@ local function unjoin(player: Player)
 				`Start called off: {player.DisplayName} left.`,
 				Config.Timers.NoticeSeconds
 			)
+		end
+		for _, other in table.clone(lobby.joined) do
+			if Seat.isBot(other) then
+				TableFlow.unjoin(lobby, other)
+				other:Destroy()
+			end
 		end
 		updatePrompt(tableModel)
 	end
@@ -224,6 +267,18 @@ local function makePrompt(tableModel: Model)
 		end
 		-- Display only, so this player's prompt reads "Waiting for players" and they see the table's banners
 		player:SetAttribute("JoinedTable", tableModel.Name)
+		-- Testing alone: Coach takes the other seat, which starts the countdown
+		if not token and coachTable(tableModel) and PhysicsTestAccess.canTest(player) then
+			local coach = spawnCoach(tableModel)
+			if table.find(lobby.joined, player) then
+				local _, coachToken =
+					TableFlow.join(lobby, coach, seatCount(tableModel), needed(tableModel), false, false)
+				token = coachToken
+			else
+				-- They left while Coach was being made
+				coach:Destroy()
+			end
+		end
 		updatePrompt(tableModel)
 		if token then
 			startGame(tableModel, token)
