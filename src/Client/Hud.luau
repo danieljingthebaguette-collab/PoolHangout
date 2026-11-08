@@ -39,8 +39,8 @@ local removeTray: (() -> ())? = nil
 -- Who was shooting at that table, so your balls pulse only as your turn starts, not on every shot you keep
 local lastShooter: Instance? = nil
 
--- The ball parts that are yours to hit on this table: your group's, every ball but the 8 on an open table, or the 8
--- once your group is cleared. Only the ones still on the table.
+-- The ball parts that are yours on this table: your group's, or the 8 once your group is cleared. None on an open
+-- table, where nothing is yours yet. Only the ones still on the table.
 local function yourBalls(tableModel: Model, group: string?, onEight: boolean): { BasePart }
 	local folder = tableModel:FindFirstChild("Balls")
 	local parts: { BasePart } = {}
@@ -49,7 +49,7 @@ local function yourBalls(tableModel: Model, group: string?, onEight: boolean): {
 			then id == 8
 			elseif group == "solids" then id < 8
 			elseif group == "stripes" then id > 8
-			else id ~= 8
+			else false
 		local part = if yours and folder then folder:FindFirstChild(`Ball{id}`) else nil
 		if part and part:IsA("BasePart") and part.Transparency ~= 1 then
 			table.insert(parts, part)

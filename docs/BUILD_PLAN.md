@@ -6,11 +6,11 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 ## Status
 
-- **Current step:** Phase 2, Normal tables
-- **In progress:** every Phase 2 task is built, waiting for my Phase 2 2-player test (steps in Claude's report): 2v2 on Table2 with Coach filling empty seats when I'm alone, the R6 shot pose (standing behind the cue ball, on the table when needed, see-through there), the camera easing between views and turned per viewer, the turn-start ball pulse, and a table in use showing only "2/2 joined". The 1v1 loop and Coach passed my tests on 2026-11-07
+- **Current step:** Phase 3, Items
+- **In progress:** the first Phase 3 task, earning items. Phase 2 passed my solo tests on 2026-11-08; its 2-player and 4-player checks moved to the Phase 3 and Phase 4 friend playtests
 - **Dates:** launch moved to Friday, Dec 18 when the plan was reordered. The phase dates are Claude's proposal for that launch
-- **Last session:** 2026-11-07 to 08. My calls written into the docs (tutorial rooms in the same server, Spectating moved after launch, coral approved, Coach only in the tutorial), the art director's effect fixes, then the rest of Phase 2: 2v2, the shot pose and camera, the pulse. Subagents no longer stage scenes in shared playtests
-- **Next up:** my Phase 2 test of 1v1 and 2v2, then Phase 3, Items, about a week ahead of the plan. At our first publish: Phase 1's age check, and checking that a late joiner sees the game
+- **Last session:** 2026-11-08. Phase 2 marked done, the pulse skipped on an open table, the art director's review of my recorded clips, my store page and sound picks moved into Phase 3 (icon and thumbnails to Phase 6), then Phase 3 started
+- **Next up:** the Phase 3 tasks in order. My Phase 3 jobs: the store page's name and description, the music and sound picks, then the age check before the friends playtest
 - **Known issues:**
   - Touch and the new HUD layout haven't been tried on a real phone yet, only in the emulator; it's covered by the Mobile phase
   - The existing touch code isn't tested or extended until the Mobile phase, so it will fall behind the PC features built before then. Ball in hand is mouse-only: on a phone the cue ball can't be moved yet
@@ -53,11 +53,11 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [x] Tune the feel together: friction, power, rail bounce, pocket size (Me + Claude)
 - [x] Restyle the table (slim rails with diamonds, real-size pockets, classic green and warm wood) and add a HUD laid out like 8 Ball Duels: power meter with %, sunk-ball tray, ball shadows, my player card, settings with sound volume, a collapsible test panel (Claude)
 - [x] Decide the final table size, since `docs/MODELS.md` needs it (Me)
-- [ ] Complete the age check and the Maturity & Compliance Questionnaire, so friends can test in the Items step. At that first publish, also check that a player who joins a server mid-game sees the game (Studio can't add a player mid-test) (Me)
+- [ ] The age check and questionnaire: moved to Phase 3, next to the friends playtest that needs them
 
 **Done when:** I take 30 shots in a row on PC with no bugs, and sinking a ball feels satisfying. If it doesn't, keep tuning before Phase 2. **Passed 2026-10-17.**
 
-## Phase 2, Nov 3–15: Normal tables (current)
+## Phase 2, Nov 3–15: Normal tables
 
 **Goal:** a normal game of 8-ball works from joining to the end screen, in 1v1 and 2v2, and feels good, before any items.
 
@@ -77,7 +77,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [x] 2v2 on one table: Table2, built as a 2v2 table with A1 and A2 on one long side and B1 and B2 on the other. Your side is your team, teammates share a group, and turns go A1 → B1 → A2 → B2 (Claude)
 - [x] R6 shot pose: while you aim, your character glides to stand straight behind the cue ball, always facing it, on top of the table when needed (see-through there), in a ready-to-shoot pose, and steps off after the turn. The camera eases between views, and while it isn't your turn the top-down view sits a little farther out (Claude)
 - [x] Your balls pulse once over 2 seconds when your turn starts (Claude)
-- [ ] 2-player test of the whole step: 1v1 on Table1 and 2v2 on Table2 (Me)
+- [x] Test of the whole step: 1v1 on Table1 and 2v2 on Table2 (Me) **Passed solo 2026-11-08:** 1v1 against Coach, and 2v2 against three Coaches. Server & Clients wouldn't run, so the 2-player 1v1 check moved to Phase 3's friends playtest and the 4-player 2v2 check to Phase 4's 4-friend playtest
 
 **Done when:**
 1. Join with E, Leave and the automatic top-down camera pass a 2-player test. **Passed 2026-11-04.**
@@ -87,7 +87,9 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 5. Hit and pocket sounds, small hit effects, and an R6 shot pose.
 6. Everyone in the top-down view sees the shooter's cue and aim indicator move live.
 
-## Phase 3, Nov 16–29: Items
+**Passed 2026-11-08** in solo tests against Coach; the multiplayer checks moved to Phases 3 and 4 (above).
+
+## Phase 3, Nov 16–29: Items (current)
 
 **Goal:** players earn the 5 items during a game and use them, and games stay fair.
 
@@ -95,7 +97,10 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] Using items: press 1 or 2, on your own turn, one per shot, with the item's name shown big to everyone at the table. Slot icons drawn in code. Plain placeholder looks until the arena step (Claude)
 - [ ] Power Shot (for the rest of the turn the meter keeps filling past 100%, up to 150% at 1.5× the full pull) and Blast Ball (one shot), with Lune tests for the blast. Check that a 150% pull fits on screen for a cue ball against a long rail shooting straight across, on a 1920×1080 PC; if it doesn't, make the extra 50% take less pull. The phone check is in the Mobile phase (Claude)
 - [ ] Freeze, Oil Slick and Pocket Block: frozen balls and pocket lids bounce balls like rails, oil patches slow balls less, and the aim indicator knows about frozen balls and lids. The lock-out rules: no freezing the 8 or a side's last group ball, no Pocket Block against a side shooting at the 8, and no side targeting the same ball or pocket two turns running. With Lune tests (Claude)
-- [ ] Playtest with 2 friends on a friends-only test version (Me)
+- [ ] Store page name and description, moved from Phase 4 to spread my hours (Me)
+- [ ] Pick the music and final sounds: ball clicks, rail thuds, pocket drops and a sound for each item. Claude wires them in during Phase 4 (Me)
+- [ ] Complete the age check and the Maturity & Compliance Questionnaire, so friends can test. At that first publish, also check that a player who joins a server mid-game sees the game (Studio can't add a player mid-test) (Me)
+- [ ] Playtest with 2 friends on a friends-only test version. Include Phase 2's 2-player check: 1v1 on Table1, each sees the other's shot pose in 3D and the live aim with F, and Leave → Yes gives the other player the win (Me)
 
 **Done when:** every rule and item test passes, and 2 friends finish 3 full games on PC, items included, without me explaining anything.
 
@@ -105,7 +110,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 - [ ] Lodge blockout: `tools/BuildArena.luau` builds the room, the floor, the table spots, the lobby spawn and the counter in plain parts (Claude builds it, I adjust)
 - [ ] The lodge in the `docs/STYLE.md` look: timber beams, a plank floor, lanterns over each table, seating, and a counter serving sodas, milkshakes and coffee (Claude)
-- [ ] Plants and other organic props: Claude writes prompts for Studio's AI model and texture tools, I run them, and the arena builder places the results (Me + Claude)
+- [ ] Plants and other organic props: Claude writes prompts for Studio's AI model and texture tools, I run them, and the arena builder places the results. The first thing cut if Phase 4 runs tight (Me + Claude)
 - [ ] All 6 tables: `tools/BuildTable.luau` builds 3 for 1v1 and 3 for 2v2, with their seat markers, on the lodge's table spots (Claude)
 - [ ] Tutorial rooms: each new player gets a private room in the same server, out of sight, with one table and Coach, that nobody else can get into; several can run at once. Skip or finishing puts them straight into the lodge and removes the room, and finishing or skipping is saved (needs my OK on saving data). All testable in Studio (Claude)
 - [ ] Tutorial steps with Coach: aiming, power, ball in hand, groups, calling the 8 and items, each with a tip card and the table set up for it, and a Skip button (Claude)
@@ -114,12 +119,11 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] Final looks for the table, cue and the stylized balls with icons, in the `docs/STYLE.md` look, every size still from Config (Claude)
 - [ ] Item effects in the `docs/STYLE.md` look: flame trail, blast burst and ring, icy frozen balls, oil patch, pocket lids, screen shake on big hits, and the ring at players' feet (Claude)
 - [ ] Server size 24 and voice chat turned on (Me)
-- [ ] Upbeat music and final sounds: ball clicks, rail thuds, pocket drops and a sound for each item (I pick them, Claude wires them in)
+- [ ] Wire in the music and final sounds I picked in Phase 3 (Claude)
 - [ ] Item balance pass: the item bar's points, blast strength, oil, item odds, all in Config. Aim for about one item every 2 turns per player. Try raising `OpponentBallPoints` to 3 for a stronger comeback, and `SinkItemsWaitForTurnEnd` if item runs get out of hand (Me + Claude)
 - [ ] Analytics: joined → each tutorial step finished (or skipped) → first game started → first game finished → second game, so I can see where new players quit (Claude)
 - [ ] GUI pass, as I direct it, starting with the art director's end-screen fix: the headline in the display font and bigger, with smaller column headers, so the result reads first (Claude)
-- [ ] Store page: name, icon, 3–5 thumbnails, and a description (Me)
-- [ ] Playtest with 4 friends: 1v1 and 2v2, with people leaving mid-game on purpose and every item used (Me)
+- [ ] Playtest with 4 friends: 1v1 and 2v2, with people leaving mid-game on purpose and every item used. Include Phase 2's 4-player check: 2v2 on Table2, turns go A1 → B1 → A2 → B2, and when one player leaves their teammate plays on alone (Me)
 - [ ] Big playtest with as many friends as I can get, on PC (Me)
 
 **Done when:** 4 friends play on PC for 30 minutes straight, including leaving mid-game, every item gets used and no table ever gets stuck, and big-playtest testers stay 20+ minutes without being asked, leaving me a written bug and balance list.
@@ -146,6 +150,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] Fix the bug list, worst first, including item balance (Config numbers only, no new items) (Me + Claude)
 - [ ] Turn off `Config.Debug.PhysicsTestLive` before launch, so the test mode can't run in public servers (Claude)
 - [ ] Final test with friends on PC and phones (Me)
+- [ ] Store page icon and 3–5 thumbnails, now that the look is frozen (Me)
 - [ ] Edit 6 short videos from playtest clips (Me)
 - [ ] Launch day: set the audience to Public for 16+, post the first videos, and share the link (Me)
 

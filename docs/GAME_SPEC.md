@@ -104,8 +104,8 @@ Laid out like 8 Ball Duels, in the look `docs/STYLE.md` describes: cream cards, 
   - the shot clock in the middle of the top bar, between the two cards
   - a Leave button top right while you're at a table, in both views (see Leaving)
   - a settings button bottom-left with a sound volume slider. The volume lasts for the session and isn't saved *(default)*. It shows only in the top-down view, so it never covers the phones' thumbstick.
+  - your balls pulse white once, over 2 seconds, when your turn starts, so you can see which are yours: your group's, or the 8 once your group is cleared. Nothing pulses on an open table, where no ball is yours yet
 - **Coming next:**
-  - your balls pulse once, over 2 seconds, when your turn starts, so you can see which are yours: your group's, every ball but the 8 on an open table, or the 8 once your group is cleared (Normal tables)
   - item slots 1 and 2 at the bottom center (Items), with icons drawn in code, and every player's slots and item bar on their card
 
 ## 8-ball rules
