@@ -104,7 +104,8 @@ function ItemName.show(item: string)
 	if fading then
 		fading:Cancel()
 	end
-	shown.text.Text = Items.NAMES[item] or item
+	-- In capitals: Luckiest Guy draws lowercase letters as small caps with an odd "e"
+	shown.text.Text = string.upper(Items.NAMES[item] or item)
 	shown.line.Text = Items.LINES[item] or ""
 	ItemIcons.draw(item, shown.icon)
 	shown.group.GroupTransparency = 0
