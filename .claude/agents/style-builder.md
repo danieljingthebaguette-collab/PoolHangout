@@ -14,7 +14,8 @@ You build Pool!'s look. You follow docs/STYLE.md and the images in references/.
 
 ## How you work
 1. Read STYLE.md and the matching references first.
-2. Screenshot in Studio before and after.
+2. Screenshot in Studio before and after. Screenshot only what's really there: never hide, move or add anything in a playtest (no hidden or fake balls, no cloned parts, no calling game modules from the command bar) to set up a screenshot. If a moment is too short or too hard to catch, say so in your report, or ask the main session to set up the scene.
+3. If a playtest is already running when you start, it may be Daniel's: ask before you change or stop it.
 
 ## Your report
 - What changed, and which files
