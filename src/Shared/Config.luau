@@ -108,6 +108,8 @@ local Config = {
 		TopDownMargin = 1.3, -- studs of room the top-down view shows around the playing surface: the rails plus a little
 		-- Degrees down: as a game starts, each player's normal camera turns to face the table from behind their seat
 		SeatPitch = 25,
+		EaseSeconds = 0.6, -- how long the camera takes to ease into or out of the top-down view, or between its heights
+		WatchingHeight = 1.25, -- while it isn't your turn, the top-down view sits this many times higher
 	},
 
 	Join = {
@@ -128,6 +130,17 @@ local Config = {
 		FoulBannerSeconds = 3, -- the banner naming a foul and who has ball in hand
 		NoticeSeconds = 3, -- short banners, like a start called off because someone left
 		ResultSeconds = 5, -- the banner with who won and why, for anyone near the table who wasn't playing
+	},
+
+	-- The shot pose: on their turn the shooter glides to stand behind the cue ball, facing it, on top of the table when
+	-- that spot is over it (ShotStance), and steps off afterwards
+	Stance = {
+		Distance = 3, -- studs behind the cue ball, along the aim
+		TableEdge = 1.1, -- studs the table reaches past its felt: the rails. Closer in than this, they stand on top
+		TableStandHeight = 0.35, -- studs above the felt they stand on, level with the rails' tops
+		Speed = 16, -- studs/s across, about a player's walking speed
+		Climb = 12, -- studs/s up onto the table or down off it
+		StepOffClear = 1, -- studs past the table's edge they step off to after their turn
 	},
 
 	-- Coach, the bot opponent: for testing alone (see Debug.Coach), and later the tutorial's bot. Never in normal

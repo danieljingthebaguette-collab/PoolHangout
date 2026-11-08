@@ -37,6 +37,11 @@ local function ballOf(balls: { EightBall.Ball }, id: number): EightBall.Ball?
 	return nil
 end
 
+-- The cue ball, which is always on the table between shots
+function ShotPicker.cueBall(balls: { EightBall.Ball }): EightBall.Ball
+	return ballOf(balls, 0) :: EightBall.Ball
+end
+
 -- The balls the shooter may hit first: on the break the whole rack, then their group's, the 8 once it's cleared, or on
 -- an open table any but the 8
 function ShotPicker.targets(

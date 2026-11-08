@@ -47,6 +47,8 @@ local volume = 1
 -- Shadows show only in the top-down view; in the normal view Roblox's own shadows are enough. Each shadow's update
 -- function, so they can all be redrawn when that changes.
 local shadowsShown = false
+-- Which way the shadows fall in table space: down and right on screen, so it turns with the top-down view
+local shadowTurn = 1
 local shadowUpdates: { [BasePart]: () -> () } = {}
 
 -- The table's felt and ball parts, or nil while the table hasn't streamed in
@@ -93,6 +95,14 @@ function TableView.setVolume(share: number)
 end
 
 -- Shows the balls' shadows in the top-down view and hides them in the normal view
+-- The top-down view is turned round for this player (the felt's +Z side at the top), so the shadows turn with it
+function TableView.turnShadows(turned: boolean)
+	shadowTurn = if turned then -1 else 1
+	for _, update in shadowUpdates do
+		update()
+	end
+end
+
 function TableView.showShadows(visible: boolean)
 	shadowsShown = visible
 	for _, update in shadowUpdates do
@@ -274,7 +284,8 @@ local function addShadow(felt: BasePart, ball: BasePart, folder: Folder)
 	local function follow()
 		local x, y = TableSpace.toTable(felt, ball.Position)
 		-- Lying flat on the felt. Cylinders run along their X axis.
-		shadow.CFrame = TableSpace.toWorld(felt, x + offset, y + offset, 0.005) * CFrame.Angles(0, 0, math.rad(90))
+		local shift = offset * shadowTurn
+		shadow.CFrame = TableSpace.toWorld(felt, x + shift, y + shift, 0.005) * CFrame.Angles(0, 0, math.rad(90))
 		-- Gone as soon as the ball starts sinking into a pocket, since it's no longer on the felt
 		local height = felt.CFrame:PointToObjectSpace(ball.Position).Y - felt.Size.Y / 2
 		local sinking = height < radius * SINKING

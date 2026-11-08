@@ -11,9 +11,11 @@ local ActiveTable = require(script.Parent.ActiveTable)
 local Hud = require(script.Parent.Hud)
 local PhysicsTestPanel = require(script.Parent.PhysicsTestPanel)
 local ShotController = require(script.Parent.ShotController)
+local ShotPose = require(script.Parent.ShotPose)
 local TableView = require(script.Parent.TableView)
 
 TableView.start()
+ShotPose.start()
 ActiveTable.start()
 local canTest = PhysicsTestAccess.canTest(Players.LocalPlayer)
 if canTest then

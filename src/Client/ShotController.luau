@@ -1,6 +1,7 @@
 --!strict
--- The shooter's controls. F (phones: an on-screen button) switches to a top-down view of the table and back. In a
--- game, your turn starting switches you to it and your turn passing switches you back.
+-- The shooter's controls. F (phones: an on-screen button) eases into a top-down view of the table and back. In a
+-- game, your turn starting eases you into it, and your turn passing eases you back to your normal camera, so you see
+-- the next shooter's pose. While it isn't your turn, F's top-down view sits a little farther out.
 -- You can only aim and shoot from the view: walking is off and a cue stick lies behind the cue ball.
 -- Aim: on PC only the mouse aims; on phones dragging turns the aim around the cue ball. Power is a slingshot
 -- pull, like 8 Ball Duels: hold the mouse button anywhere (phones: touch near the cue ball), best in front of the
@@ -41,6 +42,7 @@ local Theme = require(ReplicatedStorage.Shared.Theme)
 local AimIndicator = require(script.Parent.AimIndicator)
 local Cue = require(script.Parent.Cue)
 local Hud = require(script.Parent.Hud)
+local Stance = require(script.Parent.Stance)
 local TableView = require(script.Parent.TableView)
 local TopDownView = require(script.Parent.TopDownView)
 local Ui = require(script.Parent.Ui)
@@ -163,7 +165,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	local followThrough: { t: number, x: number, y: number, aim: number }? = nil
 	-- This table's game, from the server's TurnStarted: whether it's this player's turn, and whether they're playing in
 	-- it at all rather than watching. Nil with no game on.
-	local turn: { mine: boolean, seated: boolean }? = nil
+	local turn: { mine: boolean, seated: boolean, seat: number? }? = nil
 	-- Whether the cue ball may be placed anywhere before the next shot, from TurnStarted
 	local ballInHand = false
 	-- With ball in hand, whether the cue ball is following the mouse rather than set down
@@ -422,13 +424,16 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		lockButton.Text = if held then "Unlock" else "Lock"
 		indicator.hide()
 		if hidden then
+			Stance.stop()
 			drawRelayed(dt)
 			return
 		end
+		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
 		if turn and turn.mine then
 			sendAim(held, placing)
+			-- Your character walks round to stand behind the cue ball
+			Stance.update(felt, cueX, cueY, aim)
 		end
-		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
 		if calling then
 			indicator.showPocketRing(calling.pocket)
 		end
@@ -522,7 +527,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 
 	table.insert(lasting, lockButton.Activated:Connect(toggleLock))
 
-	local function leaveView()
+	local function leaveView(instant: boolean?)
 		if not view.isOn() then
 			return
 		end
@@ -531,6 +536,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		end
 		connections = {}
 		ContextActionService:UnbindAction(LOCK_ACTION)
+		Stance.stop()
 		-- A shot you've let go of still goes
 		if strike then
 			fire()
@@ -542,14 +548,16 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		controlsGui.Enabled = false
 		Hud.setPower(nil)
 		indicator.hide()
-		view.leave()
+		view.leave(instant)
 		characterInput.Enabled = true
 		controls:Enable()
 		onView(false)
 	end
 
+	-- Close in on your turn, farther out when it isn't, turned so the long side across from your seat is at the top
 	local function enterView()
-		view.enter()
+		view.enter(not (turn and turn.mine), if turn then turn.seat else nil)
+		TableView.turnShadows(view.isTurned())
 		connections = {
 			RunService.RenderStepped:Connect(render),
 			UserInputService.InputBegan:Connect(pointerBegan),
@@ -598,7 +606,9 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			local wasMine = turn ~= nil and turn.mine
 			local seated = table.find(seats or {}, Players.LocalPlayer) ~= nil
 			-- Seats with no shooter: the game is over and its result is showing, so nobody shoots
-			turn = if seats then { mine = shooter == Players.LocalPlayer, seated = seated } else nil
+			turn = if seats
+				then { mine = shooter == Players.LocalPlayer, seated = seated, seat = table.find(seats, Players.LocalPlayer) }
+				else nil
 			if seats and seated and not wasSeated then
 				view.faceTable(table.find(seats, Players.LocalPlayer) :: number)
 			end
@@ -610,13 +620,18 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 					and turn.mine
 				then { pocket = pocketNearEight(), clicked = false }
 				else nil
-			-- Your turn starting takes you to the top-down view, even if F took you out of it, and your turn passing to
-			-- someone else takes you back to the normal view to watch them; so does the game ending. F still switches any
-			-- time, and nobody waiting or watching is moved.
-			if (wasSeated and not seated) or (wasMine and shooter ~= nil and not (turn and turn.mine)) then
+			-- Your turn starting eases you into the top-down view close in, even if F took you out of it. Your turn
+			-- passing to someone else, or the game ending, eases you back to the normal view to watch the shooter's pose.
+			-- F still switches any time, and nobody waiting or watching is moved.
+			local mine = turn ~= nil and turn.mine
+			if (wasSeated and not seated) or (wasMine and shooter ~= nil and not mine) then
 				leaveView()
-			elseif turn and turn.mine and not wasMine and not view.isOn() then
-				enterView()
+			elseif mine and not wasMine then
+				if view.isOn() then
+					view.setFar(false)
+				else
+					enterView()
+				end
 			end
 		end
 	)
@@ -641,7 +656,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	-- top-down view. Roblox only points the camera at a new character while the camera isn't Scriptable, so a respawn
 	-- in the view would leave it on the old one: point it here.
 	lasting[#lasting + 1] = Players.LocalPlayer.CharacterAdded:Connect(function(character: Model)
-		leaveView()
+		leaveView(true)
 		local camera = workspace.CurrentCamera
 		camera.CameraSubject = character:WaitForChild("Humanoid") :: Humanoid
 		if turn and turn.mine then
@@ -651,7 +666,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 
 	return {
 		destroy = function()
-			leaveView()
+			leaveView(true)
 			for _, connection in lasting do
 				connection:Disconnect()
 			end

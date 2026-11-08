@@ -19,8 +19,10 @@ local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Seat = require(ReplicatedStorage.Shared.Seat)
 local ShotPicker = require(ReplicatedStorage.Shared.Rules.ShotPicker)
+local ShotStance = require(ReplicatedStorage.Shared.ShotStance)
 local Simulate = require(ReplicatedStorage.Shared.Physics.Simulate)
 local TableFlow = require(ReplicatedStorage.Shared.Rules.TableFlow)
+local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Balls = require(script.Parent.Balls)
 
 export type Match = {
@@ -164,6 +166,62 @@ function Match.sendAim(match: Match, state: TableFlow.AimState)
 	end
 end
 
+-- Each Coach figure's current glide, so a newer one takes over
+local glides: { [Model]: {} } = {}
+
+-- Glides a Coach figure to (toX, toY) in table space, standing on top of the table when that's over it, facing
+-- (faceX, faceY), at Config.Stance's speeds. Its figure is anchored, so it glides; every screen poses it once it stands
+-- still.
+local function glideCoach(match: Match, bot: Model, toX: number, toY: number, faceX: number, faceY: number)
+	local token = {}
+	glides[bot] = token
+	local felt = match.tableModel:FindFirstChild("Felt") :: BasePart
+	local seats = match.tableModel:FindFirstChild("Seats")
+	local marker = seats and seats:FindFirstChild("A1")
+	local root = bot:FindFirstChild("HumanoidRootPart") :: BasePart
+	local stance = Config.Stance
+	local halfX, halfY = Config.Table.Length / 2 + stance.TableEdge, Config.Table.Width / 2 + stance.TableEdge
+	-- Its root's height standing there: on the table, or on the floor where the seat markers lie, on 2-stud R6 legs
+	local toHeight = if ShotStance.overTable(toX, toY, halfX, halfY) or not (marker and marker:IsA("BasePart"))
+		then felt.Position.Y + felt.Size.Y / 2 + stance.TableStandHeight
+		else marker.Position.Y + marker.Size.Y / 2
+	toHeight += 2 + root.Size.Y / 2
+	local ball = TableSpace.toWorld(felt, faceX, faceY, 0).Position
+	task.spawn(function()
+		while glides[bot] == token and bot.Parent do
+			local dt = task.wait()
+			local at = bot:GetPivot().Position
+			local x, y = TableSpace.toTable(felt, at)
+			local newX, newY, height =
+				ShotStance.step(x, y, at.Y, toX, toY, toHeight, stance.Speed, stance.Climb, dt)
+			local spot = TableSpace.toWorld(felt, newX, newY, 0).Position
+			local position = Vector3.new(spot.X, height, spot.Z)
+			bot:PivotTo(CFrame.lookAt(position, Vector3.new(ball.X, height, ball.Z)))
+			if newX == toX and newY == toY and height == toHeight then
+				break
+			end
+		end
+		if glides[bot] == token then
+			glides[bot] = nil
+		end
+	end)
+end
+
+-- Every Coach that isn't shooting goes back to its seat's spot, facing the table, out of the shooter's way; once the
+-- game is over, every Coach does
+local function seatCoaches(match: Match)
+	local felt = match.tableModel:FindFirstChild("Felt") :: BasePart
+	local seats = match.tableModel:FindFirstChild("Seats")
+	for seat, occupant in match.seats do
+		local marker = seats and seats:FindFirstChild(TableFlow.SEAT_NAMES[seat])
+		local shooting = occupant == match.shooter and not match.ended
+		if not shooting and occupant:IsA("Model") and marker and marker:IsA("BasePart") then
+			local x, y = TableSpace.toTable(felt, marker.Position)
+			glideCoach(match, occupant, x, y, 0, 0)
+		end
+	end
+end
+
 -- Coach's turn, slow enough to follow, with its aim showing live: it waits ReadySeconds (with ball in hand, holding the
 -- cue ball where it'll go), swings its aim onto its shot over AimSeconds, draws the cue back over PullSeconds, then
 -- shoots through the same checks as a player's shot. A turn that's over by then (the game ended) stops it.
@@ -184,6 +242,13 @@ local function botTurn(match: Match, clock: {})
 	)
 	local coach = Config.Coach
 	local aim = math.atan2(shot.dirY, shot.dirX)
+	if bot:IsA("Model") then
+		-- It goes to stand behind the cue ball, where it'll place it with ball in hand
+		local cue = ShotPicker.cueBall(Balls.get(match.tableModel))
+		local cueX, cueY = shot.cueX or cue.x, shot.cueY or cue.y
+		local spot = ShotStance.spot(cueX, cueY, aim, Config.Stance.Distance)
+		glideCoach(match, bot, spot.x, spot.y, cueX, cueY)
+	end
 	local fromAim = aim + math.rad(coach.AimSwing) * (if random:NextNumber() < 0.5 then -1 else 1)
 	task.spawn(function()
 		local started = os.clock()
@@ -225,6 +290,7 @@ function startTurn(match: Match)
 		end
 	end)
 	Remotes.TurnStarted:FireAllClients(turnMessage(match))
+	seatCoaches(match)
 	if Seat.isBot(match.shooter) then
 		botTurn(match, clock)
 	end
@@ -285,6 +351,7 @@ local function finish(match: Match, winner: EightBall.Side, why: string)
 		else `{table.concat(names, " and ")} {if #names == 1 then "wins" else "win"}: {why}`
 	log(match, text)
 	Remotes.TurnStarted:FireAllClients(turnMessage(match))
+	seatCoaches(match)
 	local rows = {}
 	for seat, player in match.seats do
 		local stats = match.stats[player]

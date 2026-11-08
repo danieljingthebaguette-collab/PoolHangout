@@ -174,6 +174,17 @@ local Theme = {
 		[14] = GREEN,
 		[15] = MAROON,
 	} :: { [number]: Color3 },
+
+	-- The shooter's ready-to-shoot R6 pose (ShotPose), in degrees at the full pose
+	Pose = {
+		Lean = 35, -- the body tips forward over the table from the hips; the legs stay upright
+		BackArm = 60, -- the back (right) arm drawn back and down, as if holding a cue
+		FrontArm = 80, -- the front (left) arm reaching forward along the felt
+		Head = 20, -- the head tilts up a little, to look along the shot
+		EaseSeconds = 0.25, -- into and out of the pose
+		StillSpeed = 1, -- studs/s: slower than this counts as standing still
+		OnTableSeeThrough = 0.6, -- a shooter standing on top of the table is this see-through (40% opaque)
+	},
 }
 
 return Theme
