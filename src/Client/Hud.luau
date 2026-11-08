@@ -3,8 +3,9 @@
 -- ShotClock (between the cards), Banner (fouls and the winner, under the top bar), LeaveButton (top right while you're at a table), PowerMeter (left),
 -- Tray (right, where sunk balls collect), Hints (the control hints, bottom right) and SettingsPanel (the gear
 -- bottom-left, with the sound volume), and beside the gear "TEST MODE" while the physics test mode has the table.
--- It also starts TurnArrow, the "Turn" card over each shooter's head in the normal view. The top bar, clock and tray
--- follow one table at a time (ActiveTable); setTable switches them.
+-- It also starts TurnArrow, the "Turn" card over each shooter's head in the normal view, and AbilitiesPanel, the
+-- Abilities button bottom center while you're not at a table. The top bar, clock and tray follow one table at a time
+-- (ActiveTable); setTable switches them.
 
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -13,12 +14,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Items = require(ReplicatedStorage.Shared.Items)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Theme = require(ReplicatedStorage.Shared.Theme)
+local AbilitiesPanel = require(script.Parent.AbilitiesPanel)
 local Banner = require(script.Parent.Banner)
 local Effects = require(script.Parent.Effects)
 local EndScreen = require(script.Parent.EndScreen)
 local Hints = require(script.Parent.Hints)
 local ItemName = require(script.Parent.ItemName)
-local ItemSlots = require(script.Parent.ItemSlots)
 local LeaveButton = require(script.Parent.LeaveButton)
 local PowerMeter = require(script.Parent.PowerMeter)
 local SettingsPanel = require(script.Parent.SettingsPanel)
@@ -77,15 +78,20 @@ function Hud.setPower(share: number?)
 	PowerMeter.set(share)
 end
 
--- Shows your items' rows at the bottom center, or hides them with nil: `picking` is the slot waiting for a target,
--- `usable` false dims them, and `refusal` says why a slot's item can't be used
+-- Marks your own slots on your top bar card while you play here, or clears the marks with nil slots: `picking` is the
+-- slot waiting for a target, `usable` false dims them, and `refusal` says why a slot's item can't be used. The slots'
+-- items come from ItemsChanged.
 function Hud.setSlots(
 	slots: { Items.Item | false }?,
 	picking: number?,
 	usable: boolean,
 	refusal: { slot: number, text: string }?
 )
-	ItemSlots.show(slots, picking, usable, refusal)
+	if slots then
+		TopBar.setMine(picking, usable, refusal)
+	else
+		TopBar.setMine(nil, true, nil)
+	end
 end
 
 -- Shows control hints down the bottom right, or hides them with nil
@@ -160,7 +166,6 @@ function Hud.start(tableModel: Model)
 	TopBar.show(nil, nil, nil, nil)
 	ShotClock.build(gui)
 	Hints.build(gui)
-	ItemSlots.build(gui)
 	testModeLabel(gui)
 	gui.Parent = playerGui
 	table.insert(guis, gui)
@@ -176,7 +181,8 @@ function Hud.start(tableModel: Model)
 	table.insert(guis, settingsGui)
 
 	PowerMeter.build(playerGui)
-	LeaveButton.build(playerGui)
+	AbilitiesPanel.build(playerGui)
+	LeaveButton.build(playerGui, AbilitiesPanel.setAtTable)
 	TurnArrow.start()
 	EndScreen.start(playerGui)
 	Banner.start(playerGui, function(model: Model): boolean

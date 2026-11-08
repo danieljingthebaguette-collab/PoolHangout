@@ -20,7 +20,7 @@ Eight colors carry the whole game, plus icy blue for Freeze alone. Everything el
 | Ink | `#241C16` | Text on cards and buttons, card brackets, outlines |
 | Near-black | `#201A16` | Dark boxes: key boxes, the % readout, the tray, the timer |
 | Sunny gold | `#FFC42E` | The main accent: buttons, the power meter's fill, the turn glow, the called pocket, the ring round each of your balls as your turn starts |
-| Coral | `#FF8A76` | Buttons that leave or undo, like Leave and Yes on "Leave and lose this game?", and warnings: the shot clock's last 10 seconds, and an item row saying why its item can't be used |
+| Coral | `#FF8A76` | Buttons that leave or undo, like Leave and Yes on "Leave and lose this game?", and warnings: the shot clock's last 10 seconds, and the label beside your slots saying why an ability can't be used |
 | Felt green | `#327A4C` | The playing surface, the strongest color in the room |
 | Cushion green | `#225834` | Cushions |
 | Painted wood | `#7A4628` | The table's rails and wood; its darker tone is the body and legs |
@@ -80,7 +80,8 @@ Every value lives in `src/Shared/Theme.luau`, and UI is built in code. `src/Clie
 | Dark boxes | Near-black (32, 26, 22) with cream text: key boxes, the % readout, the power meter's track. Bigger ones, like the sunk-ball tray and later the timer, get cream corner brackets |
 | Timer | A dark box at the top center, between the top bar's two cards |
 | Control hints | Down the right side, stacked from the bottom: a slightly see-through cream label box, then a dark key box with the key or a short word, like "Lock aim" `Space` |
-| Item rows | Bottom center: a row for each item you hold, slot 1 on top, built like a control hint: the key (`1` or `2`) in a dark key box, the item's icon on a dark box, then a slightly see-through cream label with its name and, in a softer ink, a smaller line saying what it does. An empty slot has no row. A gold outline round the row you're picking a target for; text and labels faded and the icon veiled while you can't use an item; a solid coral label with ink text saying why, in place of the line, when an item can't be used |
+| Item slots | Players see items called "Abilities" everywhere on screen; code and docs keep "items". Every player's 2 slots are the small dark squares under their avatar on the top bar card, with the item bar under them. On your own: a gold outline round the slot you're picking a target for, a dark veil over both while you can't use one, and, when one is refused, a small solid coral label with ink text saying why, right beside your strip on the card's outer side (past your teammate's strip in 2v2, so it covers no one's slots), until it's cleared |
+| Abilities button and panel | While you're not at a table (exactly when the Leave button doesn't show), a gold "Abilities" button at the bottom center. It opens a cream card in the middle of the screen: "Abilities" at the top with a near-black Close button, two plain lines for 10-year-olds on earning and using them, then every ability in order, each its icon on a dark box beside its name and, in a softer ink, its one-line description. Close, Esc and joining a table close it |
 | Buttons | A bright accent with ink text: sunny gold (255, 196, 46) for the main action, coral for leaving or undoing. A second choice beside a gold one, like Back to lobby beside Rematch, is a near-black button with cream text, so the gold one leads. Only the palette's colors; never neon |
 | Text over the world | Always on a card or a dark box, never bare, so it reads on any background |
 
@@ -90,11 +91,11 @@ Every value lives in `src/Shared/Theme.luau`, and UI is built in code. `src/Clie
 - **Left:** the power meter, with the phones' Lock button beside it.
 - **Right:** the sunk-ball tray, with the control hints under it.
 - **Bottom left:** the settings gear and, in test mode, the Test button.
-- **Bottom center:** your item rows, inside the bottom band the control hints keep clear, so the table never shrinks for them.
+- **Bottom center:** the Abilities button while you're not at a table. Nothing there at a table.
 
 Touch targets stay at least 44 px, and everything fits a phone held sideways. Both are checked in the Mobile phase; until then the UI is built and tested on PC.
 
-**Built so far:** cards, the font, dark boxes, control hints, accent buttons, the top bar's side cards, the banner, the timer and the gold "Turn" card over the shooter's head, with their name under "Turn". Placeholder item looks until the GUI pass: item icons drawn in code (an orange flame, a gold burst, an icy snowflake, a dark oil drop over a puddle edged in cream, a black pocket with a gold lid), shown on each card's small slots and on your own item rows bottom center (see Item rows above), and the item's name shown big at the top center under the banner: the name in Luckiest Guy with its one-line description under it in `Theme.Font`, on a dark box with its icon, popping in and fading out. Placeholder item effects on the table until Phase 4: an icy blue ring and tint on a frozen ball, a dark glossy oil patch edged in cream, and a gold lid across a blocked pocket. **Not built yet:** the ring at players' feet, and the final item effects (flame trail, blast burst, screen shake).
+**Built so far:** cards, the font, dark boxes, control hints, accent buttons, the top bar's side cards, the banner, the timer and the gold "Turn" card over the shooter's head, with their name under "Turn". Placeholder item looks until the GUI pass: item icons drawn in code (an orange flame, a gold burst, an icy snowflake, a dark oil drop over a puddle edged in cream, a black pocket with a gold lid), shown on each card's small slots (see Item slots above), the Abilities button and panel, and the item's name shown big at the top center under the banner: the name in Luckiest Guy with its one-line description under it in `Theme.Font`, on a dark box with its icon, popping in and fading out. Placeholder item effects on the table until Phase 4: an icy blue ring and tint on a frozen ball, a dark glossy oil patch edged in cream, and a gold lid across a blocked pocket. **Not built yet:** the ring at players' feet, and the final item effects (flame trail, blast burst, screen shake).
 
 ## Effects
 

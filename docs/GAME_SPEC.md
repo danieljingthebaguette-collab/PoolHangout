@@ -106,7 +106,8 @@ Laid out like 8 Ball Duels, in the look `docs/STYLE.md` describes: cream cards, 
   - a settings button bottom-left with a sound volume slider. The volume lasts for the session and isn't saved *(default)*. It shows only in the top-down view, so it never covers the phones' thumbstick.
   - a gold ring pulses once around each of your balls, growing and fading over 2 seconds, when your turn starts, while the balls keep their own colors, so you can see which are yours: your group's, or the 8 once your group is cleared. No rings show on an open table, where no ball is yours yet
   - under each player's avatar on their card, their 2 item slots and their item bar, with a "+4" rising from the bar each time it fills and a glow while it's full with both slots taken
-  - your items at the bottom center, one row per item you hold: its key, its icon drawn in code, its name and its one-line description (see Items), dimmed while you can't use one, outlined in gold while it waits for a target, and saying why when a target isn't allowed. An empty slot shows no row. The rows fit in the bottom band's height, so the table never shrinks for them. A plain look like the control hints until the GUI pass
+  - your own 2 slots are the squares under your avatar on your card: the one waiting for a target is outlined in gold, they dim while you can't use one, and when a target isn't allowed a small coral note beside them says why, like "Can't freeze the 8"
+- **Anywhere, while you're not at a table:** an "Abilities" button at the bottom center. It opens one panel listing all 5 abilities, each with its icon, name and one line (see Items), under a short part on how you earn them (the bar under your avatar fills as you play) and use them (press 1 or 2 on your turn). Its close button and Esc close it, and so does joining a table. A plain look in `docs/STYLE.md`'s colors until the GUI pass
 
 ## 8-ball rules
 
@@ -132,7 +133,7 @@ Items never change these rules: what counts as a legal shot, a foul or a win is 
 
 ## Items
 
-Items are gadgets that change how balls move, never the rules. Here a **turn** means one player's visit to the table: every shot they take until the turn passes.
+Items are gadgets that change how balls move, never the rules. On screen players see the word "Abilities", never "items"; the docs and the code say items. Here a **turn** means one player's visit to the table: every shot they take until the turn passes.
 
 ### Earning items
 
@@ -154,10 +155,10 @@ Each player has one item bar. At 12 points it gives an item, and leftover points
 ### Using items
 
 - On your own turn, before a shot, press 1 or 2 (phones: tap the slot). One item per shot. Like shooting, it works only in the top-down view.
-- Power Shot and Blast Ball take effect at once. Freeze, Oil Slick and Pocket Block then ask for a target: click or tap a ball, a spot on the felt or a pocket, and their row lights up while they wait. Pressing the same key or tapping the slot again backs out without using it. If the target isn't allowed, the row says why, like "Can't freeze the 8", and you can pick another. Items can't be used mid-pull.
+- Power Shot and Blast Ball take effect at once. Freeze, Oil Slick and Pocket Block then ask for a target: click or tap a ball, a spot on the felt or a pocket, and their square under your avatar lights up while they wait. Pressing the same key or tapping the slot again backs out without using it. If the target isn't allowed, a note beside your slots says why, like "Can't freeze the 8", and you can pick another. Items can't be used mid-pull.
 - An item is spent the moment you use it, even if you then foul or the clock runs out. The shot clock keeps running while you pick a target.
 - Everyone at the table, players and watchers, sees the item's name big at the top center, under the clock and the banner, in Luckiest Guy, with its one-line description under it, for about 3 seconds, long enough to read. Its effect stays visible on the table while it lasts. Every player's held items show on their card, for everyone to see.
-- **What players read,** one short line per item, written for 10-year-olds, under its row at the bottom and under its big name:
+- **What players read,** one short line per item, written for 10-year-olds, in the Abilities panel and under its big name:
   - Power Shot: "Hit harder: up to 150% power for the rest of your turn"
   - Blast Ball: "The first ball you hit blasts the balls around it away"
   - Freeze: "Pick a ball: it can't move, and balls bounce off it, until after their next turn"

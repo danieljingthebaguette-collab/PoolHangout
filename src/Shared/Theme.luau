@@ -49,9 +49,9 @@ local Theme = {
 		BallMark = Color3.fromRGB(245, 242, 230), -- the white on the placeholder balls: stripes and number dots
 		CueBallMark = Color3.fromRGB(200, 35, 35),
 		BallShadow = Color3.fromRGB(10, 20, 40),
-		ItemPicking = ACCENT, -- the outline round the item row you're picking a target for
-		ItemLine = Color3.fromRGB(98, 82, 70), -- an item row's description, a softer ink so the name leads
-		ItemRefusal = Color3.fromRGB(255, 138, 118), -- coral, an item row's label box while it says why it can't be used
+		ItemPicking = ACCENT, -- the outline round your slot on the top bar that you're picking a target for
+		ItemLine = Color3.fromRGB(98, 82, 70), -- an ability's line in the Abilities panel, a softer ink so the name leads
+		ItemRefusal = Color3.fromRGB(255, 138, 118), -- coral, the label beside your slots saying why one can't be used
 	},
 
 	Ui = {
@@ -115,13 +115,21 @@ local Theme = {
 		ItemPopTextSize = 16, -- the "+4" that rises from a bar when it fills...
 		ItemPopRise = 16, -- ...this many pixels...
 		ItemPopSeconds = 0.8, -- ...as it fades out
-		-- Your items, bottom center of the top-down view (ItemSlots): a row for each, like a control hint. Two rows fit
-		-- the bottom band (Hints.bottomBand()). Placeholder looks until the GUI pass.
-		ItemRowIconInset = 3, -- the icon's margin inside its dark box, as tall as a hint
-		ItemLineTextSize = 16, -- the item's one-line description, beside its name at TextSize
-		ItemDimText = 0.55, -- while you can't use an item: the rows' text this see-through...
-		ItemDimBox = 0.5, -- ...their label boxes this see-through...
-		ItemDimVeil = 0.4, -- ...and a dark veil this see-through over each icon
+		-- Your own strip: a gold outline round the slot you're picking a target for, a dark veil over your slots while you
+		-- can't use one, and beside the strip a coral label saying why one was refused
+		ItemPickingOutline = 2, -- pixels, no wider than the gap to the next slot
+		ItemDimVeil = 0.4,
+		ItemRefusalTextSize = 16,
+		ItemRefusalHeight = 22,
+		ItemRefusalGap = 4, -- between the strip and the label
+		-- The Abilities button, bottom center while you're not at a table, and the panel it opens in the middle of the
+		-- screen, listing every ability. Placeholder looks until the GUI pass.
+		AbilitiesButtonWidth = 120,
+		AbilitiesPanelWidth = 680, -- room for the longest description on one line
+		AbilitiesCloseWidth = 80,
+		AbilitiesIconSize = 44, -- each ability's icon on its dark box...
+		AbilitiesIconInset = 4, -- ...with this margin
+		AbilitiesLineTextSize = 16, -- its one-line description, under its name at TextSize
 		-- An item's name shown big at the top center as it's used, under the banner (ItemName)
 		ItemNameTextSize = 40, -- in the display font...
 		ItemNameLineTextSize = 18, -- ...with its one-line description under it...

@@ -17,17 +17,28 @@ local LeaveButton = {}
 local leave: { button: TextButton, ask: Frame }? = nil
 local playing = false
 local hasTeammate = false
+-- Told whether this player is at a table each time that changes, and what it was last told
+local onChange: ((atTable: boolean) -> ())? = nil
+local wasAtTable: boolean? = nil
 
 -- Shows the button while this player is at a table: joined and waiting, starting, or playing
 local function showLeave()
 	if not leave then
 		return
 	end
-	leave.button.Visible = playing or Players.LocalPlayer:GetAttribute("JoinedTable") ~= nil
+	local atTable = playing or Players.LocalPlayer:GetAttribute("JoinedTable") ~= nil
+	leave.button.Visible = atTable
 	leave.ask.Visible = leave.ask.Visible and playing
+	if onChange and atTable ~= wasAtTable then
+		wasAtTable = atTable
+		onChange(atTable)
+	end
 end
 
-function LeaveButton.build(playerGui: Instance)
+-- Builds the button and its question. `onAtTable`, if given, hears whether this player is at a table (when the button
+-- shows), once now and again each time it changes.
+function LeaveButton.build(playerGui: Instance, onAtTable: ((atTable: boolean) -> ())?)
+	onChange = onAtTable
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "Leave"
 	gui.ResetOnSpawn = false
