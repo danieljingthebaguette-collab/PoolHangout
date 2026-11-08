@@ -29,7 +29,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Shared/Rules/EightBall.luau` | New game, resolve a shot, timeouts, forfeits, per-player game stats |
 | `Shared/Rules/TableFlow.luau` | How a table runs, by seat number: seat names, sides and counts, turn order, who shoots for a seat whose player left, joining and the countdown's token, every shot-request check, and what a shot leaves behind (the next seat, ball in hand, the 8 and the cue ball put back). `TableService` and `Match` call it and keep the players, remotes, timers and ball parts. Tested in `tests/tableflow.spec.luau`, and in `tests/games.spec.luau`, where seeded bots play whole 1v1 and 2v2 games through it with `Simulate` and `EightBall` |
 | `Server/Main.server.luau` | Starts the services |
-| `Server/TableService.luau` | Finds tables, runs their Join prompts, countdowns and signs, moves players to their seats, starts and resets games |
+| `Server/TableService.luau` | Finds tables, runs their Join prompts, countdowns and signs, moves players to their seats, starts and resets games, and hides Roblox's name tags for everyone joined or playing, and Coach |
 | `Server/Balls.luau` | Each table's ball parts and where its balls rest, and playing a shot on them: simulate in slices, `ShotStarted`, wait out the replay. Games and the test mode both shoot through it |
 | `Server/Match.luau` | One game: seats, turn order, shot clock, ball in hand, items (through `Items.luau`), takeovers, end-screen data |
 | `Server/StatsService.luau` | Lifetime stats. The only module that touches DataStores |
@@ -41,12 +41,12 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Client/TopDownView.luau` | The top-down camera: framing the table between the HUD's reserves, close in on your turn and `WatchingHeight` farther out when it isn't, easing over `EaseSeconds` into the view, between heights and back out to the normal camera behind your character, and turning it to face the table from a seat |
 | `Client/ActiveTable.luau` | Which table the shot controls and HUD follow: the one you're playing at, else the one you joined, else the nearest. `Main` rebuilds the shot controls and switches the HUD when it changes; replays, sounds, the Turn arrow, the end screen and the pose work on every table |
 | `Client/Stance.luau` | On your turn in the view, glides your character to stand `Stance.Distance` behind the cue ball, facing it, on top of the table when needed, and off the table again after |
-| `Client/ShotPose.luau` | On every screen, poses each table's shooter (R6 joint offsets, no animation asset) once they stand still, and draws a shooter on top of the table see-through |
+| `Client/ShotPose.luau` | On every screen, poses each table's shooter (R6 joint offsets, no animation asset) once they stand still, turns off the shooter's shadow (giving each part its own back after), and draws a shooter on top of the table see-through |
 | `Client/AimIndicator.luau` | The aim indicator (the line, circle and dot, and the cue ball's and hit ball's lines), the faint ring with ball in hand and the called pocket's ring, drawn on the screen |
 | `Client/Cue.luau` | The cue stick, a Part only the shooter's screen sees, and laying it along the aim |
 | `Client/Hud.luau` | Starts the HUD's parts below, shows them in the top-down view, and "TEST MODE"; later item slots with icons drawn in code and the item's name shown big |
 | `Client/ShotClock.luau` | The shot clock between the top bar's cards, counting to the server's clock end time |
-| `Client/TurnArrow.luau` | The gold "Turn" card over each table's shooter in the normal view |
+| `Client/TurnArrow.luau` | The gold "Turn" card over each table's shooter in the normal view, with their name under "Turn" |
 | `Client/TopBar.luau` | Each side's card: avatars, names, the turn glow, and the group with its balls; later every card's item slots and bar with its "+4" pops |
 | `Client/Banner.luau` | The banner under the top bar for the server's messages, for everyone at the table |
 | `Client/LeaveButton.luau` | The Leave button and the question it asks mid-game |
@@ -56,7 +56,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Client/Hints.luau` | The control hints, bottom right |
 | `Client/SettingsPanel.luau` | The gear and its card with the sound volume |
 | `Client/Ui.luau` | Small shared builders: rounded corners, labels, accent buttons and ball icons |
-| `Client/Effects.luau` | Effects on the table, built from parts in code once per effect and destroyed when it ends. Today: chunky sparks on hard hits and a pop at the pocket, from `TableView`'s loudest few events per frame, capped at `Theme.Effects.MaxParts`; and the turn-start pulse, a white `Highlight` on each of your balls (your group's or the 8, none on an open table) for `PulseSeconds`, which `Hud` asks for. Later the item effects and screen shake: flame trail, blast, frozen balls, oil patches, pocket lids |
+| `Client/Effects.luau` | Effects on the table, built from parts in code once per effect and destroyed when it ends. Today: chunky sparks on hard hits and a pop at the pocket, from `TableView`'s loudest few events per frame, capped at `Theme.Effects.MaxParts`; and the turn-start pulse, a flat gold ring on the felt round each of your balls (your group's or the 8, none on an open table), growing and fading over `PulseSeconds` and following its ball, which `Hud` asks for. Later the item effects and screen shake: flame trail, blast, frozen balls, oil patches, pocket lids |
 | `Client/Slider.luau` | A labelled slider row for mouse and touch, for the settings and the test panel |
 | `Client/Card.luau` | The card look from `docs/STYLE.md`: cream or dark, with corner brackets and a faint dot texture |
 | `Client/Spectate.luau` | "Watch from above" (first week after launch; until then F) |

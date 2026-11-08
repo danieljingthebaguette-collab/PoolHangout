@@ -1,8 +1,8 @@
 --!strict
 -- Effects on the table, in docs/STYLE.md's look, built in code and only on this screen. For now the hit effects:
 -- small chunky ink-edged sparks where a ball hits another ball or a rail hard, bigger on the break, and a ring that
--- pops out of a pocket a ball drops into. Then the white pulse on your balls as your turn starts. Item effects and
--- screen shake come in the Items and polish phases. Every look and timing is Theme.Effects.
+-- pops out of a pocket a ball drops into. Then the gold ring round each of your balls as your turn starts. Item
+-- effects and screen shake come in the Items and polish phases. Every look and timing is Theme.Effects.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -19,6 +19,10 @@ local look = Theme.Effects
 -- break speed
 local PARTNER_REACH = 7
 local TINY = Vector3.new(0.001, 0.001, 0.001)
+-- Canvas pixels a ball radius for the turn-start ring, so its line is sharp from any view
+local PULSE_PIXELS = 50
+-- A ball whose center is lower than this many radii above the felt is dropping into a pocket
+local SINKING = 0.99
 
 -- Effect parts alive now, kept under look.MaxParts
 local live = 0
@@ -45,6 +49,31 @@ local function newPart(felt: BasePart, seconds: number, color: Color3, size: Vec
 		part:Destroy()
 	end)
 	return part
+end
+
+-- A flat ring on the top of `part`, which goes see-through: a circle the part's size, drawn by a stroke `thickness`
+-- canvas pixels wide just outside it. Returns the stroke, to fade or hide.
+local function ringOn(part: BasePart, pixelsPerStud: number, thickness: number, transparency: number): UIStroke
+	part.Transparency = 1
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Top
+	gui.LightInfluence = 0
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = pixelsPerStud
+	local ring = Instance.new("Frame")
+	ring.Size = UDim2.fromScale(1, 1)
+	ring.BackgroundTransparency = 1
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = ring
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = part.Color
+	stroke.Thickness = thickness
+	stroke.Transparency = transparency
+	stroke.Parent = ring
+	ring.Parent = gui
+	gui.Parent = part
+	return stroke
 end
 
 -- `count` chunky sparks from (x, y) in table space, flying at an angle of sprayMin to sprayMax degrees either side of
@@ -119,29 +148,12 @@ local function pop(felt: BasePart, r: number, x: number, y: number)
 	local finish = look.PopEndScale * mouth
 	local cframe = TableSpace.toWorld(felt, pocket.x, pocket.y, look.PopHeight * r)
 	local part = newPart(felt, look.PopSeconds, look.PopColor, Vector3.new(start, 0.001, start), cframe)
-	part.Transparency = 1
 	-- Canvas pixels the size of screen pixels here, so the line's width is in screen pixels from any view
 	local camera = workspace.CurrentCamera
 	local a = camera:WorldToViewportPoint(cframe.Position)
 	local b = camera:WorldToViewportPoint(cframe.Position + camera.CFrame.RightVector)
-	local gui = Instance.new("SurfaceGui")
-	gui.Face = Enum.NormalId.Top
-	gui.LightInfluence = 0
-	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	gui.PixelsPerStud = math.max(Vector2.new(b.X - a.X, b.Y - a.Y).Magnitude, 1)
-	local ring = Instance.new("Frame")
-	ring.Size = UDim2.fromScale(1, 1)
-	ring.BackgroundTransparency = 1
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0.5, 0)
-	corner.Parent = ring
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = look.PopColor
-	stroke.Thickness = look.PopLineStart
-	stroke.Transparency = look.PopTransparency
-	stroke.Parent = ring
-	ring.Parent = gui
-	gui.Parent = part
+	local pixels = math.max(Vector2.new(b.X - a.X, b.Y - a.Y).Magnitude, 1)
+	local stroke = ringOn(part, pixels, look.PopLineStart, look.PopTransparency)
 	-- Fast out of the gate and fading from the first frame, so it never holds still at full strength
 	TweenService:Create(
 		part,
@@ -208,31 +220,49 @@ local function show(kind: string, part: BasePart, felt: BasePart, share: number)
 	end
 end
 
--- The pulse showing now, so a new one replaces it instead of stacking
-local pulsing: { Highlight } = {}
+-- The rings showing now, so a new pulse replaces them instead of stacking
+local pulsing: { BasePart } = {}
 
--- Your turn started: these balls, yours to hit, pulse once over Theme.Effects.PulseSeconds so you can see which they are.
--- A Highlight on each ball washes it and its marks white and outlines it, follows it if it moves, and hides behind the
--- cue and the felt, so a ball sinking mid-pulse takes it down with it.
+-- Your turn started: a flat gold ring on the felt round each of these balls, yours to hit, grows and fades out once
+-- over Theme.Effects.PulseSeconds, so you can see which they are. Each ring follows its ball if you shoot before it's
+-- done, and hides as the ball drops; the balls keep their own colors.
 function Effects.pulse(balls: { BasePart })
 	for _, old in pulsing do
 		old:Destroy()
 	end
 	table.clear(pulsing)
-	-- Half the time in, then the same back out
-	local info = TweenInfo.new(look.PulseSeconds / 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 0, true)
+	local grow = TweenInfo.new(look.PulseSeconds, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+	local fadeOut = TweenInfo.new(look.PulseSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 	for _, ball in balls do
-		local glow = Instance.new("Highlight")
-		glow.DepthMode = Enum.HighlightDepthMode.Occluded
-		glow.FillColor = look.PulseColor
-		glow.OutlineColor = look.PulseColor
-		glow.FillTransparency = 1
-		glow.OutlineTransparency = 1
-		glow.Parent = ball
-		TweenService:Create(glow, info, { FillTransparency = look.PulseFill, OutlineTransparency = look.PulseOutline })
-			:Play()
-		table.insert(pulsing, glow)
-		task.delay(look.PulseSeconds, glow.Destroy, glow)
+		local tableModel = ball.Parent and ball.Parent.Parent
+		local felt = tableModel and tableModel:FindFirstChild("Felt")
+		if not (felt and felt:IsA("BasePart")) then
+			continue
+		end
+		local r = ball.Size.X / 2
+		local across = look.PulseDiameter * r
+		local line = look.PulseThickness * r
+		-- The part is the ring's inside, since the stroke draws outside it
+		local inside = across - 2 * line
+		local part = newPart(felt, look.PulseSeconds, look.PulseColor, Vector3.new(inside, 0.001, inside), felt.CFrame)
+		local stroke = ringOn(part, PULSE_PIXELS / r, look.PulseThickness * PULSE_PIXELS, look.PulseTransparency)
+		local function follow()
+			local x, y = TableSpace.toTable(felt, ball.Position)
+			part.CFrame = TableSpace.toWorld(felt, x, y, look.PulseHeight * r)
+			local height = felt.CFrame:PointToObjectSpace(ball.Position).Y - felt.Size.Y / 2
+			stroke.Enabled = ball.Transparency ~= 1 and height >= r * SINKING
+		end
+		follow()
+		local moved = ball:GetPropertyChangedSignal("CFrame"):Connect(follow)
+		local shown = ball:GetPropertyChangedSignal("Transparency"):Connect(follow)
+		part.Destroying:Once(function()
+			moved:Disconnect()
+			shown:Disconnect()
+		end)
+		local finish = look.PulseGrow * across - 2 * line
+		TweenService:Create(part, grow, { Size = Vector3.new(finish, 0.001, finish) }):Play()
+		TweenService:Create(stroke, fadeOut, { Transparency = 1 }):Play()
+		table.insert(pulsing, part)
 	end
 end
 

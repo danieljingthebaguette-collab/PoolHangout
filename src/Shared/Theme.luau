@@ -69,10 +69,13 @@ local Theme = {
 		TopBarGap = 120, -- the space between the top bar's two cards, kept for the shot clock
 		ClockWidth = 96, -- the shot clock's dark box in that gap, as tall as the cards
 		ClockWarningTextSize = 34, -- the shot clock's seconds in its last stretch, bigger than LargeTextSize
-		TurnArrowWidth = 64, -- the "Turn" card over the shooter's head, in pixels whatever the distance
-		TurnArrowHeight = 28,
+		TurnArrowWidth = 64, -- the "Turn" card over the shooter's head, in pixels whatever the distance; the narrowest
+		-- it gets, since it widens to fit the shooter's name
+		TurnArrowHeight = 42, -- two lines: "Turn", then the shooter's name
+		TurnArrowNameSize = 15, -- text size of the name under "Turn"
+		TurnArrowMaxWidth = 200, -- room for the longest name; only the card and its point show
 		TurnArrowPoint = 10, -- the point under the card, aiming at the head
-		TurnArrowStuds = 2.5, -- studs above the head's center
+		TurnArrowStuds = 2.7, -- studs above the head's center
 		EndScreenWidth = 520, -- the end screen's card, in the middle of the screen
 		EndRowHeight = 28, -- each line of its stats table, and its status and countdown lines
 		EndNameShare = 0.4, -- share of a stats line the player's name gets; the four numbers split the rest
@@ -150,12 +153,15 @@ local Theme = {
 		PopHeight = 1.8, -- just over the corner plates, so they never cover it
 		PopTransparency = 0.1, -- at the start; it fades to nothing
 		PopSeconds = 0.25,
-		-- Your balls when your turn starts: a white wash and outline (a Highlight, no parts) that swells in and fades
-		-- out once, following the balls if you shoot before it's done
-		PulseSeconds = 2, -- in and out
-		PulseColor = Color3.fromRGB(255, 255, 255), -- GAME_SPEC's "pulse white", the same white as the aim line
-		PulseFill = 0.5, -- the wash's transparency at its strongest, so the ball's own color still shows through
-		PulseOutline = 0, -- the outline's transparency at its strongest
+		-- Your balls when your turn starts: a flat ring on the felt round each, that grows and fades out once. It
+		-- follows its ball if you shoot before it's done and goes when the ball drops; the balls keep their own colors
+		PulseSeconds = 2,
+		PulseColor = ACCENT, -- flat sunny gold, with no light on it
+		PulseDiameter = 3.6, -- across its outer edge: 1.8 ball widths...
+		PulseGrow = 1.6, -- ...growing to this many times that
+		PulseThickness = 0.5, -- its line, a quarter of a ball width
+		PulseHeight = 0.1, -- just over the felt and the balls' shadows, under the balls' middles
+		PulseTransparency = 0, -- at the start; it fades to nothing
 		-- The most effect parts alive at once, so a full-power break stays cheap on phones: 18 outlined sparks, the
 		-- break's first three bursts. Uncapped, a full-power break would reach about 100
 		MaxParts = 36,

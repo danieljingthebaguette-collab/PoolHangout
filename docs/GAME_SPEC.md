@@ -73,7 +73,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 
 ## Taking a shot
 
-1. A "Turn" arrow appears over the shooter's head and their shot clock starts. The arrow is a small gold "Turn" card pointing down at the head; everyone sees it in the normal view, and the top-down view hides it, since the top bar's glow shows the turn there.
+1. A "Turn" arrow appears over the shooter's head and their shot clock starts. The arrow is a small gold card reading "Turn" with the shooter's name under it, pointing down at the head; Roblox's own name tags are hidden for everyone joined to or playing at a table, and for Coach, so they never float over the felt; everyone sees it in the normal view, and the top-down view hides it, since the top bar's glow shows the turn there.
 2. The shooter is already in the top-down view (step 10). F (phones: an on-screen button) switches between it and the normal view from anywhere. Where they stand doesn't matter.
 3. The top-down view shows the whole table, fixed and horizontal on screen, turned for each viewer so the long side farthest from them is at the top: across from their seat, or if they have none, across from where they stand as the view opens. It stays that way while the view is on, so it never swirls as the shooter's character moves.
 4. Ball in hand only comes after a foul, like a scratch, and lets the shooter place the cue ball anywhere on the table. The cue ball follows the mouse, stopping at the nearest spot it's allowed, with a faint white ring around it: never overlapping a ball or in a pocket's mouth. The hint reads "Place ball · Click". A click sets it down, then they aim and shoot as normal. Until they shoot, clicking on or near the cue ball (within 3 ball radii of its center) picks it up again. (Phones: the Mobile phase.)
@@ -104,7 +104,7 @@ Laid out like 8 Ball Duels, in the look `docs/STYLE.md` describes: cream cards, 
   - the shot clock in the middle of the top bar, between the two cards
   - a Leave button top right while you're at a table, in both views (see Leaving)
   - a settings button bottom-left with a sound volume slider. The volume lasts for the session and isn't saved *(default)*. It shows only in the top-down view, so it never covers the phones' thumbstick.
-  - your balls pulse white once, over 2 seconds, when your turn starts, so you can see which are yours: your group's, or the 8 once your group is cleared. Nothing pulses on an open table, where no ball is yours yet
+  - a gold ring pulses once around each of your balls, growing and fading over 2 seconds, when your turn starts, while the balls keep their own colors, so you can see which are yours: your group's, or the 8 once your group is cleared. No rings show on an open table, where no ball is yours yet
 - **Coming next:**
   - item slots 1 and 2 at the bottom center (Items), with icons drawn in code, and every player's slots and item bar on their card
 

@@ -1,7 +1,8 @@
 --!strict
--- The "Turn" arrow over each table's shooter, for everyone to see in the normal view: a gold card with a point under it,
--- over the shooter's head. Drawn from the server's TurnStarted, and gone while nobody's turn is on. The top-down view
--- hides it, since the top bar's glow shows the turn there.
+-- The "Turn" arrow over each table's shooter, for everyone to see in the normal view: a gold card reading "Turn" and the
+-- shooter's name, with a point under it, over their head. Roblox's own name tags are off at the tables (TableService),
+-- so this names them. Drawn from the server's TurnStarted, and gone while nobody's turn is on. The top-down view hides
+-- it, since the top bar's glow shows the turn there.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,16 +15,17 @@ local Ui = require(script.Parent.Ui)
 local TurnArrow = {}
 
 -- Each table's arrow, its shooter, and the connection that moves it onto their new character after a respawn
-type Arrow = { gui: BillboardGui, shooter: Seat.Seat?, connection: RBXScriptConnection? }
+type Arrow = { gui: BillboardGui, name: TextLabel, shooter: Seat.Seat?, connection: RBXScriptConnection? }
 local arrows: { [Model]: Arrow } = {}
 local hidden = false
 local playerGui: Instance? = nil
 
-local function build(): BillboardGui
+-- The arrow's gui, and the label for the shooter's name
+local function build(): (BillboardGui, TextLabel)
 	local ui = Theme.Ui
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "TurnArrow"
-	gui.Size = UDim2.fromOffset(ui.TurnArrowWidth, ui.TurnArrowHeight + ui.TurnArrowPoint)
+	gui.Size = UDim2.fromOffset(ui.TurnArrowMaxWidth, ui.TurnArrowHeight + ui.TurnArrowPoint)
 	gui.StudsOffset = Vector3.new(0, ui.TurnArrowStuds, 0)
 	gui.LightInfluence = 0
 	gui.ResetOnSpawn = false
@@ -38,13 +40,36 @@ local function build(): BillboardGui
 	point.BackgroundColor3 = Theme.Colors.TurnArrow
 	point.BorderSizePixel = 0
 	point.Parent = gui
-	local card = Ui.label("Turn", gui)
-	card.Size = UDim2.new(1, 0, 0, ui.TurnArrowHeight)
-	card.BackgroundTransparency = 0
+	-- Centered, and widening past TurnArrowWidth to fit the name
+	local card = Instance.new("Frame")
+	card.AnchorPoint = Vector2.new(0.5, 0)
+	card.Position = UDim2.fromScale(0.5, 0)
+	card.Size = UDim2.fromOffset(ui.TurnArrowWidth, ui.TurnArrowHeight)
+	card.AutomaticSize = Enum.AutomaticSize.X
 	card.BackgroundColor3 = Theme.Colors.TurnArrow
+	card.BorderSizePixel = 0
 	Ui.roundCorners(card)
+	local padding = Instance.new("UIPadding")
+	padding.PaddingLeft = UDim.new(0, ui.Padding)
+	padding.PaddingRight = UDim.new(0, ui.Padding)
+	padding.Parent = card
+	local list = Instance.new("UIListLayout")
+	list.SortOrder = Enum.SortOrder.LayoutOrder
+	list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	list.VerticalAlignment = Enum.VerticalAlignment.Center
+	list.Parent = card
+	local title = Ui.label("Turn", card)
+	title.Size = UDim2.fromOffset(0, Theme.TextSize)
+	title.AutomaticSize = Enum.AutomaticSize.X
+	title.LayoutOrder = 1
+	local name = Ui.label("", card)
+	name.TextSize = ui.TurnArrowNameSize
+	name.Size = UDim2.fromOffset(0, ui.TurnArrowNameSize)
+	name.AutomaticSize = Enum.AutomaticSize.X
+	name.LayoutOrder = 2
+	card.Parent = gui
 	gui.Parent = playerGui
-	return gui
+	return gui, name
 end
 
 local function update(arrow: Arrow)
@@ -53,13 +78,15 @@ local function update(arrow: Arrow)
 	-- Nil takes the arrow off, though the type says an Adornee is always there
 	arrow.gui.Adornee = head :: Instance
 	arrow.gui.Enabled = head ~= nil and not hidden
+	arrow.name.Text = if arrow.shooter then Seat.name(arrow.shooter) else ""
 end
 
 -- Puts a table's arrow over its shooter, or takes it away with nil
 local function show(tableModel: Model, shooter: Seat.Seat?)
 	local arrow = arrows[tableModel]
 	if not arrow then
-		arrow = { gui = build(), shooter = nil, connection = nil }
+		local gui, name = build()
+		arrow = { gui = gui, name = name, shooter = nil, connection = nil }
 		arrows[tableModel] = arrow
 	end
 	if arrow.connection then

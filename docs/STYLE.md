@@ -19,7 +19,7 @@ Eight colors carry the whole game. Everything else is a lighter or darker tone o
 | Cream | `#F6EFE0` | Cards and panels, text on dark boxes, the rails' diamonds |
 | Ink | `#241C16` | Text on cards and buttons, card brackets, outlines |
 | Near-black | `#201A16` | Dark boxes: key boxes, the % readout, the tray, the timer |
-| Sunny gold | `#FFC42E` | The main accent: buttons, the power meter's fill, the turn glow, the called pocket |
+| Sunny gold | `#FFC42E` | The main accent: buttons, the power meter's fill, the turn glow, the called pocket, the ring round each of your balls as your turn starts |
 | Coral | `#FF8A76` | Buttons that leave or undo, like Leave and Yes on "Leave and lose this game?", and the shot clock's last 10 seconds |
 | Felt green | `#327A4C` | The playing surface, the strongest color in the room |
 | Cushion green | `#225834` | Cushions |
@@ -66,7 +66,7 @@ Stylized balls with icons on them (details coming). Until then, the placeholder 
 
 ## Characters
 
-Normal Roblox avatars on the R6 rig only (set in the game's avatar settings), otherwise unchanged. Each player has a soft ring at their feet: a thin cream circle with a faint glow, a little wider than the avatar. The ring isn't built yet.
+Normal Roblox avatars on the R6 rig only (set in the game's avatar settings), otherwise unchanged. Roblox's own name tags are hidden at the tables, since they'd be bare text over the felt; the "Turn" card names the shooter. Each player has a soft ring at their feet: a thin cream circle with a faint glow, a little wider than the avatar. The ring isn't built yet.
 
 ## UI
 
@@ -93,7 +93,7 @@ Every value lives in `src/Shared/Theme.luau`, and UI is built in code. `src/Clie
 
 Touch targets stay at least 44 px, and everything fits a phone held sideways. Both are checked in the Mobile phase; until then the UI is built and tested on PC.
 
-**Built so far:** cards, the font, dark boxes, control hints, accent buttons, the top bar's side cards, the banner, the timer and the gold "Turn" card over the shooter's head. **Not built yet:** item slots and the ring at players' feet.
+**Built so far:** cards, the font, dark boxes, control hints, accent buttons, the top bar's side cards, the banner, the timer and the gold "Turn" card over the shooter's head, with their name under "Turn". **Not built yet:** item slots and the ring at players' feet.
 
 ## Effects
 

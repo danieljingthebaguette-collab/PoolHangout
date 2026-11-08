@@ -2,8 +2,9 @@
 -- The shooter's ready-to-shoot pose, for every table, on every screen: while it's their turn and they stand still, their
 -- R6 character leans over the table, the back arm drawn back as if holding a cue and the front arm reaching out along
 -- the felt. It eases in, and out again while their shot rolls or when the turn passes. Built from joint offsets in code,
--- with no animation asset; each screen poses the shooters it sees, players and Coach alike. A shooter standing on top
--- of the table is drawn see-through on every screen, so the balls under them stay easy to see.
+-- with no animation asset; each screen poses the shooters it sees, players and Coach alike. A shooter casts no shadow,
+-- on or beside the table, and one standing on top of it is drawn see-through on every screen, so the balls under them
+-- stay easy to see.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,6 +27,8 @@ local shooters: { [Model]: { seat: Seat.Seat, rolling: boolean } } = {}
 local posed: { [Model]: Posed } = {}
 -- Characters drawn see-through now, on top of their table
 local faded: { [Model]: boolean } = {}
+-- Shooters' characters casting no shadow now, with each part's own CastShadow to give back after
+local unshadowed: { [Model]: { [BasePart]: boolean } } = {}
 
 -- Each R6 joint's offset at the full pose, from Theme.Pose
 local function offsets(): { [string]: CFrame }
@@ -105,13 +108,41 @@ local function setSeeThrough(character: Model, amount: number)
 	end
 end
 
--- Shooters standing on top of their table are see-through; anyone who stepped off, or stopped shooting, isn't
+-- These characters cast no shadow, parts added since included; every other character gets its parts' own back. A
+-- character that's gone is just forgotten.
+local function dropShadows(shooting: { [Model]: boolean })
+	for character in shooting do
+		local saved = unshadowed[character] or {}
+		unshadowed[character] = saved
+		for _, part in character:GetDescendants() do
+			if part:IsA("BasePart") and saved[part] == nil then
+				saved[part] = part.CastShadow
+				part.CastShadow = false
+			end
+		end
+	end
+	for character, saved in unshadowed do
+		if not shooting[character] then
+			for part, cast in saved do
+				part.CastShadow = cast
+			end
+			unshadowed[character] = nil
+		end
+	end
+end
+
+-- Shooters cast no shadow, and those standing on top of their table are see-through; anyone who stepped off, or
+-- stopped shooting, gets back what they had
 local function fade()
 	local halfX = Config.Table.Length / 2 + Config.Stance.TableEdge
 	local halfY = Config.Table.Width / 2 + Config.Stance.TableEdge
 	local wanted: { [Model]: boolean } = {}
+	local shooting: { [Model]: boolean } = {}
 	for tableModel, shooter in shooters do
 		local character = Seat.character(shooter.seat)
+		if character and character.Parent then
+			shooting[character] = true
+		end
 		local root = character and character:FindFirstChild("HumanoidRootPart")
 		local felt = tableModel:FindFirstChild("Felt")
 		if character and root and root:IsA("BasePart") and felt and felt:IsA("BasePart") then
@@ -128,6 +159,7 @@ local function fade()
 		end
 	end
 	faded = wanted
+	dropShadows(shooting)
 end
 
 function ShotPose.start()

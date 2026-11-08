@@ -5,7 +5,9 @@
 -- table sees "Starting...", and after the countdown each player is moved once to their seat's spot, facing the table,
 -- and the game starts. Players walk freely the whole time. When a game is decided its end screen shows, then the same
 -- players play again if they all pressed Rematch, or the table re-racks and opens. It also ends, with no winner, when
--- one of its players leaves the server, unless they had already pressed Leave.
+-- one of its players leaves the server, unless they had already pressed Leave. Roblox's own name tags are off for
+-- everyone joined to or playing at a table, and for Coach, since they'd float over the felt; the Turn card names the
+-- shooter instead.
 -- Testing alone (Config.Debug): with Coach on, Coach, the bot, takes every other seat of a table a tester joins while
 -- alone in the server (in 2v2, a teammate and both opponents); otherwise, in Studio with SoloTables, one player is
 -- enough and takes every turn.
@@ -83,6 +85,18 @@ local function needed(tableModel: Model): number
 	return TableFlow.needed(seatCount(tableModel), solo)
 end
 
+-- Shows or hides the Roblox name tag over a seat's character. Set here, it reaches every screen.
+local function showNameTag(seat: Seat.Seat, shown: boolean)
+	local character = Seat.character(seat)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		-- Viewer is Roblox's own setting for players, which the place keeps
+		humanoid.DisplayDistanceType = if shown
+			then Enum.HumanoidDisplayDistanceType.Viewer
+			else Enum.HumanoidDisplayDistanceType.None
+	end
+end
+
 local function pick(n: number): number
 	return random:NextInteger(1, n)
 end
@@ -134,6 +148,7 @@ local function spawnCoach(tableModel: Model, seat: number, count: number): Model
 	model.Name = if count == 1 then "Coach" else `Coach {count}`
 	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
 	humanoid.DisplayName = model.Name
+	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart
 	root.Anchored = true
 	model.Parent = workspace
@@ -151,6 +166,8 @@ local function endGame(tableModel: Model, match: Match.Match)
 	for _, seat in match.seats do
 		if Seat.isBot(seat) then
 			seat:Destroy()
+		else
+			showNameTag(seat, true)
 		end
 	end
 	matches[tableModel] = nil
@@ -227,6 +244,7 @@ local function unjoin(player: Player)
 			continue
 		end
 		player:SetAttribute("JoinedTable", nil)
+		showNameTag(player, true)
 		if calledOff then
 			Remotes.Banner:FireAllClients(
 				tableModel,
@@ -271,6 +289,7 @@ local function makePrompt(tableModel: Model)
 		end
 		-- Display only, so this player's prompt reads "Waiting for players" and they see the table's banners
 		player:SetAttribute("JoinedTable", tableModel.Name)
+		showNameTag(player, false)
 		-- Testing alone: Coach takes every other seat, and the last one starts the countdown
 		if not token and coachTable() and PhysicsTestAccess.canTest(player) then
 			local count = 0
@@ -311,6 +330,20 @@ function TableService.start()
 		end
 	end
 
+	-- A character respawned at a table keeps its name tag off. Roblox drops these connections with the player.
+	local function watchCharacter(player: Player)
+		player.CharacterAdded:Connect(function(character: Model)
+			character:WaitForChild("Humanoid")
+			if inGame(player) or isWaiting(player) then
+				showNameTag(player, false)
+			end
+		end)
+	end
+	Players.PlayerAdded:Connect(watchCharacter)
+	for _, player in Players:GetPlayers() do
+		watchCharacter(player)
+	end
+
 	Players.PlayerRemoving:Connect(function(player: Player)
 		for tableModel, match in matches do
 			local seat = table.find(match.seats, player)
@@ -340,8 +373,13 @@ function TableService.start()
 
 	Remotes.LeaveTable.OnServerEvent:Connect(function(player: Player)
 		for _, match in matches do
-			if table.find(match.seats, player) then
+			local seat = table.find(match.seats, player)
+			if seat then
 				Match.leave(match, player)
+				-- Off the table now, even while a 2v2 teammate plays on
+				if match.left[seat] then
+					showNameTag(player, true)
+				end
 			end
 		end
 		unjoin(player)
