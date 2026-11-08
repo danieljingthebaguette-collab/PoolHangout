@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Banner = require(script.Parent.Banner)
+local Effects = require(script.Parent.Effects)
 local EndScreen = require(script.Parent.EndScreen)
 local Hints = require(script.Parent.Hints)
 local LeaveButton = require(script.Parent.LeaveButton)
@@ -35,6 +36,27 @@ local testLabel: TextLabel? = nil
 local current: Model? = nil
 local hudGui: ScreenGui? = nil
 local removeTray: (() -> ())? = nil
+-- Who was shooting at that table, so your balls pulse only as your turn starts, not on every shot you keep
+local lastShooter: Instance? = nil
+
+-- The ball parts that are yours to hit on this table: your group's, every ball but the 8 on an open table, or the 8
+-- once your group is cleared. Only the ones still on the table.
+local function yourBalls(tableModel: Model, group: string?, onEight: boolean): { BasePart }
+	local folder = tableModel:FindFirstChild("Balls")
+	local parts: { BasePart } = {}
+	for id = 1, 15 do
+		local yours = if onEight
+			then id == 8
+			elseif group == "solids" then id < 8
+			elseif group == "stripes" then id > 8
+			else id ~= 8
+		local part = if yours and folder then folder:FindFirstChild(`Ball{id}`) else nil
+		if part and part:IsA("BasePart") and part.Transparency ~= 1 then
+			table.insert(parts, part)
+		end
+	end
+	return parts
+end
 
 -- Shows the HUD while you're in the top-down view. In the normal view it would sit where phones put the thumbstick.
 function Hud.showTable(visible: boolean)
@@ -42,7 +64,7 @@ function Hud.showTable(visible: boolean)
 	for _, gui in guis do
 		gui.Enabled = visible
 	end
-	-- Prompts float over the table, so in the top-down view "Table in use" would sit on the felt
+	-- Prompts float over the table, so in the top-down view "2/2 joined" would sit on the felt
 	ProximityPromptService.Enabled = not visible
 	TurnArrow.setHidden(visible)
 end
@@ -91,6 +113,7 @@ end
 -- Follows another table: its top bar and clock come with its next turn message, and its tray at once
 function Hud.setTable(tableModel: Model)
 	current = tableModel
+	lastShooter = nil
 	TopBar.show(nil, nil, nil, nil)
 	ShotClock.show(nil)
 	if removeTray then
@@ -171,7 +194,7 @@ function Hud.start(tableModel: Model)
 			shooter: Player?,
 			_: boolean?,
 			seats: { Player }?,
-			_: boolean?,
+			onEight: boolean?,
 			groups: { [string]: string }?,
 			down: { number }?,
 			clockEndsAt: number?
@@ -181,9 +204,15 @@ function Hud.start(tableModel: Model)
 			end
 			TopBar.show(shooter, seats, groups, down)
 			ShotClock.show(if shooter then clockEndsAt else nil)
+			-- Your turn starting: your balls pulse once, so you can see which they are
+			local seat = seats and table.find(seats, player)
+			if shooter == player and lastShooter ~= player and seat then
+				local side = if seat % 2 == 1 then "A" else "B"
+				Effects.pulse(yourBalls(model :: Model, (groups or {})[side], onEight == true))
+			end
+			lastShooter = shooter
 			-- In a game still being played, and in 2v2 with a teammate still in: seats alternate sides, and a teammate
 			-- who left shows as this player
-			local seat = seats and table.find(seats, player)
 			local teammate = false
 			for i, other in (seats or {}) :: { Player } do
 				teammate = teammate or (seat ~= nil and other ~= player and i % 2 == seat % 2)

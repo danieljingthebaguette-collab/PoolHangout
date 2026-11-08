@@ -150,6 +150,12 @@ local Theme = {
 		PopHeight = 1.8, -- just over the corner plates, so they never cover it
 		PopTransparency = 0.1, -- at the start; it fades to nothing
 		PopSeconds = 0.25,
+		-- Your balls when your turn starts: a white wash and outline (a Highlight, no parts) that swells in and fades
+		-- out once, following the balls if you shoot before it's done
+		PulseSeconds = 2, -- in and out
+		PulseColor = Color3.fromRGB(255, 255, 255), -- GAME_SPEC's "pulse white", the same white as the aim line
+		PulseFill = 0.5, -- the wash's transparency at its strongest, so the ball's own color still shows through
+		PulseOutline = 0, -- the outline's transparency at its strongest
 		-- The most effect parts alive at once, so a full-power break stays cheap on phones: 18 outlined sparks, the
 		-- break's first three bursts. Uncapped, a full-power break would reach about 100
 		MaxParts = 36,

@@ -7,10 +7,10 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current step:** Phase 2, Normal tables
-- **In progress:** finishing Phase 2: 2v2 on Table2, the R6 shot pose and the ball pulse. The full 1v1 loop on Table1 and Coach passed my tests on 2026-11-07: I played the loop against Coach, and a 2-player test passed (live aim with F, the watcher's result banner, Rematch with two players). The join task passed my 2-player test on 2026-11-04
+- **In progress:** every Phase 2 task is built, waiting for my Phase 2 2-player test (steps in Claude's report): 2v2 on Table2 with Coach filling empty seats when I'm alone, the R6 shot pose (standing behind the cue ball, on the table when needed, see-through there), the camera easing between views and turned per viewer, the turn-start ball pulse, and a table in use showing only "2/2 joined". The 1v1 loop and Coach passed my tests on 2026-11-07
 - **Dates:** launch moved to Friday, Dec 18 when the plan was reordered. The phase dates are Claude's proposal for that launch
-- **Last session:** 2026-11-07. The health pass is finished (fixes for ending a table, respawning on your turn and late joiners) and the 1v1 loop and Coach are committed, one commit per step. The tutorial with Coach is planned in GAME_SPEC and Phase 4, replacing the tips-only tutorial, and ARCHITECTURE has notes on where items plug in
-- **Next up:** 2v2 on Table2 (Coach fills the empty seats when I'm alone), the R6 shot pose, the ball pulse, then the Phase 2 2-player test of 1v1 and 2v2. At our first publish: Phase 1's age check, and checking that a late joiner sees the game
+- **Last session:** 2026-11-07 to 08. My calls written into the docs (tutorial rooms in the same server, Spectating moved after launch, coral approved, Coach only in the tutorial), the art director's effect fixes, then the rest of Phase 2: 2v2, the shot pose and camera, the pulse. Subagents no longer stage scenes in shared playtests
+- **Next up:** my Phase 2 test of 1v1 and 2v2, then Phase 3, Items, about a week ahead of the plan. At our first publish: Phase 1's age check, and checking that a late joiner sees the game
 - **Known issues:**
   - Touch and the new HUD layout haven't been tried on a real phone yet, only in the emulator; it's covered by the Mobile phase
   - The existing touch code isn't tested or extended until the Mobile phase, so it will fall behind the PC features built before then. Ball in hand is mouse-only: on a phone the cue ball can't be moved yet
@@ -22,6 +22,8 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
   - The Output warning about rbxassetid://203785492 ("Pop Close Sound") comes from a Studio plugin or Roblox, not the place: ignore it
   - The GUI needs tweaking. Leave it as it is until I say we'll get to it
   - Coach's avatar on the top bar is an empty dark square, since a bot has no avatar picture
+  - Studio's screenshot tool has been timing out since 2026-11-07, so the art director hasn't seen the shot pose, the turn-start pulse, the new pocket pop or the near-black Back to lobby yet
+  - Pressing E on a table with a game on does nothing; its prompt only shows the count
   - Our break sinks about 1.8 balls (`tools/BreakStats.luau`), against 0.7 in the 3 full-power 8 Ball Duels breaks recorded so far. Since the 2026-11-04 tuning it spreads the rack and brings the cue ball back like theirs; more recorded breaks would show whether the count really differs
   - Not yet checked by me that a slider change reaches both the server and the shooter's screen (part 4 of my physics check). Claude's playtest confirmed it for the pocket sliders
 
@@ -74,7 +76,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [x] Coach, a bot opponent for testing, in Studio or for me alone in a published server: when I'm alone in the server and join a 1v1 table, Coach takes the other seat and plays simple, sensible shots, built on the whole-game test bots' shot logic, so I can play the whole loop alone. It becomes the tutorial's bot in Phase 4, and never plays in normal matches (Claude)
 - [x] 2v2 on one table: Table2, built as a 2v2 table with A1 and A2 on one long side and B1 and B2 on the other. Your side is your team, teammates share a group, and turns go A1 → B1 → A2 → B2 (Claude)
 - [x] R6 shot pose: while you aim, your character glides to stand straight behind the cue ball, always facing it, on top of the table when needed (see-through there), in a ready-to-shoot pose, and steps off after the turn. The camera eases between views, and while it isn't your turn the top-down view sits a little farther out (Claude)
-- [ ] Your balls pulse once over 2 seconds when your turn starts (Claude)
+- [x] Your balls pulse once over 2 seconds when your turn starts (Claude)
 - [ ] 2-player test of the whole step: 1v1 on Table1 and 2v2 on Table2 (Me)
 
 **Done when:**

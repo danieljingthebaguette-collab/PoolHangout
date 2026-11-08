@@ -1,7 +1,8 @@
 --!strict
--- Effects on the table, in docs/STYLE.md's look, built from parts in code and only on this screen. For now the hit
--- effects: small chunky ink-edged sparks where a ball hits another ball or a rail hard, bigger on the break, and a
--- ring that pops out of a pocket a ball drops into. Item effects and screen shake come in the Items and polish phases. Every look and timing is Theme.Effects.
+-- Effects on the table, in docs/STYLE.md's look, built in code and only on this screen. For now the hit effects:
+-- small chunky ink-edged sparks where a ball hits another ball or a rail hard, bigger on the break, and a ring that
+-- pops out of a pocket a ball drops into. Then the white pulse on your balls as your turn starts. Item effects and
+-- screen shake come in the Items and polish phases. Every look and timing is Theme.Effects.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -204,6 +205,34 @@ local function show(kind: string, part: BasePart, felt: BasePart, share: number)
 		local dx, dy = otherX - x, otherY - y
 		local edge = r / math.sqrt(nearest)
 		sparks(felt, r, x + dx * edge, y + dy * edge, dx, dy, count, big, look.BallSprayMin, look.BallSprayMax)
+	end
+end
+
+-- The pulse showing now, so a new one replaces it instead of stacking
+local pulsing: { Highlight } = {}
+
+-- Your turn started: these balls, yours to hit, pulse once over Theme.Effects.PulseSeconds so you can see which they are.
+-- A Highlight on each ball washes it and its marks white and outlines it, follows it if it moves, and hides behind the
+-- cue and the felt, so a ball sinking mid-pulse takes it down with it.
+function Effects.pulse(balls: { BasePart })
+	for _, old in pulsing do
+		old:Destroy()
+	end
+	table.clear(pulsing)
+	-- Half the time in, then the same back out
+	local info = TweenInfo.new(look.PulseSeconds / 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 0, true)
+	for _, ball in balls do
+		local glow = Instance.new("Highlight")
+		glow.DepthMode = Enum.HighlightDepthMode.Occluded
+		glow.FillColor = look.PulseColor
+		glow.OutlineColor = look.PulseColor
+		glow.FillTransparency = 1
+		glow.OutlineTransparency = 1
+		glow.Parent = ball
+		TweenService:Create(glow, info, { FillTransparency = look.PulseFill, OutlineTransparency = look.PulseOutline })
+			:Play()
+		table.insert(pulsing, glow)
+		task.delay(look.PulseSeconds, glow.Destroy, glow)
 	end
 end
 
