@@ -61,4 +61,23 @@ function Geometry.build(tableParams: TableParams): Layout
 	return { rails = rails, pockets = pockets, rack = rack, headLineX = -tableParams.Length / 4 }
 end
 
+-- Pocket Block's lid over pocket `index`: a rail from jaw to jaw, across the pocket's mouth
+function Geometry.lid(tableParams: TableParams, index: number): Rail
+	local halfLength, halfWidth = tableParams.Length / 2, tableParams.Width / 2
+	-- Pockets 1–3 run along the −y side from the head end, 4–6 along the +y side
+	local sideY = if index <= 3 then -1 else 1
+	local along = (index - 1) % 3 - 1 -- −1 head corner, 0 side, 1 foot corner
+	if along == 0 then
+		local sideGap = tableParams.SidePocketMouth / 2
+		return { ax = -sideGap, ay = sideY * halfWidth, bx = sideGap, by = sideY * halfWidth }
+	end
+	local cornerGap = tableParams.CornerPocketMouth / math.sqrt(2)
+	return {
+		ax = along * (halfLength - cornerGap),
+		ay = sideY * halfWidth,
+		bx = along * halfLength,
+		by = sideY * (halfWidth - cornerGap),
+	}
+end
+
 return Geometry

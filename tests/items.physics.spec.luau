@@ -2,6 +2,8 @@
 -- What items change about how balls move: Power Shot's speed past full power, and Blast Ball. Every distance and
 -- speed comes from Config.
 local Config = require("../src/Shared/Config")
+local Geometry = require("../src/Shared/Physics/Geometry")
+local Preview = require("../src/Shared/Physics/Preview")
 local Simulate = require("../src/Shared/Physics/Simulate")
 
 local R = Config.Table.BallRadius
@@ -110,5 +112,97 @@ return function(test, check)
 			check.equal(first.y, b.balls[i].y)
 			check.equal(first.pocket, b.balls[i].pocket)
 		end
+	end)
+
+	-- Frozen balls, pocket lids and oil
+
+	test("a ball rolling into a frozen ball bounces straight back off it like a rail, and the frozen ball stays put", function()
+		local balls = { ball(0, -3, 0), ball(1, 0, 0) }
+		local sim = Simulate.start(balls, SHOT, nil, { frozen = { 1 } })
+		local before = 0
+		while not sim.firstHit and not Simulate.step(sim, 1) do
+			before = if sim.firstHit then before else speed(find(sim, 0))
+		end
+		check.equal(sim.firstHit, 1, "it counts as the first ball hit, for the rules")
+		local cue = find(sim, 0)
+		check.truthy(cue.vx < 0, "back the way it came")
+		check.near(speed(cue) / before, Config.Physics.RailBounce, 0.01, "keeping RailBounce of its speed")
+		Simulate.step(sim, math.huge)
+		check.equal(find(sim, 1).x, 0, "the frozen ball never moved")
+		check.equal(find(sim, 1).y, 0)
+		check.equal(find(sim, 1).pocket, nil)
+	end)
+
+	test("a ball glancing off a frozen ball comes off at the angle it hit", function()
+		local balls = { ball(0, -3, -R), ball(1, 0, 0) }
+		local sim = Simulate.start(balls, SHOT, nil, { frozen = { 1 } })
+		untilFirstHit(sim)
+		Simulate.step(sim, 1)
+		local cue = find(sim, 0)
+		-- Half a ball off center, it meets the frozen ball's surface 30 degrees off head-on, so like a rail hit at 30
+		-- degrees it turns 180 - 2 × 30 = 120 degrees from its path
+		check.near(math.deg(math.atan2(math.abs(cue.vy), cue.vx)), 120, 1, "reflected about the line of centers")
+	end)
+
+	test("a blast never pushes a frozen ball", function()
+		local sim = Simulate.run(setup(), SHOT, nil, { blast = true, frozen = { 2 } })
+		check.equal(find(sim, 2).x, 0)
+		check.equal(find(sim, 2).y, 2 * R + 0.001)
+		check.truthy(find(sim, 4).y ~= setup()[5].y, "an unfrozen one nearby still moves")
+	end)
+
+	test("a pocket with a lid takes no ball: it bounces off the lid like a rail", function()
+		local halfX, halfY = Config.Table.Length / 2, Config.Table.Width / 2
+		-- Into the foot +y corner (pocket 6) and the +y side pocket (pocket 5)
+		local cases = {
+			{ pocket = 6, from = { halfX - 2, halfY - 2 }, dir = { math.sqrt(0.5), math.sqrt(0.5) } },
+			{ pocket = 5, from = { 0, 0 }, dir = { 0, 1 } },
+		}
+		for _, case in cases do
+			local shot = { dirX = case.dir[1], dirY = case.dir[2], power = 0.3 }
+			local open = Simulate.run({ ball(0, case.from[1], case.from[2]) }, shot)
+			check.equal(find(open, 0).pocket, case.pocket, `pocket {case.pocket} open: it drops`)
+			local lidded = Simulate.run({ ball(0, case.from[1], case.from[2]) }, shot, nil, { blocked = { case.pocket } })
+			check.equal(find(lidded, 0).pocket, nil, `pocket {case.pocket} blocked: it doesn't`)
+			local railHits = 0
+			for _, event in lidded.events do
+				railHits += if event.kind == "rail" then 1 else 0
+			end
+			check.truthy(railHits > 0, "it bounced")
+		end
+	end)
+
+	test("on oil a ball slows at OilSlowdown of the normal rate, and two patches slow it no less than one", function()
+		local function lostOver(steps: number, oil: { { x: number, y: number } }?): number
+			local sim = Simulate.start({ ball(0, 0, 0) }, { dirX = 1, dirY = 0, power = 0 }, nil, { oil = oil })
+			local start = speed(find(sim, 0))
+			Simulate.step(sim, steps)
+			return start - speed(find(sim, 0))
+		end
+		-- Few enough steps that the softest shot stays well inside the patch
+		local plain = lostOver(100)
+		local oiled = lostOver(100, { { x = 0, y = 0 } })
+		check.near(oiled / plain, Config.Items.OilSlowdown, 1e-6)
+		check.near(lostOver(100, { { x = 0, y = 0 }, { x = 0.1, y = 0 } }), oiled, 1e-9, "patches don't stack")
+		local far = Simulate.run({ ball(0, -6, 0) }, { dirX = 1, dirY = 0, power = 0 }, nil, { oil = { { x = -5, y = 0 } } })
+		local near = Simulate.run({ ball(0, -6, 0) }, { dirX = 1, dirY = 0, power = 0 })
+		check.truthy(find(far, 0).x > find(near, 0).x, "crossing a patch, it rolls farther")
+	end)
+
+	test("the aim indicator stops at a frozen ball or a lid, like a wall", function()
+		local layout = Geometry.build(Config.Table)
+		local balls = { { id = 0, x = -3, y = 0 }, { id = 1, x = 0, y = 0 } }
+		local normal = Preview.firstContact(balls, 1, 0, Config.Table, layout, Config.Physics)
+		check.equal(normal.kind, "ball")
+		local frozen = Preview.firstContact(balls, 1, 0, Config.Table, layout, Config.Physics, { frozen = { 1 } })
+		check.equal(frozen.kind, "rail", "a frozen ball is a wall")
+		check.equal(frozen.ball, nil, "with no bounce lines")
+		check.near(frozen.x, normal.x, 1e-9, "at the same spot")
+		-- Straight at the +y side pocket
+		local toPocket = { { id = 0, x = 0, y = 0 } }
+		check.equal(Preview.firstContact(toPocket, 0, 1, Config.Table, layout, Config.Physics).kind, "pocket")
+		local lidded = Preview.firstContact(toPocket, 0, 1, Config.Table, layout, Config.Physics, { blocked = { 5 } })
+		check.equal(lidded.kind, "rail", "a lid is a rail")
+		check.near(lidded.y, Config.Table.Width / 2 - R, 1e-6, "touching the lid")
 	end)
 end

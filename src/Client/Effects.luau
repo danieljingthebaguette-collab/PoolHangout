@@ -75,6 +75,8 @@ local function ringOn(part: BasePart, pixelsPerStud: number, thickness: number, 
 	gui.Parent = part
 	return stroke
 end
+-- ItemEffects draws the frozen balls' rings with it too
+Effects.ringOn = ringOn
 
 -- `count` chunky sparks from (x, y) in table space, flying at an angle of sprayMin to sprayMax degrees either side of
 -- the direction (ax, ay). `big` is the break's bigger, farther-flying look. Each spark sits on a slightly bigger ink

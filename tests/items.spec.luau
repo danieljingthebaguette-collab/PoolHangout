@@ -133,10 +133,12 @@ return function(test, check)
 		end
 	end)
 
-	-- A few balls: the cue ball, the 3 and the 8 on the table, and the 5 already down
+	-- A few balls: the cue ball, the 2, the 3, the 11 and the 8 on the table, and the 5 already down
 	local BALLS = {
 		{ id = 0, x = -4, y = 0, vx = 0, vy = 0 },
+		{ id = 2, x = -2, y = 1, vx = 0, vy = 0 },
 		{ id = 3, x = 2, y = 1, vx = 0, vy = 0 },
+		{ id = 11, x = 3, y = -1, vx = 0, vy = 0 },
 		{ id = 8, x = 4, y = 0, vx = 0, vy = 0 },
 		{ id = 5, x = 0, y = 0, vx = 0, vy = 0, pocket = 2 },
 	}
@@ -283,5 +285,81 @@ return function(test, check)
 		check.equal(Items.maxPower(state, 2), 1, "nobody else")
 		Items.turnEnded(state, 1)
 		check.equal(Items.maxPower(state, 1), 1, "over with the turn")
+	end)
+
+	test("Freeze can't pick the last ball left in either group", function()
+		local balls = {
+			{ id = 0, x = -4, y = 0, vx = 0, vy = 0 },
+			{ id = 3, x = 2, y = 1, vx = 0, vy = 0 },
+			{ id = 11, x = 3, y = -1, vx = 0, vy = 0 },
+			{ id = 12, x = 3, y = 1, vx = 0, vy = 0 },
+		}
+		check.equal(Items.use(holding("freeze"), 1, 1, 3, balls, TABLE, roll), nil, "the last solid")
+		check.equal(Items.use(holding("freeze"), 1, 1, 11, balls, TABLE, roll), "freeze", "a stripe with another left")
+	end)
+
+	test("Pocket Block can't be used once the other side is shooting at the 8", function()
+		local groups = { A = "solids", B = "stripes" }
+		-- Side B's stripes are all down: B is on the 8
+		local onEight = { { id = 0, x = -4, y = 0, vx = 0, vy = 0 }, { id = 3, x = 2, y = 1, vx = 0, vy = 0 } }
+		check.equal(Items.use(holding("pocketBlock"), 1, 1, 2, onEight, TABLE, roll, groups), nil, "B on the 8")
+		check.equal(Items.use(holding("pocketBlock"), 1, 1, 2, BALLS, TABLE, roll, groups), "pocketBlock", "B isn't")
+		check.equal(Items.use(holding("pocketBlock"), 1, 1, 2, onEight, TABLE, roll, {}), "pocketBlock", "open table")
+	end)
+
+	test("a lid already down stays for its full time, and nobody can call that pocket while it's there", function()
+		local state = holding("pocketBlock")
+		Items.newShot(state, 1, true)
+		Items.use(state, 1, 1, 2, BALLS, TABLE, roll)
+		check.truthy(not Items.callable(state, 2), "blocked: no calling it")
+		check.truthy(Items.callable(state, 3) and Items.callable(state, nil))
+		Items.turnEnded(state, 1)
+		Items.newShot(state, 2, true) -- B clears its group on this turn, whatever happens the lid stays
+		check.truthy(state.blocked[2])
+		Items.turnEnded(state, 2)
+		check.truthy(Items.callable(state, 2), "callable again once it lifts")
+	end)
+
+	test("a side can't pick the same ball or pocket on two of its turns in a row", function()
+		local state = Items.new(2)
+		local function otherSideTurn()
+			Items.turnEnded(state, 1)
+			Items.newShot(state, 2, true)
+			Items.turnEnded(state, 2)
+			Items.newShot(state, 1, true)
+		end
+		Items.newShot(state, 1, true)
+		Items.give(state, 1, "freeze")
+		Items.give(state, 1, "pocketBlock")
+		check.equal(Items.use(state, 1, 1, 3, BALLS, TABLE, roll), "freeze")
+		Items.newShot(state, 1, false)
+		check.equal(Items.use(state, 1, 2, 6, BALLS, TABLE, roll), "pocketBlock")
+		otherSideTurn()
+		check.equal(state.frozen[3], nil, "both are over")
+		check.equal(state.blocked[6], nil)
+		Items.give(state, 1, "freeze")
+		Items.give(state, 1, "pocketBlock")
+		check.equal(Items.use(state, 1, 1, 3, BALLS, TABLE, roll), nil, "the same ball on the next turn")
+		check.equal(Items.use(state, 1, 2, 6, BALLS, TABLE, roll), nil, "the same pocket on the next turn")
+		check.equal(Items.use(state, 1, 2, 5, BALLS, TABLE, roll), "pocketBlock", "another pocket")
+		otherSideTurn()
+		check.equal(Items.use(state, 1, 1, 3, BALLS, TABLE, roll), "freeze", "two turns on, the ball is allowed again")
+	end)
+
+	test("the effects for the shot list frozen balls, blocked pockets and oil spots", function()
+		local state = Items.new(2)
+		Items.give(state, 1, "freeze")
+		Items.give(state, 1, "oilSlick")
+		Items.use(state, 1, 1, 2, BALLS, TABLE, roll)
+		Items.newShot(state, 1, false)
+		Items.use(state, 1, 2, { x = 1, y = 2 }, BALLS, TABLE, roll)
+		local effects = Items.effects(state)
+		check.equal(#(effects.frozen :: { number }), 1)
+		check.equal((effects.frozen :: { number })[1], 2)
+		check.equal(#(effects.blocked :: { number }), 0)
+		local oil = effects.oil :: { { x: number, y: number } }
+		check.equal(#oil, 1)
+		check.equal(oil[1].x, 1)
+		check.equal(oil[1].y, 2)
 	end)
 end

@@ -14,8 +14,16 @@ export type Ball = { id: number, x: number, y: number, vx: number, vy: number, p
 export type Shot = { dirX: number, dirY: number, power: number, isBreak: boolean? }
 
 -- What items change about a shot (Items.effects builds it). Empty is a normal shot. `blast`: at the cue ball's first
--- hit, the other balls near the hit ball are pushed away from it (Config.Items.BlastReach and BlastPush).
-export type Effects = { blast: boolean? }
+-- hit, the other balls near the hit ball are pushed away from it (Config.Items.BlastReach and BlastPush). `frozen`:
+-- ids of balls that never move, which others bounce off like a rail. `blocked`: ids of pockets with a lid across the
+-- mouth, a rail from jaw to jaw. `oil`: spots where a ball whose center is within Config.Items.OilRadius slows at
+-- OilSlowdown of the normal rate. Lists rather than sets, so they survive a remote.
+export type Effects = {
+	blast: boolean?,
+	frozen: { number }?,
+	blocked: { number }?,
+	oil: { { x: number, y: number } }?,
+}
 
 -- The server sends the params it used with each shot, so every screen matches it even while they're
 -- being tuned live.
@@ -37,6 +45,10 @@ export type Sim = {
 	effects: Effects,
 	-- When and around which ball a Blast Ball went off, for its effect on screen
 	blast: { time: number, id: number }?,
+	-- From the effects: frozen balls and blocked pockets by id, and the rails, the lids included
+	frozen: { [number]: boolean },
+	blocked: { [number]: boolean },
+	rails: { Geometry.Rail },
 }
 
 local Simulate = {}
@@ -63,27 +75,41 @@ function Simulate.start(balls: { Ball }, shot: Shot, params: Params?, effects: E
 			ball.vx, ball.vy = shot.dirX * speed, shot.dirY * speed
 		end
 	end
+	local used: Effects = effects or {}
+	local layout = Geometry.build(p.Table)
+	local frozen, blocked = {}, {}
+	for _, id in (used.frozen or {}) :: { number } do
+		frozen[id] = true
+	end
+	local rails = table.clone(layout.rails)
+	for _, index in (used.blocked or {}) :: { number } do
+		blocked[index] = true
+		table.insert(rails, Geometry.lid(p.Table, index))
+	end
 	return {
 		balls = copies,
 		params = p,
-		layout = Geometry.build(p.Table),
+		layout = layout,
 		steps = 0,
 		done = false,
 		events = {},
-		effects = effects or {},
+		effects = used,
+		frozen = frozen,
+		blocked = blocked,
+		rails = rails,
 	}
 end
 
 -- Blast Ball goes off around ball `hit`: every other ball still on the table within BlastReach of its center, but the
--- cue ball, is pushed straight away from it, at BlastPush of full-power speed if it's touching, fading to nothing at
--- the edge
+-- cue ball and frozen balls, is pushed straight away from it, at BlastPush of full-power speed if it's touching, fading
+-- to nothing at the edge
 local function blast(sim: Sim, hit: Ball, time: number)
 	local radius = sim.params.Table.BallRadius
 	local reach = Config.Items.BlastReach * radius
 	local strongest = Config.Items.BlastPush * sim.params.Physics.FullPowerSpeed
 	sim.blast = { time = time, id = hit.id }
 	for _, ball in sim.balls do
-		if ball.id == 0 or ball == hit or ball.pocket then
+		if ball.id == 0 or ball == hit or ball.pocket or sim.frozen[ball.id] then
 			continue
 		end
 		local dx, dy = ball.x - hit.x, ball.y - hit.y
@@ -100,13 +126,16 @@ end
 -- Advances the shot by up to `count` time steps. Returns true once it's over: every ball has stopped
 -- or dropped, or the time cap was reached.
 function Simulate.step(sim: Sim, count: number): boolean
-	local balls, rails, pockets, events = sim.balls, sim.layout.rails, sim.layout.pockets, sim.events
+	local balls, rails, pockets, events = sim.balls, sim.rails, sim.layout.pockets, sim.events
+	local frozen, blocked = sim.frozen, sim.blocked
+	local oil = (sim.effects.oil or {}) :: { { x: number, y: number } }
 	local tableParams, physics = sim.params.Table, sim.params.Physics
 	local radius, dt = tableParams.BallRadius, physics.TimeStep
 	local diameterSq = 4 * radius * radius
 	local halfLength, halfWidth = tableParams.Length / 2, tableParams.Width / 2
 	local hitShare = (1 + physics.BallBounce) / 2
 	local slowdown = physics.RollingSlowdown
+	local oilReachSq = (Config.Items.OilRadius * radius) ^ 2
 	local maxTravel = physics.MaxStepTravel * radius
 	local lastStep = physics.TimeCap / dt
 	-- No rail or pocket reaches farther than this onto the felt
@@ -143,7 +172,8 @@ function Simulate.step(sim: Sim, count: number): boolean
 				end
 				for j = i + 1, #balls do
 					local b = balls[j]
-					if b.pocket or (a.vx == 0 and a.vy == 0 and b.vx == 0 and b.vy == 0) then
+					local aFrozen, bFrozen = frozen[a.id], frozen[b.id]
+					if b.pocket or (a.vx == 0 and a.vy == 0 and b.vx == 0 and b.vy == 0) or (aFrozen and bFrozen) then
 						continue
 					end
 					local dx, dy = b.x - a.x, b.y - a.y
@@ -174,14 +204,23 @@ function Simulate.step(sim: Sim, count: number): boolean
 					if a.id == 0 and not sim.firstHit then
 						sim.firstHit = b.id
 					end
-					-- A ball rolling into the hit keeps Follow of the speed the hit takes away, like natural roll.
-					-- Every moving ball counts as rolling, even one that was only just hit.
-					local pushA = if aInto > 0 then push * (1 - physics.Follow) else push
-					local pushB = if bInto > 0 then push * (1 - physics.Follow) else push
-					a.vx -= pushA * nx
-					a.vy -= pushA * ny
-					b.vx += pushB * nx
-					b.vy += pushB * ny
+					if aFrozen or bFrozen then
+						-- A frozen ball is a wall: the other bounces off it like a rail, at the angle it came in
+						local other = if aFrozen then b else a
+						local mx, my = if aFrozen then nx else -nx, if aFrozen then ny else -ny
+						local into = -(other.vx * mx + other.vy * my)
+						other.vx = (other.vx + 2 * into * mx) * physics.RailBounce
+						other.vy = (other.vy + 2 * into * my) * physics.RailBounce
+					else
+						-- A ball rolling into the hit keeps Follow of the speed the hit takes away, like natural roll.
+						-- Every moving ball counts as rolling, even one that was only just hit.
+						local pushA = if aInto > 0 then push * (1 - physics.Follow) else push
+						local pushB = if bInto > 0 then push * (1 - physics.Follow) else push
+						a.vx -= pushA * nx
+						a.vy -= pushA * ny
+						b.vx += pushB * nx
+						b.vy += pushB * ny
+					end
 
 					a.x += a.vx * back
 					a.y += a.vy * back
@@ -208,10 +247,11 @@ function Simulate.step(sim: Sim, count: number): boolean
 						nearest, nearestSq = index, px * px + py * py
 					end
 				end
-				-- Only a pocket's opening lets a ball's center past the edge of the felt, so that drops it too
+				-- Only a pocket's opening lets a ball's center past the edge of the felt, so that drops it too. A blocked
+				-- pocket's lid keeps balls out.
 				local pocketRadius = pockets[nearest].radius
 				if
-					nearestSq < pocketRadius * pocketRadius
+					(nearestSq < pocketRadius * pocketRadius and not blocked[nearest])
 					or math.abs(ball.x) > halfLength
 					or math.abs(ball.y) > halfWidth
 				then
@@ -260,8 +300,15 @@ function Simulate.step(sim: Sim, count: number): boolean
 					continue
 				end
 				local speed = math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy)
-				-- SpeedDrag makes fast balls lose speed quicker; at 0 the slowdown is the same at every speed
+				-- SpeedDrag makes fast balls lose speed quicker; at 0 the slowdown is the same at every speed. On oil,
+				-- one patch or several, it slows at OilSlowdown of that.
 				local slow = (slowdown + physics.SpeedDrag * speed) * h
+				for _, patch in oil do
+					if (ball.x - patch.x) ^ 2 + (ball.y - patch.y) ^ 2 < oilReachSq then
+						slow *= Config.Items.OilSlowdown
+						break
+					end
+				end
 				if speed - slow <= physics.StopSpeed then
 					ball.vx, ball.vy = 0, 0
 				else

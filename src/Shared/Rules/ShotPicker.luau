@@ -114,7 +114,7 @@ local function mouth(pocket: Geometry.Pocket, tableParams: Geometry.TableParams)
 	return pocket.x - math.sign(pocket.x) * inset, pocket.y - math.sign(pocket.y) * inset
 end
 
--- Every clear pot from (cueX, cueY), easiest first
+-- Every clear pot from (cueX, cueY) into a pocket that isn't `closed` (by Pocket Block), easiest first
 local function options(
 	balls: { EightBall.Ball },
 	targets: { EightBall.Ball },
@@ -122,7 +122,8 @@ local function options(
 	cueY: number,
 	skill: Skill,
 	params: Simulate.Params,
-	layout: Geometry.Layout
+	layout: Geometry.Layout,
+	closed: { [number]: boolean }
 ): { Option }
 	local radius = params.Table.BallRadius
 	local minCos = math.cos(math.rad(skill.MaxCut))
@@ -141,6 +142,7 @@ local function options(
 			local cosCut = if cueDistance > 0 then (aimX * ux + aimY * uy) / cueDistance else -1
 			if
 				square
+				and not closed[index]
 				and cosCut >= minCos
 				and clear(balls, cueX, cueY, ghostX, ghostY, { [0] = true, [target.id] = true }, radius)
 				and clear(balls, target.x, target.y, mouthX, mouthY, { [0] = true, [target.id] = true }, radius)
@@ -168,7 +170,8 @@ local function placeForPot(
 	targets: { EightBall.Ball },
 	skill: Skill,
 	params: Simulate.Params,
-	layout: Geometry.Layout
+	layout: Geometry.Layout,
+	closed: { [number]: boolean }
 ): (number?, number?)
 	local radius = params.Table.BallRadius
 	local bestX, bestY, bestEase = nil, nil, -math.huge
@@ -181,7 +184,7 @@ local function placeForPot(
 			for _, back in skill.PlaceDistances do
 				local x, y = target.x - ux * (2 * radius + back), target.y - uy * (2 * radius + back)
 				if EightBall.canPlaceCue(balls, x, y, params.Table) then
-					local best = options(balls, { target }, x, y, skill, params, layout)[1]
+					local best = options(balls, { target }, x, y, skill, params, layout, closed)[1]
 					if best and best.ease > bestEase then
 						bestX, bestY, bestEase = x, y, best.ease
 					end
@@ -192,13 +195,13 @@ local function placeForPot(
 	return bestX, bestY
 end
 
--- The pocket nearest the 8, called when no pot on it is clear
-local function nearestPocket(balls: { EightBall.Ball }, layout: Geometry.Layout): number
+-- The open pocket nearest the 8, called when no pot on it is clear
+local function nearestPocket(balls: { EightBall.Ball }, layout: Geometry.Layout, closed: { [number]: boolean }): number
 	local eight = ballOf(balls, 8)
 	local best, bestSq = 1, math.huge
 	for index, pocket in layout.pockets do
 		local distSq = if eight then (pocket.x - eight.x) ^ 2 + (pocket.y - eight.y) ^ 2 else 0
-		if distSq < bestSq then
+		if distSq < bestSq and not closed[index] then
 			best, bestSq = index, distSq
 		end
 	end
@@ -206,7 +209,8 @@ local function nearestPocket(balls: { EightBall.Ball }, layout: Geometry.Layout)
 end
 
 -- Coach's shot. On the break it hits the rack at full power. Otherwise it plays the easiest clear pot, or with none,
--- hits a ball it may hit fairly at medium power, so it doesn't foul.
+-- hits a ball it may hit fairly at medium power, so it doesn't foul. It never plays at, or calls, a pocket in
+-- `blocked` (Pocket Block's lids).
 function ShotPicker.coach(
 	balls: { EightBall.Ball },
 	groups: EightBall.Groups,
@@ -215,9 +219,14 @@ function ShotPicker.coach(
 	ballInHand: boolean,
 	skill: Skill,
 	params: Simulate.Params,
-	float: () -> number
+	float: () -> number,
+	blocked: { number }?
 ): Shot
 	local layout = Geometry.build(params.Table)
+	local closed = {}
+	for _, index in (blocked or {}) :: { number } do
+		closed[index] = true
+	end
 	local cue = ballOf(balls, 0) :: EightBall.Ball
 	local cueX, cueY = cue.x, cue.y
 	if isBreak then
@@ -229,13 +238,13 @@ function ShotPicker.coach(
 	local targets = ShotPicker.targets(balls, groups, side)
 	local placedX, placedY = nil, nil
 	if ballInHand then
-		placedX, placedY = placeForPot(balls, targets, skill, params, layout)
+		placedX, placedY = placeForPot(balls, targets, skill, params, layout, closed)
 		if placedX and placedY then
 			cueX, cueY = placedX, placedY
 		end
 	end
 	local onEight = EightBall.groupCleared(groups, side, balls)
-	local best = options(balls, targets, cueX, cueY, skill, params, layout)[1]
+	local best = options(balls, targets, cueX, cueY, skill, params, layout, closed)[1]
 	local dirX, dirY, power, called
 	if best then
 		dirX, dirY, power, called = best.dirX, best.dirY, best.power, best.pocket
@@ -254,7 +263,7 @@ function ShotPicker.coach(
 		end
 		local toX, toY = if nearest then nearest.x - cueX else 1, if nearest then nearest.y - cueY else 0
 		local length = math.sqrt(toX * toX + toY * toY)
-		dirX, dirY, power, called = toX / length, toY / length, 0.5, nearestPocket(balls, layout)
+		dirX, dirY, power, called = toX / length, toY / length, 0.5, nearestPocket(balls, layout, closed)
 	end
 	-- Off by a little, either way
 	local miss = math.rad(skill.AimError) * (2 * float() - 1)

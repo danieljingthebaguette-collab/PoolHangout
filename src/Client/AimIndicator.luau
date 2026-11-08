@@ -11,6 +11,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
 local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Preview = require(ReplicatedStorage.Shared.Physics.Preview)
+local Simulate = require(ReplicatedStorage.Shared.Physics.Simulate)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Ui = require(script.Parent.Ui)
@@ -23,9 +24,10 @@ export type Indicator = {
 	hide: () -> (),
 	-- See-through while aiming or about to cancel, solid while the aim is locked
 	fade: (faint: boolean) -> (),
-	-- Draws the indicator for an aim from the cue ball at (x, y), over the balls this screen shows, with the blast's
-	-- reach when `blast`. Returns the pocket the 8's yellow line points at when the aim is on the 8.
-	draw: (cueX: number, cueY: number, aim: number, balls: { Preview.Ball }, blast: boolean?) -> number?,
+	-- Draws the indicator for an aim from the cue ball at (x, y), over the balls this screen shows, with the items on
+	-- the table: frozen balls and lids stop it, and Blast Ball shows its reach. Returns the pocket the 8's yellow line
+	-- points at when the aim is on the 8.
+	draw: (cueX: number, cueY: number, aim: number, balls: { Preview.Ball }, effects: Simulate.Effects?) -> number?,
 	showPocketRing: (pocket: number) -> (),
 	showPlaceRing: (cueX: number, cueY: number) -> (),
 	destroy: () -> (),
@@ -163,11 +165,18 @@ function AimIndicator.new(playerGui: Instance, felt: BasePart, ballParts: { [num
 		line.Visible = true
 	end
 
-	local function draw(cueX: number, cueY: number, aim: number, balls: { Preview.Ball }, blast: boolean?): number?
+	local function draw(
+		cueX: number,
+		cueY: number,
+		aim: number,
+		balls: { Preview.Ball },
+		effects: Simulate.Effects?
+	): number?
 		-- The hit uses the table and physics the shot will use, sliders and all
 		local params = PhysicsTestAccess.params()
 		local layout = Geometry.build(params.Table)
-		local contact = Preview.firstContact(balls, math.cos(aim), math.sin(aim), params.Table, layout, params.Physics)
+		local contact =
+			Preview.firstContact(balls, math.cos(aim), math.sin(aim), params.Table, layout, params.Physics, effects)
 		if Config.Aim.ShowAimLine then
 			-- The line runs to the circle's center, which the dot marks
 			showLine(pathLine, cueX, cueY, contact.x, contact.y)
@@ -188,7 +197,7 @@ function AimIndicator.new(playerGui: Instance, felt: BasePart, ballParts: { [num
 			return nil
 		end
 		local hitX, hitY = TableSpace.toTable(felt, ballParts[contact.ball].Position)
-		if blast then
+		if effects and effects.blast then
 			local middle = toScreen(hitX, hitY)
 			local diameter = 2 * (toScreen(hitX + Config.Items.BlastReach * radius, hitY) - middle).Magnitude
 			blastRing.Position = UDim2.fromOffset(middle.X, middle.Y)

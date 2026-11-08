@@ -38,6 +38,9 @@ export type State = {
 	frozen: { [number]: Lasting },
 	blocked: { [number]: Lasting },
 	oil: { { side: EightBall.Side, started: boolean, x: number, y: number } },
+	-- What each side froze or blocked, like "ball 3" or "pocket 2", on its turn now and its turn before, since a side
+	-- can't pick the same target on two of its turns in a row
+	targets: { [EightBall.Side]: { now: { [string]: boolean }, before: { [string]: boolean } } },
 }
 -- A change to a bar, for its "+4" pop: whose, and the points it earned
 export type Pop = { seat: number, points: number }
@@ -63,7 +66,16 @@ function Items.new(seatCount: number): State
 		end
 		bars[seat] = { points = 0, slots = slots }
 	end
-	return { bars = bars, used = false, powerShot = nil, blast = false, frozen = {}, blocked = {}, oil = {} }
+	return {
+		bars = bars,
+		used = false,
+		powerShot = nil,
+		blast = false,
+		frozen = {},
+		blocked = {},
+		oil = {},
+		targets = { A = { now = {}, before = {} }, B = { now = {}, before = {} } },
+	}
 end
 
 local function emptySlot(bar: Bar): number?
@@ -162,28 +174,40 @@ local function wholeIn(value: unknown, low: number, high: number): number?
 	return nil
 end
 
--- Checks an item's target, from a client so untrusted: a ball still on the table that isn't the cue ball or the 8 and
--- isn't frozen yet, a finite spot on the felt, or a pocket that isn't blocked yet. Returns it as checked, or nil.
--- ponytail: Phase 3's last item step adds the lock-outs (a side's last group ball, Pocket Block against a side on the
--- 8, the same target two turns running).
+-- Whether ball `id` is still on the table, and whether it's the last of its group (solids or stripes) left there
+local function onTable(balls: { EightBall.Ball }, id: number): (boolean, boolean)
+	local group, here, left = EightBall.groupOf(id), false, 0
+	for _, ball in balls do
+		if not ball.pocket and EightBall.groupOf(ball.id) == group then
+			left += 1
+			here = here or ball.id == id
+		end
+	end
+	return here, left == 1
+end
+
+-- Checks an item's target, from a client so untrusted, with the lock-outs so nobody can be stopped from winning:
+-- - a ball on the table that isn't the cue ball, the 8, the last ball left in its group or frozen already
+-- - a finite spot on the felt
+-- - a pocket that isn't blocked already, and not while the other side is shooting at the 8
+-- and for a ball or a pocket, not one this side picked on its turn before. Returns it as checked, or nil.
 local function checkTarget(
 	state: State,
+	side: EightBall.Side,
 	kind: string,
 	target: unknown,
 	balls: { EightBall.Ball },
-	tableParams: Geometry.TableParams
+	tableParams: Geometry.TableParams,
+	groups: EightBall.Groups
 ): Target?
+	local before = state.targets[side].before
 	if kind == "ball" then
 		local id = wholeIn(target, 1, 15)
-		if not id or id == 8 or state.frozen[id] then
+		if not id or id == 8 or state.frozen[id] or before[`ball {id}`] then
 			return nil
 		end
-		for _, ball in balls do
-			if ball.id == id and not ball.pocket then
-				return id
-			end
-		end
-		return nil
+		local here, last = onTable(balls, id)
+		return if here and not last then id else nil
 	elseif kind == "spot" then
 		if type(target) ~= "table" then
 			return nil
@@ -201,13 +225,18 @@ local function checkTarget(
 		return { x = x, y = y }
 	end
 	local pocket = wholeIn(target, 1, #Geometry.build(tableParams).pockets)
-	return if pocket and not state.blocked[pocket] then pocket else nil
+	local other: EightBall.Side = TableFlow.otherSide(side)
+	local otherOnEight = groups[other] ~= nil and EightBall.groupCleared(groups, other, balls)
+	if not pocket or state.blocked[pocket] or before[`pocket {pocket}`] or otherOnEight then
+		return nil
+	end
+	return pocket
 end
 
 -- The seat's shooter uses the item in `slot`, with `target` for the items that need one (Items.TARGETS). From a client,
 -- so every argument is checked: one item a shot, a slot holding an item, no second Power Shot while one is on, and an
--- allowed target. It's spent at once and its slot frees, so a full bar's waiting item arrives. Returns the item and
--- its checked target, or nil when it's refused.
+-- allowed target, the lock-outs included (`groups` are each side's group now). It's spent at once and its slot frees,
+-- so a full bar's waiting item arrives. Returns the item and its checked target, or nil when it's refused.
 function Items.use(
 	state: State,
 	seat: number,
@@ -215,7 +244,8 @@ function Items.use(
 	target: unknown,
 	balls: { EightBall.Ball },
 	tableParams: Geometry.TableParams,
-	roll: () -> number
+	roll: () -> number,
+	groups: EightBall.Groups?
 ): (Item?, Target?)
 	local index = wholeIn(slot, 1, Config.Items.Slots)
 	local bar = state.bars[seat]
@@ -223,12 +253,12 @@ function Items.use(
 	if not (index and item) or (item == "powerShot" and state.powerShot) then
 		return nil, nil
 	end
+	local side: EightBall.Side = TableFlow.sideOf(seat)
 	local kind = Items.TARGETS[item]
-	local checked = if kind then checkTarget(state, kind, target, balls, tableParams) else nil
+	local checked = if kind then checkTarget(state, side, kind, target, balls, tableParams, groups or {}) else nil
 	if kind and not checked then
 		return nil, nil
 	end
-	local side: EightBall.Side = TableFlow.sideOf(seat)
 	local lasting: Lasting = { side = side, started = false }
 	if item == "powerShot" then
 		state.powerShot = seat
@@ -236,8 +266,10 @@ function Items.use(
 		state.blast = true
 	elseif item == "freeze" then
 		state.frozen[checked :: number] = lasting
+		state.targets[side].now[`ball {checked}`] = true
 	elseif item == "pocketBlock" then
 		state.blocked[checked :: number] = lasting
+		state.targets[side].now[`pocket {checked}`] = true
 	else
 		local spot = checked :: Spot
 		table.insert(state.oil, { side = side, started = false, x = spot.x, y = spot.y })
@@ -248,9 +280,26 @@ function Items.use(
 	return item, checked
 end
 
--- What the items on now change about the next shot, for the simulation on the server and every screen
+-- What the items on now change about the next shot, for the simulation on the server and every screen, and to draw
 function Items.effects(state: State): Simulate.Effects
-	return { blast = state.blast }
+	local frozen, blocked, oil = {}, {}, {}
+	for id in state.frozen do
+		table.insert(frozen, id)
+	end
+	for index in state.blocked do
+		table.insert(blocked, index)
+	end
+	for _, patch in state.oil do
+		table.insert(oil, { x = patch.x, y = patch.y })
+	end
+	table.sort(frozen)
+	table.sort(blocked)
+	return { blast = state.blast, frozen = frozen, blocked = blocked, oil = oil }
+end
+
+-- Whether a pocket may be called for the 8: not while it's blocked
+function Items.callable(state: State, pocket: number?): boolean
+	return pocket == nil or not state.blocked[pocket]
 end
 
 -- The most power the seat's shooter may use: past 1 while their Power Shot is on
@@ -279,7 +328,10 @@ function Items.newShot(state: State, seat: number, fresh: boolean)
 	state.used = false
 	state.blast = false
 	if fresh then
-		local side = TableFlow.sideOf(seat)
+		local side: EightBall.Side = TableFlow.sideOf(seat)
+		-- What this side picked on its last turn is off limits for this one
+		local targets = state.targets[side]
+		targets.before, targets.now = targets.now, {}
 		for _, lasting in lastings(state) do
 			if lasting.side ~= side then
 				lasting.started = true

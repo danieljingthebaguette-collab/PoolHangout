@@ -59,6 +59,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Client/Hints.luau` | The control hints, bottom right |
 | `Client/SettingsPanel.luau` | The gear and its card with the sound volume |
 | `Client/Ui.luau` | Small shared builders: rounded corners, labels, accent buttons and ball icons |
+| `Client/ItemEffects.luau` | Item effects on every table, on every screen, from `ItemsChanged`: an icy ring and tint on each frozen ball, a dark glossy patch for each oil slick and a gold lid across each blocked pocket's mouth (`Geometry.lid`). Each message is the full set: new ones are built once, gone ones destroyed. Placeholder looks until Phase 4, in `Theme.ItemEffects` |
 | `Client/Effects.luau` | Effects on the table, built from parts in code once per effect and destroyed when it ends. Today: chunky sparks on hard hits and a pop at the pocket, from `TableView`'s loudest few events per frame, capped at `Theme.Effects.MaxParts`; and the turn-start pulse, a flat gold ring on the felt round each of your balls (your group's or the 8, none on an open table), growing and fading over `PulseSeconds` and following its ball, which `Hud` asks for. Later the item effects and screen shake: flame trail, blast, frozen balls, oil patches, pocket lids |
 | `Client/Slider.luau` | A labelled slider row for mouse and touch, for the settings and the test panel |
 | `Client/Card.luau` | The card look from `docs/STYLE.md`: cream or dark, with corner brackets and a faint dot texture |
@@ -216,7 +217,7 @@ Workspace
 | `UseItem` | client → server | Slot, and a target: a ball id, a point `{ x, y }` on the felt or a pocket id. At most one per `Config.Items.UseCooldown` |
 | `TableChanged` | server → clients | Sign text, state, seats |
 | `TurnStarted` | server → clients | Shooter, the game's players in turn order (a 2v2 player who pressed Leave shows as their teammate), clock end time, ball in hand (true or false), pocket call needed, each side's group and the balls down (the top bar draws from these, so every screen agrees). Players with no shooter: the game is over and its result is showing, so nobody shoots. No players means no game is on: the game just ended, or the physics test mode's ball in hand |
-| `ItemsChanged` | server → clients | Each seat's item bar in turn order: its points and its slots (an item name, or false when empty), and the `{ seat, points }` pops earned since the last message. Sent after each `TurnStarted` and whenever slots change; none when the game ends, which clears them |
+| `ItemsChanged` | server → clients | Each seat's item bar in turn order: its points and its slots (an item name, or false when empty), the `{ seat, points }` pops earned since the last message, and the effects on the table (`Items.effects`: frozen ball ids, blocked pocket ids, oil spots). Sent after each `TurnStarted` and whenever slots change; none when the game ends, which clears them |
 | `ItemUsed` | server → clients | The seat, the item and its checked target, for the big name and the effect |
 | `ShotStarted` | server → clients | Start balls, shot, item effects and physics params to replay |
 | `ShotResolved` | server → clients | Final balls |

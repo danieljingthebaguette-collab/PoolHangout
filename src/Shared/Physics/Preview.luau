@@ -2,9 +2,11 @@
 -- Where a shot's cue ball first touches something, for the aim indicator. It follows the cue ball's straight
 -- path with the same contacts Simulate uses (balls, rails with their ends as jaws, pockets, and the felt's
 -- edge), worked out exactly instead of step by step. For a ball, it also works out where each ball goes after the
--- hit with Simulate's own rule, so the indicator shows the cue ball's slight drift forward too.
+-- hit with Simulate's own rule, so the indicator shows the cue ball's slight drift forward too. Items: a frozen ball
+-- and a pocket's lid are walls the line stops at, with no bounce lines, and a blocked pocket takes nothing.
 
 local Geometry = require("./Geometry")
+local Simulate = require("./Simulate")
 
 export type Ball = { id: number, x: number, y: number, pocket: number? }
 -- What a hit sends each ball. `cueX, cueY` is the unit direction the cue ball leaves in, and `cueShare` and
@@ -102,15 +104,25 @@ function Preview.aimedPocket(layout: Geometry.Layout, x: number, y: number, dirX
 end
 
 -- `dirX, dirY` must be a unit direction. `layout` is Geometry.build(tableParams), built once by the caller.
--- `physics` decides what a hit sends each ball.
+-- `physics` decides what a hit sends each ball, and `effects` are the items on the table (Simulate.Effects).
 function Preview.firstContact(
 	balls: { Ball },
 	dirX: number,
 	dirY: number,
 	tableParams: Geometry.TableParams,
 	layout: Geometry.Layout,
-	physics: HitParams
+	physics: HitParams,
+	effects: Simulate.Effects?
 ): Contact
+	local frozen, blocked = {}, {}
+	for _, id in ((effects and effects.frozen) or {}) :: { number } do
+		frozen[id] = true
+	end
+	local rails = table.clone(layout.rails)
+	for _, index in ((effects and effects.blocked) or {}) :: { number } do
+		blocked[index] = true
+		table.insert(rails, Geometry.lid(tableParams, index))
+	end
 	local radius = tableParams.BallRadius
 	local cue: Ball = balls[1]
 	for _, ball in balls do
@@ -129,13 +141,13 @@ function Preview.firstContact(
 	local kind: "ball" | "rail" | "pocket" = "pocket"
 	local hit: Ball? = nil
 
-	for _, pocket in layout.pockets do
-		local t = reachPoint(x, y, dirX, dirY, pocket.x, pocket.y, pocket.radius)
+	for index, pocket in layout.pockets do
+		local t = if blocked[index] then nil else reachPoint(x, y, dirX, dirY, pocket.x, pocket.y, pocket.radius)
 		if t and t < best then
 			best, kind, hit = t, "pocket", nil
 		end
 	end
-	for _, rail in layout.rails do
+	for _, rail in rails do
 		local t = reachRail(x, y, dirX, dirY, rail, radius)
 		if t and t < best then
 			best, kind, hit = t, "rail", nil
@@ -145,7 +157,8 @@ function Preview.firstContact(
 		if ball.id ~= 0 and not ball.pocket then
 			local t = reachPoint(x, y, dirX, dirY, ball.x, ball.y, 2 * radius)
 			if t and t < best then
-				best, kind, hit = t, "ball", ball
+				-- A frozen ball is a wall
+				best, kind, hit = t, if frozen[ball.id] then "rail" else "ball", if frozen[ball.id] then nil else ball
 			end
 		end
 	end

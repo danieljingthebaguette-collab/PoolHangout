@@ -78,9 +78,10 @@ return {
 	UseItem = remote("UseItem"),
 	-- server → clients: (table model, seat, item, target), an item was used, for the big name and its effect
 	ItemUsed = remote("ItemUsed"),
-	-- server → clients: (table model, bars, pops), each seat's item bar in turn order as Items.Bar (its points and its
-	-- slots, each an item name or false when empty), and pops the { seat, points } earned since the last message, for
-	-- each bar's "+4". No bars: no game is on, so no bars or slots show.
+	-- server → clients: (table model, bars, pops, effects), each seat's item bar in turn order as Items.Bar (its points
+	-- and its slots, each an item name or false when empty), pops the { seat, points } earned since the last message,
+	-- for each bar's "+4", and the effects on the table now (Simulate.Effects: lists of frozen ball ids, blocked pocket
+	-- ids and oil spots { x, y } in table space, and blast). No bars: no game is on, so no bars, slots or effects show.
 	ItemsChanged = remote("ItemsChanged"),
 	-- server → clients: (table model, starting balls, shot, physics params, effects) to replay, effects being what items
 	-- change about the shot (Simulate.Effects)

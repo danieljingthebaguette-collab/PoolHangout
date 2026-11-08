@@ -149,13 +149,15 @@ local function turnMessage(match: Match): ...any
 		if shooter then match.clockEndsAt else nil
 end
 
--- Tells every screen, or one, about each seat's bar and slots, with the pops earned since the last time
+-- Tells every screen, or one, about each seat's bar and slots, with the pops earned since the last time, and the
+-- effects on the table
 local function sendItems(match: Match, player: Player?)
+	local effects = Items.effects(match.items)
 	if player then
-		Remotes.ItemsChanged:FireClient(player, match.tableModel, match.items.bars, {})
+		Remotes.ItemsChanged:FireClient(player, match.tableModel, match.items.bars, {}, effects)
 		return
 	end
-	Remotes.ItemsChanged:FireAllClients(match.tableModel, match.items.bars, match.pops)
+	Remotes.ItemsChanged:FireAllClients(match.tableModel, match.items.bars, match.pops, effects)
 	match.pops = {}
 end
 
@@ -270,7 +272,8 @@ local function botTurn(match: Match, clock: {})
 		match.ballInHand,
 		Config.Coach,
 		PhysicsTestAccess.params(),
-		float
+		float,
+		Items.effects(match.items).blocked
 	)
 	local coach = Config.Coach
 	local aim = math.atan2(shot.dirY, shot.dirX)
@@ -460,7 +463,12 @@ function shoot(
 	local onEight = EightBall.groupCleared(match.groups, side, Balls.get(tableModel))
 	local maxPower = Items.maxPower(match.items, match.turnSeat)
 	local request = TableFlow.readShot(dirX, dirY, power, calledPocket, onEight, layout, maxPower)
-	if not request or not Balls.placeCue(tableModel, match.ballInHand, cueX, cueY, params.Table) then
+	-- Nobody can call a pocket that's blocked
+	if
+		not request
+		or not Items.callable(match.items, request.calledPocket)
+		or not Balls.placeCue(tableModel, match.ballInHand, cueX, cueY, params.Table)
+	then
 		return
 	end
 
@@ -543,7 +551,8 @@ local function useItem(match: Match, player: Seat.Seat, slot: unknown, target: u
 	match.lastUse[player] = now
 	local tableModel = match.tableModel
 	local tableParams = PhysicsTestAccess.params().Table
-	local item, checked = Items.use(match.items, match.turnSeat, slot, target, Balls.get(tableModel), tableParams, roll)
+	local item, checked =
+		Items.use(match.items, match.turnSeat, slot, target, Balls.get(tableModel), tableParams, roll, match.groups)
 	if item then
 		log(match, `{player.Name} uses {Items.NAMES[item]}`)
 		Remotes.ItemUsed:FireAllClients(tableModel, match.turnSeat, item, checked)

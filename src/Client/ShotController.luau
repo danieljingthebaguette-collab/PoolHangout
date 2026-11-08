@@ -39,6 +39,7 @@ local Items = require(ReplicatedStorage.Shared.Items)
 local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Preview = require(ReplicatedStorage.Shared.Physics.Preview)
 local Pull = require(ReplicatedStorage.Shared.Pull)
+local Simulate = require(ReplicatedStorage.Shared.Physics.Simulate)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local TableFlow = require(ReplicatedStorage.Shared.Rules.TableFlow)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
@@ -194,8 +195,10 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	-- shot, whether their Power Shot is on, and the slot whose item is waiting for a target
 	local bars: { Items.Bar }? = nil
 	local usedThisShot, powerOn = false, false
-	-- Whoever is shooting at this table used Blast Ball on this shot, for the aim indicator's ring and the shot
+	-- Whoever is shooting at this table used Blast Ball on this shot, for the aim indicator's ring and the shot, and the
+	-- effects on the table from the last ItemsChanged: frozen balls, lids and oil
 	local blastShot = false
+	local tableEffects: Simulate.Effects = {}
 	local picking: { slot: number, kind: string }? = nil
 
 	-- The top-down view's camera, and everything the view connected while it's on
@@ -224,6 +227,21 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	-- Whether this player may place the cue ball now
 	local function canPlace(): boolean
 		return ballInHand and canShoot()
+	end
+
+	-- What items change about the next shot, as this screen knows it
+	local function shotEffects(): Simulate.Effects
+		return {
+			blast = blastShot,
+			frozen = tableEffects.frozen,
+			blocked = tableEffects.blocked,
+			oil = tableEffects.oil,
+		}
+	end
+
+	-- Whether a pocket has a lid, so it can't be called for the 8
+	local function isBlocked(pocket: number): boolean
+		return table.find(tableEffects.blocked or {}, pocket) ~= nil
 	end
 
 	-- This player's item slots, while they're playing at this table
@@ -258,7 +276,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		)
 		-- Placing and calling end with the shot, even before the server's next TurnStarted arrives
 		ballInHand, holding, placed, calling = false, false, nil, nil
-		TableView.predict(tableModel, shot, PhysicsTestAccess.params(), { blast = blastShot })
+		TableView.predict(tableModel, shot, PhysicsTestAccess.params(), shotEffects())
 		TableView.playSound(cueBall, "CueStrike", power)
 	end
 
@@ -307,13 +325,14 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		return nil
 	end
 
-	-- The pocket nearest the 8 as this screen shows it, called until the aim or a click picks another
+	-- The pocket nearest the 8 as this screen shows it, called until the aim or a click picks another. Never a blocked
+	-- one.
 	local function pocketNearEight(): number
 		local x, y = TableSpace.toTable(felt, ballParts[8].Position)
 		local best, bestSq = 1, math.huge
 		for index, pocket in Geometry.build(PhysicsTestAccess.params().Table).pockets do
 			local distSq = (x - pocket.x) ^ 2 + (y - pocket.y) ^ 2
-			if distSq < bestSq then
+			if distSq < bestSq and not isBlocked(index) then
 				best, bestSq = index, distSq
 			end
 		end
@@ -428,7 +447,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			return
 		end
 		indicator.fade(not target.held)
-		indicator.draw(cueX, cueY, relayed.aim, shownBalls(), blastShot)
+		indicator.draw(cueX, cueY, relayed.aim, shownBalls(), shotEffects())
 		Cue.place(cue, felt, cueX, cueY, relayed.aim, cueBack + relayed.pull * radius * Config.Aim.CuePullBack)
 		cue.part.Transparency = 0
 	end
@@ -519,8 +538,8 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		end
 		indicator.fade(cancelling or not held)
 		-- On the 8, the called pocket follows the 8's yellow line until a click picks one
-		local aimed = indicator.draw(cueX, cueY, aim, shownBalls(), blastShot)
-		if aimed and calling and not calling.clicked then
+		local aimed = indicator.draw(cueX, cueY, aim, shownBalls(), shotEffects())
+		if aimed and calling and not calling.clicked and not isBlocked(aimed) then
 			calling.pocket = aimed
 		end
 		local back = cueBack + (pull + strikeOffset) * radius * Config.Aim.CuePullBack
@@ -601,7 +620,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			elseif calling and not pulling.state.left then
 				-- On the 8, a click that never pulled back calls the pocket it's on
 				local pocket = pocketAt(pulling.state.pressX, pulling.state.pressY)
-				if pocket then
+				if pocket and not isBlocked(pocket) then
 					calling.pocket, calling.clicked = pocket, true
 				end
 			end
@@ -742,11 +761,18 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			relayed = { target = state, aim = state.aim, pull = state.pull, x = nil, y = nil, from = nil }
 		end
 	end)
-	lasting[#lasting + 1] = Remotes.ItemsChanged.OnClientEvent:Connect(function(model: Model?, newBars: { Items.Bar }?)
-		if model == tableModel then
-			bars = newBars
+	lasting[#lasting + 1] = Remotes.ItemsChanged.OnClientEvent:Connect(
+		function(model: Model?, newBars: { Items.Bar }?, _: unknown, effects: Simulate.Effects?)
+			if model == tableModel then
+				bars = newBars
+				tableEffects = effects or {}
+				-- A lid came down on the pocket called for the 8: call the nearest open one
+				if calling and isBlocked(calling.pocket) then
+					calling.pocket, calling.clicked = pocketNearEight(), false
+				end
+			end
 		end
-	end)
+	)
 	lasting[#lasting + 1] = Remotes.ItemUsed.OnClientEvent:Connect(function(model: Model?, seat: number, item: string)
 		if model == tableModel and item == "blastBall" then
 			blastShot = true

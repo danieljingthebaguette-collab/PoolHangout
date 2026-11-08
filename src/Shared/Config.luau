@@ -105,6 +105,10 @@ local Config = {
 		-- pushed away from it, a touching ball at BlastPush of full-power speed, fading to nothing at the edge
 		BlastReach = 6,
 		BlastPush = 0.4,
+		-- Oil Slick: a patch OilRadius ball radii round its spot (5 ball widths across), where balls slow at OilSlowdown
+		-- of the normal rate. Patches don't stack.
+		OilRadius = 5,
+		OilSlowdown = 0.25,
 		UseCooldown = 0.5, -- the server ignores a player's item uses closer together than this
 		PickRadius = 2, -- ball radii: picking a ball for Freeze takes the nearest one within this of the click
 		-- Every item a bar can give, each equally likely
