@@ -248,8 +248,14 @@ local function newReplay(view: View, sim: Simulate.Sim): Replay
 	return { view = view, sim = sim, elapsed = 0, shown = {}, heard = 0, drops = {}, predicted = nil }
 end
 
--- Starts a shot on this screen before the server's copy arrives, from the balls as they're shown
-function TableView.predict(tableModel: Model, shot: Simulate.Shot, params: Simulate.Params)
+-- Starts a shot on this screen before the server's copy arrives, from the balls as they're shown, with what this
+-- screen knows items change about it
+function TableView.predict(
+	tableModel: Model,
+	shot: Simulate.Shot,
+	params: Simulate.Params,
+	effects: Simulate.Effects?
+)
 	local view = findView(tableModel)
 	if not view or busy[tableModel] then
 		return
@@ -261,7 +267,7 @@ function TableView.predict(tableModel: Model, shot: Simulate.Shot, params: Simul
 			table.insert(balls, { id = id, x = x, y = y, vx = 0, vy = 0 })
 		end
 	end
-	local replay = newReplay(view, Simulate.start(balls, shot, params))
+	local replay = newReplay(view, Simulate.start(balls, shot, params, effects))
 	replay.predicted = { balls = balls, giveUpAt = os.clock() + Config.Shot.PredictTimeoutSeconds }
 	play(tableModel, replay)
 end
@@ -337,12 +343,18 @@ function TableView.start()
 		end
 	end)
 	Remotes.ShotStarted.OnClientEvent:Connect(
-		function(tableModel: Model?, balls: { Simulate.Ball }, shot: Simulate.Shot, params: Simulate.Params)
+		function(
+			tableModel: Model?,
+			balls: { Simulate.Ball },
+			shot: Simulate.Shot,
+			params: Simulate.Params,
+			effects: Simulate.Effects?
+		)
 			local view = findView(tableModel)
 			if not (tableModel and view) then
 				return
 			end
-			local sim = Simulate.start(balls, shot, params)
+			local sim = Simulate.start(balls, shot, params, effects)
 			local current = replays[tableModel]
 			if current and current.predicted then
 				-- Switch to the server's exact numbers at the same moment, so the rest of the shot matches it.

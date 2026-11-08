@@ -178,8 +178,9 @@ function TableFlow.mayRequest(
 	return not ended and isShooter and not rolling and now - (last or -math.huge) >= cooldown
 end
 
--- A shot request's values, as a client sent them: an aim direction of nonzero length, power from 0 to 1, and on the
--- 8 (`onEight`) the number of a pocket that exists. Off the 8 any called pocket is ignored. Nil if anything is wrong.
+-- A shot request's values, as a client sent them: an aim direction of nonzero length, power from 0 to 1 (to
+-- `maxPower` while the shooter's Power Shot is on), and on the 8 (`onEight`) the number of a pocket that exists. Off
+-- the 8 any called pocket is ignored. Nil if anything is wrong.
 -- The cue ball's spot is checked last, with `cueSpotAllowed`, as it's placed.
 function TableFlow.readShot(
 	dirX: unknown,
@@ -187,13 +188,14 @@ function TableFlow.readShot(
 	power: unknown,
 	calledPocket: unknown,
 	onEight: boolean,
-	layout: Geometry.Layout
+	layout: Geometry.Layout,
+	maxPower: number?
 ): ShotRequest?
 	if type(dirX) ~= "number" or type(dirY) ~= "number" or type(power) ~= "number" then
 		return nil
 	end
 	local length = math.sqrt(dirX * dirX + dirY * dirY)
-	if not (isFinite(length) and length > 0 and power >= 0 and power <= 1) then
+	if not (isFinite(length) and length > 0 and power >= 0 and power <= (maxPower or 1)) then
 		return nil
 	end
 	-- NaN and infinity fail the whole-number check
@@ -207,7 +209,8 @@ function TableFlow.readShot(
 	return { dirX = dirX / length, dirY = dirY / length, power = power, calledPocket = called }
 end
 
--- A shooter's live aim, as their client sent it: an angle, a pull from 0 to 1 and two true-or-false values, then with
+-- A shooter's live aim, as their client sent it: an angle, a pull from 0 to 1 (to `maxPull` while their Power Shot is
+-- on) and two true-or-false values, then with
 -- ball in hand an optional spot on the felt, and an optional pocket that exists. Nil if anything is wrong. Display only:
 -- the shot is checked again when it's asked for.
 function TableFlow.readAim(
@@ -220,13 +223,14 @@ function TableFlow.readAim(
 	pocket: unknown,
 	ballInHand: boolean,
 	layout: Geometry.Layout,
-	tableParams: Geometry.TableParams
+	tableParams: Geometry.TableParams,
+	maxPull: number?
 ): AimState?
 	if
 		type(aim) ~= "number"
 		or not isFinite(aim)
 		or type(pull) ~= "number"
-		or not (pull >= 0 and pull <= 1)
+		or not (pull >= 0 and pull <= (maxPull or 1))
 		or type(held) ~= "boolean"
 		or type(placing) ~= "boolean"
 	then

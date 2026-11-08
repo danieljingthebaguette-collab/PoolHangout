@@ -1,8 +1,8 @@
 --!strict
 -- The aim indicator, like 8 Ball Duels: a line from the cue ball to a circle where it first touches something, a dot at
 -- the circle's center, a white line where the cue ball goes after a hit and a yellow line where the hit ball goes. Also
--- the faint ring round the cue ball while it follows the mouse with ball in hand, and the gold ring round the pocket
--- called for the 8. Only this screen sees them. They're drawn on the screen over the fixed top-down view: 3D line
+-- the faint ring round the cue ball while it follows the mouse with ball in hand, the gold ring round the pocket
+-- called for the 8, and with Blast Ball on, a ring round the ball the cue ball will hit, as far as the blast reaches. Only this screen sees them. They're drawn on the screen over the fixed top-down view: 3D line
 -- adornments came out broken up and hidden behind balls, and a hollow cylinder shows nothing from straight above.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,9 +23,9 @@ export type Indicator = {
 	hide: () -> (),
 	-- See-through while aiming or about to cancel, solid while the aim is locked
 	fade: (faint: boolean) -> (),
-	-- Draws the indicator for an aim from the cue ball at (x, y), over the balls this screen shows. Returns the pocket
-	-- the 8's yellow line points at when the aim is on the 8.
-	draw: (cueX: number, cueY: number, aim: number, balls: { Preview.Ball }) -> number?,
+	-- Draws the indicator for an aim from the cue ball at (x, y), over the balls this screen shows, with the blast's
+	-- reach when `blast`. Returns the pocket the 8's yellow line points at when the aim is on the 8.
+	draw: (cueX: number, cueY: number, aim: number, balls: { Preview.Ball }, blast: boolean?) -> number?,
 	showPocketRing: (pocket: number) -> (),
 	showPlaceRing: (cueX: number, cueY: number) -> (),
 	destroy: () -> (),
@@ -116,6 +116,17 @@ function AimIndicator.new(playerGui: Instance, felt: BasePart, ballParts: { [num
 	pocketRingStroke.Color = Theme.Colors.CalledPocket
 	pocketRingStroke.Thickness = Theme.Ui.PocketRingThickness
 	pocketRingStroke.Parent = pocketRing
+	-- With Blast Ball on, the blast's reach round the ball the cue ball will hit
+	local blastRing = Instance.new("Frame")
+	blastRing.AnchorPoint = Vector2.new(0.5, 0.5)
+	blastRing.BackgroundTransparency = 1
+	blastRing.Visible = false
+	blastRing.Parent = indicatorGui
+	Ui.roundCorners(blastRing, CIRCLE)
+	local blastRingStroke = Instance.new("UIStroke")
+	blastRingStroke.Color = Theme.Colors.BlastRing
+	blastRingStroke.Thickness = Theme.Ui.BlastRingThickness
+	blastRingStroke.Parent = blastRing
 	indicatorGui.Parent = playerGui
 
 	-- Where a table-space point at ball-center height is on the screen
@@ -127,6 +138,7 @@ function AimIndicator.new(playerGui: Instance, felt: BasePart, ballParts: { [num
 	local function hide()
 		placeRing.Visible = false
 		pocketRing.Visible = false
+		blastRing.Visible = false
 		pathLine.Visible, cueLine.Visible, targetLine.Visible = false, false, false
 		ghost.Visible, ghostEdge.Visible, dot.Visible = false, false, false
 	end
@@ -151,7 +163,7 @@ function AimIndicator.new(playerGui: Instance, felt: BasePart, ballParts: { [num
 		line.Visible = true
 	end
 
-	local function draw(cueX: number, cueY: number, aim: number, balls: { Preview.Ball }): number?
+	local function draw(cueX: number, cueY: number, aim: number, balls: { Preview.Ball }, blast: boolean?): number?
 		-- The hit uses the table and physics the shot will use, sliders and all
 		local params = PhysicsTestAccess.params()
 		local layout = Geometry.build(params.Table)
@@ -176,6 +188,13 @@ function AimIndicator.new(playerGui: Instance, felt: BasePart, ballParts: { [num
 			return nil
 		end
 		local hitX, hitY = TableSpace.toTable(felt, ballParts[contact.ball].Position)
+		if blast then
+			local middle = toScreen(hitX, hitY)
+			local diameter = 2 * (toScreen(hitX + Config.Items.BlastReach * radius, hitY) - middle).Magnitude
+			blastRing.Position = UDim2.fromOffset(middle.X, middle.Y)
+			blastRing.Size = UDim2.fromOffset(diameter, diameter)
+			blastRing.Visible = true
+		end
 		local aimed = if contact.ball == 8
 			then Preview.aimedPocket(layout, hitX, hitY, contact.pushX :: number, contact.pushY :: number)
 			else nil

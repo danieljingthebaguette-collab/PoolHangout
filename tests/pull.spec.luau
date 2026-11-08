@@ -74,4 +74,18 @@ return function(test, check)
 		pointAt(pull, -(CANCEL + 0.75 * FULL))
 		check.near(Pull.power(pull), 0.75, 1e-9, "back within it")
 	end)
+
+	test("with Power Shot on, power keeps filling at the same rate past full, up to its top", function()
+		local top = Config.Items.PowerShotMax
+		local pull = newPull()
+		pointAt(pull, -(CANCEL + FULL * 1.25))
+		check.near(Pull.power(pull, top), 1.25, 1e-9, "a quarter past full")
+		check.equal(Pull.power(pull), 1, "without Power Shot it stops at full")
+		pointAt(pull, -(CANCEL + FULL * top))
+		check.equal(Pull.power(pull, top), top, "exactly the top at the top's pull")
+		pointAt(pull, -(CANCEL + FULL * top * 2))
+		check.equal(Pull.power(pull, top), top, "and no more past it")
+		pointAt(pull, -(CANCEL + FULL / 2))
+		check.near(Pull.power(pull, top), 0.5, 1e-9, "the same as ever up to full")
+	end)
 end

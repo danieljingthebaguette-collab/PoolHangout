@@ -9,8 +9,13 @@ local Geometry = require("./Geometry")
 export type Ball = { id: number, x: number, y: number, vx: number, vy: number, pocket: number? }
 
 -- A unit direction rather than an angle, because math.sin and math.cos can round differently on
--- different devices. Power is 0–1. The break gets BreakPower times a normal shot's full power.
+-- different devices. Power is 0–1, or up to Config.Items.PowerShotMax with Power Shot. The break gets BreakPower
+-- times a normal shot's full power.
 export type Shot = { dirX: number, dirY: number, power: number, isBreak: boolean? }
+
+-- What items change about a shot (Items.effects builds it). Empty is a normal shot. `blast`: at the cue ball's first
+-- hit, the other balls near the hit ball are pushed away from it (Config.Items.BlastReach and BlastPush).
+export type Effects = { blast: boolean? }
 
 -- The server sends the params it used with each shot, so every screen matches it even while they're
 -- being tuned live.
@@ -29,12 +34,15 @@ export type Sim = {
 	events: { Event },
 	-- The first ball the cue ball touched, for the rules. Nil until it touches one.
 	firstHit: number?,
+	effects: Effects,
+	-- When and around which ball a Blast Ball went off, for its effect on screen
+	blast: { time: number, id: number }?,
 }
 
 local Simulate = {}
 
 -- Works on copies, so the caller's starting balls stay as they were to send to clients.
-function Simulate.start(balls: { Ball }, shot: Shot, params: Params?): Sim
+function Simulate.start(balls: { Ball }, shot: Shot, params: Params?, effects: Effects?): Sim
 	local p: Params = params or Config
 	local copies: { Ball } = {}
 	for i, ball in balls do
@@ -43,16 +51,50 @@ function Simulate.start(balls: { Ball }, shot: Shot, params: Params?): Sim
 	table.sort(copies, function(a: Ball, b: Ball): boolean
 		return a.id < b.id
 	end)
-	-- Even the softest shot leaves at SoftestShot of full speed; the rest of the speed rises with pull ^ PowerCurve
+	-- Even the softest shot leaves at SoftestShot of full speed; the rest of the speed rises with pull ^ PowerCurve. Past
+	-- full power, with Power Shot, speed rises in step with the power, so 1.25 is 1.25 times full speed.
 	local fullSpeed = p.Physics.FullPowerSpeed * (if shot.isBreak then p.Physics.BreakPower else 1)
 	local soft = p.Physics.SoftestShot
-	local speed = (soft + (1 - soft) * shot.power ^ p.Physics.PowerCurve) * fullSpeed
+	local speed = if shot.power > 1
+		then shot.power * fullSpeed
+		else (soft + (1 - soft) * shot.power ^ p.Physics.PowerCurve) * fullSpeed
 	for _, ball in copies do
 		if ball.id == 0 then
 			ball.vx, ball.vy = shot.dirX * speed, shot.dirY * speed
 		end
 	end
-	return { balls = copies, params = p, layout = Geometry.build(p.Table), steps = 0, done = false, events = {} }
+	return {
+		balls = copies,
+		params = p,
+		layout = Geometry.build(p.Table),
+		steps = 0,
+		done = false,
+		events = {},
+		effects = effects or {},
+	}
+end
+
+-- Blast Ball goes off around ball `hit`: every other ball still on the table within BlastReach of its center, but the
+-- cue ball, is pushed straight away from it, at BlastPush of full-power speed if it's touching, fading to nothing at
+-- the edge
+local function blast(sim: Sim, hit: Ball, time: number)
+	local radius = sim.params.Table.BallRadius
+	local reach = Config.Items.BlastReach * radius
+	local strongest = Config.Items.BlastPush * sim.params.Physics.FullPowerSpeed
+	sim.blast = { time = time, id = hit.id }
+	for _, ball in sim.balls do
+		if ball.id == 0 or ball == hit or ball.pocket then
+			continue
+		end
+		local dx, dy = ball.x - hit.x, ball.y - hit.y
+		local dist = math.sqrt(dx * dx + dy * dy)
+		if dist >= reach or dist == 0 then
+			continue
+		end
+		local push = strongest * math.min((reach - dist) / (reach - 2 * radius), 1)
+		ball.vx += dx / dist * push
+		ball.vy += dy / dist * push
+	end
 end
 
 -- Advances the shot by up to `count` time steps. Returns true once it's over: every ball has stopped
@@ -145,6 +187,9 @@ function Simulate.step(sim: Sim, count: number): boolean
 					a.y += a.vy * back
 					b.x += b.vx * back
 					b.y += b.vy * back
+					if a.id == 0 and sim.firstHit == b.id and not sim.blast and sim.effects.blast then
+						blast(sim, b, time)
+					end
 				end
 			end
 
@@ -272,8 +317,8 @@ function Simulate.railAfterFirstHit(sim: Sim): boolean
 end
 
 -- Plays a whole shot at once, for tests. The game steps a shot a slice at a time instead.
-function Simulate.run(balls: { Ball }, shot: Shot, params: Params?): Sim
-	local sim = Simulate.start(balls, shot, params)
+function Simulate.run(balls: { Ball }, shot: Shot, params: Params?, effects: Effects?): Sim
+	local sim = Simulate.start(balls, shot, params, effects)
 	Simulate.step(sim, math.huge)
 	return sim
 end

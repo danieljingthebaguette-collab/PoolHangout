@@ -5,13 +5,14 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Ui = require(script.Parent.Ui)
 
 local PowerMeter = {}
 
--- The meter, once it's built: its screen, its fill and its % readout
-local meter: { gui: ScreenGui, fill: Frame, percent: TextLabel }? = nil
+-- The meter, once it's built: its screen, its track, its fill and its % readout
+local meter: { gui: ScreenGui, track: Frame, fill: Frame, percent: TextLabel }? = nil
 
 function PowerMeter.build(playerGui: Instance)
 	local gui = Instance.new("ScreenGui")
@@ -47,17 +48,23 @@ function PowerMeter.build(playerGui: Instance)
 	percent.TextColor3 = Theme.Colors.DarkText
 	Ui.roundCorners(percent)
 	gui.Parent = playerGui
-	meter = { gui = gui, fill = fill, percent = percent }
+	meter = { gui = gui, track = track, fill = fill, percent = percent }
 end
 
--- Shows the pull, 0 to 1, or hides the meter with nil while you can't shoot
+-- Shows the pull, 0 to 1, or hides the meter with nil while you can't shoot. With Power Shot it goes past 1: the meter
+-- stays full and an orange fill rises again from the bottom, up to Config.Items.PowerShotMax. A placeholder look until
+-- the GUI pass.
 function PowerMeter.set(share: number?)
 	if not meter then
 		return
 	end
 	meter.gui.Enabled = share ~= nil
 	if share then
-		meter.fill.Size = UDim2.fromScale(1, share)
+		local over = share > 1
+		meter.track.BackgroundColor3 = if over then Theme.Colors.Fill else Theme.Colors.Dark
+		meter.fill.BackgroundColor3 = if over then Theme.Colors.PowerOver else Theme.Colors.Fill
+		local height = if over then (share - 1) / (Config.Items.PowerShotMax - 1) else share
+		meter.fill.Size = UDim2.fromScale(1, math.clamp(height, 0, 1))
 		meter.percent.Text = `{math.round(share * 100)}%`
 	end
 end

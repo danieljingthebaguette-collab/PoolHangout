@@ -42,7 +42,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Client/ActiveTable.luau` | Which table the shot controls and HUD follow: the one you're playing at, else the one you joined, else the nearest. `Main` rebuilds the shot controls and switches the HUD when it changes; replays, sounds, the Turn arrow, the end screen and the pose work on every table |
 | `Client/Stance.luau` | On your turn in the view, glides your character to stand `Stance.Distance` behind the cue ball, facing it, on top of the table when needed, and off the table again after |
 | `Client/ShotPose.luau` | On every screen, poses each table's shooter (R6 joint offsets, no animation asset) once they stand still, turns off the shooter's shadow (giving each part its own back after), and draws a shooter on top of the table see-through |
-| `Client/AimIndicator.luau` | The aim indicator (the line, circle and dot, and the cue ball's and hit ball's lines), the faint ring with ball in hand and the called pocket's ring, drawn on the screen |
+| `Client/AimIndicator.luau` | The aim indicator (the line, circle and dot, and the cue ball's and hit ball's lines), the faint ring with ball in hand, the called pocket's ring and, with Blast Ball on, the blast's reach round the ball the cue ball will hit, drawn on the screen |
 | `Client/Cue.luau` | The cue stick, a Part only the shooter's screen sees, and laying it along the aim |
 | `Client/Hud.luau` | Starts the HUD's parts below, shows them in the top-down view, and "TEST MODE"; your item slots (`ItemSlots`, which `ShotController` updates every frame) and an item's name shown big as it's used at your table (`ItemName`) |
 | `Client/ShotClock.luau` | The shot clock between the top bar's cards, counting to the server's clock end time |
@@ -54,7 +54,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Client/ItemName.luau` | An item's name shown big with its icon in the middle of the screen as it's used, on its own screen in both views: pops in, fades out within 1.5 s, and a newer one replaces it |
 | `Client/LeaveButton.luau` | The Leave button and the question it asks mid-game |
 | `Client/EndScreen.luau` | The end screen: who won and why, each player's stats, Rematch and Back to lobby |
-| `Client/PowerMeter.luau` | The power meter and its % |
+| `Client/PowerMeter.luau` | The power meter and its %; past 100% with Power Shot, an orange fill rises again over the full gold one, up to `PowerShotMax` |
 | `Client/Tray.luau` | The sunk-ball tray |
 | `Client/Hints.luau` | The control hints, bottom right |
 | `Client/SettingsPanel.luau` | The gear and its card with the sound volume |
@@ -166,8 +166,8 @@ Notes from the health pass on where each part of the Items phase joins today's c
   - Effects that last "until the end of the other side's next turn" end where the turn passes: `TableFlow.afterShot` or `TableFlow.afterTimeout` returning a different seat.
 - **Key item state by seat number, not by player.** `stats` and `votes` are keyed by the seat's occupant (a Player or Coach's model). GAME_SPEC gives a player who takes over a leaver's spot that spot's items and bar, so slots and bars belong to the seat.
 - **Items get their own remote, `ItemsChanged`** (decided 2026-11-08, instead of growing `TurnStarted` into a table): the bars, slots and pops go to every screen right after each `TurnStarted`, so no `TurnStarted` listener changes.
-- **`effects` through the simulation.** `Simulate.start(balls, shot, params)` and `Preview` take no effects yet. Add an `effects` argument, where an empty table gives today's behavior, and pass it through `Balls.shoot`, `ShotStarted` and `TableView`'s replay and `predict`, so every screen simulates the same shot. Coach's `ShotPicker` can ignore effects at first.
-- **Power past 100%.** Four places cap power at 1, and each needs `PowerShotMax` while the shooter's Power Shot is on:
+- **`effects` through the simulation** (done 2026-11-08 for Blast Ball): `Simulate.start(balls, shot, params, effects)` takes `Items.effects`, an empty table being a normal shot, and it goes through `Balls.shoot`, `ShotStarted` and `TableView`'s replay and `predict`, so every screen simulates the same shot. `Preview` takes no effects yet: frozen balls and lids join it with those items. Coach's `ShotPicker` ignores effects.
+- **Power past 100%** (done 2026-11-08). Four places capped power at 1, and each takes `PowerShotMax` while the shooter's Power Shot is on (`Items.maxPower`):
   - `Pull.power`
   - `TableFlow.readShot` (power) and `TableFlow.readAim` (live-aim pull)
   - the speed formula in `Simulate.start`, which is linear above 1

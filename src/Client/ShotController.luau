@@ -194,6 +194,8 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	-- shot, whether their Power Shot is on, and the slot whose item is waiting for a target
 	local bars: { Items.Bar }? = nil
 	local usedThisShot, powerOn = false, false
+	-- Whoever is shooting at this table used Blast Ball on this shot, for the aim indicator's ring and the shot
+	local blastShot = false
 	local picking: { slot: number, kind: string }? = nil
 
 	-- The top-down view's camera, and everything the view connected while it's on
@@ -256,7 +258,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		)
 		-- Placing and calling end with the shot, even before the server's next TurnStarted arrives
 		ballInHand, holding, placed, calling = false, false, nil, nil
-		TableView.predict(tableModel, shot, PhysicsTestAccess.params())
+		TableView.predict(tableModel, shot, PhysicsTestAccess.params(), { blast = blastShot })
 		TableView.playSound(cueBall, "CueStrike", power)
 	end
 
@@ -426,7 +428,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			return
 		end
 		indicator.fade(not target.held)
-		indicator.draw(cueX, cueY, relayed.aim, shownBalls())
+		indicator.draw(cueX, cueY, relayed.aim, shownBalls(), blastShot)
 		Cue.place(cue, felt, cueX, cueY, relayed.aim, cueBack + relayed.pull * radius * Config.Aim.CuePullBack)
 		cue.part.Transparency = 0
 	end
@@ -517,7 +519,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		end
 		indicator.fade(cancelling or not held)
 		-- On the 8, the called pocket follows the 8's yellow line until a click picks one
-		local aimed = indicator.draw(cueX, cueY, aim, shownBalls())
+		local aimed = indicator.draw(cueX, cueY, aim, shownBalls(), blastShot)
 		if aimed and calling and not calling.clicked then
 			calling.pocket = aimed
 		end
@@ -576,7 +578,8 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 				-- Only how far it has moved straight back from where it pressed counts
 				local x, y = pointerOnTable(inputRay(input))
 				Pull.moveTo(pulling.state, x, y, math.cos(aim), math.sin(aim))
-				pull = Pull.power(pulling.state)
+				-- With your Power Shot on it keeps filling past 100%
+				pull = Pull.power(pulling.state, if powerOn then Config.Items.PowerShotMax else 1)
 			end
 		elseif drag and input == drag.input then
 			local angle = pointerAngle(inputRay(input))
@@ -694,7 +697,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			end
 			relayed, lastSent = nil, ""
 			-- Each shot may use an item; Power Shot stays on for the rest of a turn
-			usedThisShot, picking = false, nil
+			usedThisShot, picking, blastShot = false, nil, false
 			local wasSeated = turn ~= nil and turn.seated
 			local wasMine = turn ~= nil and turn.mine
 			local seated = table.find(seats or {}, Players.LocalPlayer) ~= nil
@@ -745,6 +748,9 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		end
 	end)
 	lasting[#lasting + 1] = Remotes.ItemUsed.OnClientEvent:Connect(function(model: Model?, seat: number, item: string)
+		if model == tableModel and item == "blastBall" then
+			blastShot = true
+		end
 		if model == tableModel and turn and turn.mine and seat == turn.seat then
 			usedThisShot, picking = true, nil
 			powerOn = powerOn or item == "powerShot"

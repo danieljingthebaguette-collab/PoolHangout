@@ -360,7 +360,8 @@ local function relayAim(match: Match, player: Seat.Seat, ...: unknown)
 		pocket,
 		match.ballInHand,
 		Geometry.build(tableParams),
-		tableParams
+		tableParams,
+		Items.maxPower(match.items, match.turnSeat)
 	)
 	if state then
 		Match.sendAim(match, state)
@@ -457,7 +458,8 @@ function shoot(
 	local layout = Geometry.build(params.Table)
 	local side: EightBall.Side = sideOf(match, player)
 	local onEight = EightBall.groupCleared(match.groups, side, Balls.get(tableModel))
-	local request = TableFlow.readShot(dirX, dirY, power, calledPocket, onEight, layout)
+	local maxPower = Items.maxPower(match.items, match.turnSeat)
+	local request = TableFlow.readShot(dirX, dirY, power, calledPocket, onEight, layout, maxPower)
 	if not request or not Balls.placeCue(tableModel, match.ballInHand, cueX, cueY, params.Table) then
 		return
 	end
@@ -470,7 +472,7 @@ function shoot(
 		{ dirX = request.dirX, dirY = request.dirY, power = request.power, isBreak = match.isBreak }
 	match.isBreak = false
 	local before = Balls.get(tableModel)
-	local sim = Balls.shoot(tableModel, shot, params)
+	local sim = Balls.shoot(tableModel, shot, params, Items.effects(match.items))
 	local outcome = EightBall.resolveShot(match.groups, side, {
 		isBreak = shot.isBreak == true,
 		firstHit = sim.firstHit,

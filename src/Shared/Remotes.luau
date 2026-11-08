@@ -35,7 +35,8 @@ local function unreliable(name: string): UnreliableRemoteEvent
 end
 
 return {
-	-- client → server: (dirX, dirY, power, cueX?, cueY?, calledPocket?), a direction in table space and power 0–1,
+	-- client → server: (dirX, dirY, power, cueX?, cueY?, calledPocket?), a direction in table space and power 0–1 (up to
+	-- Config.Items.PowerShotMax while the shooter's Power Shot is on),
 	-- with ball in hand where the shooter placed the cue ball (nil leaves it where it is, and is the only choice
 	-- without it), and on the 8 the pocket id called for it
 	RequestShot = remote("RequestShot"),
@@ -81,7 +82,8 @@ return {
 	-- slots, each an item name or false when empty), and pops the { seat, points } earned since the last message, for
 	-- each bar's "+4". No bars: no game is on, so no bars or slots show.
 	ItemsChanged = remote("ItemsChanged"),
-	-- server → clients: (table model, starting balls, shot, physics params) to replay
+	-- server → clients: (table model, starting balls, shot, physics params, effects) to replay, effects being what items
+	-- change about the shot (Simulate.Effects)
 	ShotStarted = remote("ShotStarted"),
 	-- server → clients: (table model, final balls)
 	ShotResolved = remote("ShotResolved"),

@@ -98,6 +98,13 @@ local Config = {
 		-- When true, an item your own sinks fill waits for the end of your turn, instead of arriving at once
 		SinkItemsWaitForTurnEnd = false,
 		Slots = 2,
+		-- Power Shot: the meter goes past 100% up to this, at this many times FullPullDistance, and the shot leaves at
+		-- this many times full-power speed
+		PowerShotMax = 1.5,
+		-- Blast Ball: at the cue ball's first hit, balls within BlastReach ball radii of the hit ball's center are
+		-- pushed away from it, a touching ball at BlastPush of full-power speed, fading to nothing at the edge
+		BlastReach = 6,
+		BlastPush = 0.4,
 		UseCooldown = 0.5, -- the server ignores a player's item uses closer together than this
 		PickRadius = 2, -- ball radii: picking a ball for Freeze takes the nearest one within this of the click
 		-- Every item a bar can give, each equally likely

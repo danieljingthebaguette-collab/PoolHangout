@@ -7,6 +7,7 @@
 local Config = require("./Config")
 local EightBall = require("./Rules/EightBall")
 local Geometry = require("./Physics/Geometry")
+local Simulate = require("./Physics/Simulate")
 local TableFlow = require("./Rules/TableFlow")
 
 local Items = {}
@@ -245,6 +246,16 @@ function Items.use(
 	state.used = true
 	Items.award(state, seat, roll)
 	return item, checked
+end
+
+-- What the items on now change about the next shot, for the simulation on the server and every screen
+function Items.effects(state: State): Simulate.Effects
+	return { blast = state.blast }
+end
+
+-- The most power the seat's shooter may use: past 1 while their Power Shot is on
+function Items.maxPower(state: State, seat: number): number
+	return if state.powerShot == seat then Config.Items.PowerShotMax else 1
 end
 
 -- Every effect that lasts until the end of the other side's next turn

@@ -129,13 +129,18 @@ function Balls.placeCue(
 	return true
 end
 
--- Plays a shot from where the balls rest and returns the finished simulation once every screen has replayed it.
--- Yields. The table counts as rolling until the caller places the balls again.
-function Balls.shoot(tableModel: Model, shot: Simulate.Shot, params: Simulate.Params): Simulate.Sim
+-- Plays a shot from where the balls rest, with what any items change about it, and returns the finished simulation
+-- once every screen has replayed it. Yields. The table counts as rolling until the caller places the balls again.
+function Balls.shoot(
+	tableModel: Model,
+	shot: Simulate.Shot,
+	params: Simulate.Params,
+	effects: Simulate.Effects?
+): Simulate.Sim
 	rolling[tableModel] = true
 	local start = resting[tableModel]
-	local sim = Simulate.start(start, shot, params)
-	Remotes.ShotStarted:FireAllClients(tableModel, start, shot, params)
+	local sim = Simulate.start(start, shot, params, effects)
+	Remotes.ShotStarted:FireAllClients(tableModel, start, shot, params, effects or {})
 	local startedAt = workspace:GetServerTimeNow()
 	while not Simulate.step(sim, Config.Shot.ServerStepsPerFrame) do
 		task.wait()
@@ -157,7 +162,8 @@ function Balls.shoot(tableModel: Model, shot: Simulate.Shot, params: Simulate.Pa
 			)}) at power`,
 			`{string.format("%.2f", shot.power)}: rolled {string.format("%.2f", duration)} s,`,
 			`hit {sim.firstHit or "nothing"} first, sunk:`,
-			if #sunk > 0 then table.concat(sunk, ", ") else "nothing"
+			if #sunk > 0 then table.concat(sunk, ", ") else "nothing",
+			if sim.blast then `(blast round {sim.blast.id})` else ""
 		)
 	end
 	return sim

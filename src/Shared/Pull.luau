@@ -23,12 +23,14 @@ function Pull.moveTo(pull: Pull, x: number, y: number, dirX: number, dirY: numbe
 	end
 end
 
--- The shot's power, 0 to 1. Exactly 1 from full power on, rather than a rounding error short of it.
-function Pull.power(pull: Pull): number
-	if pull.back >= pull.cancel + pull.full then
-		return 1
+-- The shot's power, 0 to 1, or with Power Shot on up to `max`, at `max` times the full pull: it keeps filling at the
+-- same rate past 1. Exactly the top from there on, rather than a rounding error short of it.
+function Pull.power(pull: Pull, max: number?): number
+	local top = max or 1
+	if pull.back >= pull.cancel + pull.full * top then
+		return top
 	end
-	return math.clamp((pull.back - pull.cancel) / pull.full, 0, 1)
+	return math.clamp((pull.back - pull.cancel) / pull.full, 0, top)
 end
 
 return Pull
