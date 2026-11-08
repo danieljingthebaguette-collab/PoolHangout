@@ -49,9 +49,9 @@ local Theme = {
 		BallMark = Color3.fromRGB(245, 242, 230), -- the white on the placeholder balls: stripes and number dots
 		CueBallMark = Color3.fromRGB(200, 35, 35),
 		BallShadow = Color3.fromRGB(10, 20, 40),
-		ItemPicking = ACCENT, -- the outline round your slot on the top bar that you're picking a target for
-		ItemLine = Color3.fromRGB(98, 82, 70), -- an ability's line in the Abilities panel, a softer ink so the name leads
-		ItemRefusal = Color3.fromRGB(255, 138, 118), -- coral, the label beside your slots saying why one can't be used
+		ItemPicking = ACCENT, -- the outline round your ability's row while you pick its target
+		ItemLine = Color3.fromRGB(98, 82, 70), -- an ability's line, on its row and in the Abilities panel: softer ink
+		ItemRefusal = Color3.fromRGB(255, 138, 118), -- coral, an ability's row while it says why its target isn't allowed
 	},
 
 	Ui = {
@@ -115,13 +115,13 @@ local Theme = {
 		ItemPopTextSize = 16, -- the "+4" that rises from a bar when it fills...
 		ItemPopRise = 16, -- ...this many pixels...
 		ItemPopSeconds = 0.8, -- ...as it fades out
-		-- Your own strip: a gold outline round the slot you're picking a target for, a dark veil over your slots while you
-		-- can't use one, and beside the strip a coral label saying why one was refused
-		ItemPickingOutline = 2, -- pixels, no wider than the gap to the next slot
-		ItemDimVeil = 0.4,
-		ItemRefusalTextSize = 16,
-		ItemRefusalHeight = 22,
-		ItemRefusalGap = 4, -- between the strip and the label
+		-- Your abilities, bottom center of the top-down view (ItemSlots): a row for each, like a control hint. Two rows fit
+		-- the bottom band (Hints.bottomBand()). Placeholder looks until the GUI pass.
+		ItemRowIconInset = 3, -- the icon's margin inside its dark box, as tall as a hint
+		ItemLineTextSize = 16, -- the ability's one-line description, beside its name at TextSize
+		ItemDimText = 0.55, -- while you can't use an ability: the rows' text this see-through...
+		ItemDimBox = 0.5, -- ...their label boxes this see-through...
+		ItemDimVeil = 0.4, -- ...and a dark veil this see-through over each icon
 		-- The Abilities button, bottom center while you're not at a table, and the panel it opens in the middle of the
 		-- screen, listing every ability. Placeholder looks until the GUI pass.
 		AbilitiesButtonWidth = 120,

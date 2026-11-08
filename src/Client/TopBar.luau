@@ -2,8 +2,7 @@
 -- The top bar: a card for each side, left and right of the gap kept in the middle for the shot clock. Each shows its
 -- players' avatars and names, whose turn it is, and with a game on, its group and that group's balls. Under each
 -- avatar, that seat's 2 item slots and its item bar, with a "+4" rising from the bar each time it fills. Every screen
--- draws it from the server's TurnStarted and ItemsChanged messages, so they all agree. Your own slots also show which
--- one you're picking a target for, dim while you can't use one, and say why one was refused (setMine).
+-- draws it from the server's TurnStarted and ItemsChanged messages, so they all agree.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,9 +18,8 @@ local Ui = require(script.Parent.Ui)
 
 local TopBar = {}
 
--- Under an avatar: its seat's item slots, each with a gold outline and a dark veil only your own use, and the bar's
--- gold fill with the glow it gets when full
-type Strip = { frame: Frame, slots: { Frame }, outlines: { UIStroke }, veils: { Frame }, fill: Frame, glow: UIStroke }
+-- Under an avatar: its seat's item slots, and the bar's gold fill with the glow it gets when full
+type Strip = { frame: Frame, slots: { Frame }, fill: Frame, glow: UIStroke }
 
 -- One side's card: the card and its glow, up to two players' avatars with their rings and item strips, the names, and the
 -- row with the group and its balls
@@ -47,12 +45,9 @@ local shownUsers: { [ImageLabel]: number } = {}
 -- game on.
 local cardSides: { string }? = nil
 local shownBars: { Items.Bar }? = nil
--- This player's seat from the last turn message, nil when they have none. Your own strip's marks: the coral label saying
--- why an item was refused, the strip they're on, and what they show, so a call that changes nothing touches nothing.
+-- This player's seat from the last turn message: their own squares don't show on their card, since their abilities
+-- are the rows at the bottom of the screen (ItemSlots). Their bar does.
 local mySeat: number? = nil
-local refusalLabel: TextLabel? = nil
-local markedStrip: Strip? = nil
-local shownMine: string? = nil
 
 local function avatarSize(): number
 	return Theme.Ui.CardHeight - 2 * Theme.Ui.Padding
@@ -74,7 +69,7 @@ local function itemStrip(gui: ScreenGui, anchorX: number, x: number): Strip
 	frame.BackgroundTransparency = 1
 	frame.Visible = false
 	frame.Parent = gui
-	local slots, outlines, veils = {}, {}, {}
+	local slots = {}
 	for i = 1, Config.Items.Slots do
 		local slot = Instance.new("Frame")
 		slot.Position = UDim2.fromOffset((i - 1) * (size + ui.ItemSlotGap), 0)
@@ -83,23 +78,7 @@ local function itemStrip(gui: ScreenGui, anchorX: number, x: number): Strip
 		slot.BorderSizePixel = 0
 		slot.Parent = frame
 		Ui.roundCorners(slot)
-		-- Round the slot you're picking a target for
-		local outline = Instance.new("UIStroke")
-		outline.Color = Theme.Colors.ItemPicking
-		outline.Thickness = ui.ItemPickingOutline
-		outline.Enabled = false
-		outline.Parent = slot
-		-- Over the icon while you can't use an item
-		local veil = Instance.new("Frame")
-		veil.Size = UDim2.fromScale(1, 1)
-		veil.BackgroundColor3 = Theme.Colors.Dark
-		veil.BackgroundTransparency = ui.ItemDimVeil
-		veil.BorderSizePixel = 0
-		veil.ZIndex = 2
-		veil.Visible = false
-		Ui.roundCorners(veil)
-		veil.Parent = slot
-		slots[i], outlines[i], veils[i] = slot, outline, veil
+		slots[i] = slot
 	end
 	local track = Instance.new("Frame")
 	track.Position = UDim2.fromOffset(0, size + ui.ItemSlotGap)
@@ -118,7 +97,7 @@ local function itemStrip(gui: ScreenGui, anchorX: number, x: number): Strip
 	glow.Thickness = ui.TurnGlow
 	glow.Enabled = false
 	glow.Parent = track
-	return { frame = frame, slots = slots, outlines = outlines, veils = veils, fill = fill, glow = glow }
+	return { frame = frame, slots = slots, fill = fill, glow = glow }
 end
 
 -- A "+4" that rises from a strip's bar and fades, so players learn what fills it
@@ -359,6 +338,7 @@ local function showStrips(pops: { Items.Pop }?)
 				for slot, holder in strip.slots do
 					local item = bar.slots[slot]
 					ItemIcons.draw(if item then item :: string else "", holder)
+					holder.Visible = seat ~= mySeat
 				end
 				local share = math.clamp(bar.points / Config.Items.BarPoints, 0, 1)
 				strip.fill.Size = UDim2.fromScale(share, 1)
@@ -386,74 +366,18 @@ function TopBar.height(): number
 	return ui.Padding + ui.CardHeight + ui.ItemStripGap + slotSize() + ui.ItemSlotGap + ui.ItemBarHeight
 end
 
--- Builds both cards in `gui`, hidden, and the refusal label for your own strip
+-- Builds both cards in `gui`, hidden
 function TopBar.build(gui: ScreenGui)
 	sideCards = { sideCard(gui, true), sideCard(gui, false) }
-	local ui = Theme.Ui
-	local label = Ui.label("", gui)
-	label.AnchorPoint = Vector2.new(1, 0.5)
-	label.Size = UDim2.fromOffset(0, ui.ItemRefusalHeight)
-	label.AutomaticSize = Enum.AutomaticSize.X
-	label.TextSize = ui.ItemRefusalTextSize
-	label.BackgroundTransparency = 0
-	label.BackgroundColor3 = Theme.Colors.ItemRefusal
-	label.ZIndex = 3 -- over the "+4" pops
-	label.Visible = false
-	Ui.roundCorners(label)
-	local padding = Instance.new("UIPadding")
-	padding.PaddingLeft = UDim.new(0, ui.Padding / 2)
-	padding.PaddingRight = padding.PaddingLeft
-	padding.Parent = label
-	refusalLabel = label
-	markedStrip, shownMine = nil, nil
-end
-
--- Marks your own slots on your card, from ShotController every frame: `picking` (1 or 2) outlines the slot you're
--- picking a target for, `usable` false dims your slots, and `refusal` shows why a slot's item can't be used, in a coral
--- label beside your strip until it's cleared. Other players' strips never change. Only touches what changed.
-function TopBar.setMine(picking: number?, usable: boolean, refusal: { slot: number, text: string }?)
-	-- Your card is the left one. Seats go A1, B1, A2, B2, so your avatar is the first or second on it.
-	local card = sideCards[1]
-	local index = if mySeat then math.ceil(mySeat / 2) else nil
-	local strip = if card and index then card.strips[index] else nil
-	-- Beside your strip on the card's outer side, past your teammate's when theirs is farther out, so it covers no
-	-- one's slots
-	local outer = if card and card.avatars[2].Visible then 2 else 1
-	local state = `{index} {outer} {picking} {usable} {refusal and refusal.text}`
-	if not refusalLabel or state == shownMine then
-		return
-	end
-	shownMine = state
-	if markedStrip and markedStrip ~= strip then
-		for i, outline in markedStrip.outlines do
-			outline.Enabled = false
-			markedStrip.veils[i].Visible = false
-		end
-	end
-	markedStrip = strip
-	refusalLabel.Visible = strip ~= nil and refusal ~= nil
-	if not (card and strip) then
-		return
-	end
-	for i, outline in strip.outlines do
-		outline.Enabled = picking == i
-		strip.veils[i].Visible = not usable
-	end
-	if refusal then
-		local ui = Theme.Ui
-		local edge = card.strips[outer].frame.Position.X.Offset - avatarSize() - ui.ItemRefusalGap
-		refusalLabel.Position = UDim2.new(0.5, edge, 0, ui.Padding + ui.CardHeight + ui.ItemStripGap + slotSize() / 2)
-		refusalLabel.Text = refusal.text
-	end
 end
 
 -- Draws the bar from a TurnStarted message: this player's side on the left and the other side on the right, or side A
 -- on the left for anyone watching. With no game on, only this player's own card shows.
 function TopBar.show(shooter: Seat.Seat?, seats: { Seat.Seat }?, groups: { [string]: string }?, downIds: { number }?)
 	local me = Players.LocalPlayer
-	mySeat = if seats then table.find(seats, me) else nil
 	if not seats then
 		cardSides = nil
+		mySeat = nil
 		showSide(sideCards[1], { me }, nil, nil, nil)
 		showSide(sideCards[2], {}, nil, nil, nil)
 		showStrips(nil)
@@ -467,7 +391,8 @@ function TopBar.show(shooter: Seat.Seat?, seats: { Seat.Seat }?, groups: { [stri
 			table.insert(side, player)
 		end
 	end
-	local seat = mySeat
+	local seat = table.find(seats, me)
+	mySeat = seat
 	local mine = if seat and seat % 2 == 0 then "B" else "A"
 	local theirs = if mine == "A" then "B" else "A"
 	local down: { [number]: boolean } = {}

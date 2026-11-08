@@ -1,7 +1,8 @@
 --!strict
 -- The shooter's controls. F (phones: an on-screen button) eases into a top-down view of the table and back. In a
--- game, your turn starting eases you into it, and your turn passing eases you back to your normal camera, so you see
--- the next shooter's pose. While it isn't your turn, F's top-down view sits a little farther out.
+-- game, your turn starting eases you into it close in, your turn passing keeps you in it eased a little farther out,
+-- and the game ending eases you back to your normal camera. While it isn't your turn, F's top-down view sits farther
+-- out too.
 -- You can only aim and shoot from the view: walking is off and a cue stick lies behind the cue ball.
 -- Aim: on PC only the mouse aims; on phones dragging turns the aim around the cue ball. Power is a slingshot
 -- pull, like 8 Ball Duels: hold the mouse button anywhere (phones: touch near the cue ball), best in front of the
@@ -176,9 +177,9 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	-- After the strike: the cue carries on a little past where the cue ball was and fades out. How far through, 0 to
 	-- 1, and where the cue ball and aim were when it struck.
 	local followThrough: { t: number, x: number, y: number, aim: number }? = nil
-	-- This table's game, from the server's TurnStarted: whether it's this player's turn, and whether they're playing in
-	-- it at all rather than watching. Nil with no game on.
-	local turn: { mine: boolean, seated: boolean, seat: number? }? = nil
+	-- This table's game, from the server's TurnStarted: whether it's this player's turn, whether they're playing in it at
+	-- all rather than watching, and whether it's over with its result showing. Nil with no game on.
+	local turn: { mine: boolean, seated: boolean, seat: number?, over: boolean }? = nil
 	-- Whether the cue ball may be placed anywhere before the next shot, from TurnStarted
 	local ballInHand = false
 	-- With ball in hand, whether the cue ball is following the mouse rather than set down
@@ -642,6 +643,8 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	end
 
 	table.insert(lasting, lockButton.Activated:Connect(toggleLock))
+	-- Clicking an ability's row at the bottom does what its key does
+	Hud.onSlotPress(useSlot)
 
 	local function leaveView(instant: boolean?)
 		if not view.isOn() then
@@ -730,6 +733,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			usedThisShot, picking, blastShot, refusal = false, nil, false, nil
 			local wasSeated = turn ~= nil and turn.seated
 			local wasMine = turn ~= nil and turn.mine
+			local wasOver = turn ~= nil and turn.over
 			local seated = table.find(seats or {}, Players.LocalPlayer) ~= nil
 			-- Seats with no shooter: the game is over and its result is showing, so nobody shoots
 			turn = if seats
@@ -737,6 +741,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 					mine = shooter == Players.LocalPlayer,
 					seated = seated,
 					seat = table.find(seats, Players.LocalPlayer),
+					over = shooter == nil,
 				}
 				else nil
 			if seats and seated and not wasSeated then
@@ -751,11 +756,13 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 				then { pocket = pocketNearEight(), clicked = false }
 				else nil
 			-- Your turn starting eases you into the top-down view close in, even if F took you out of it. Your turn
-			-- passing to someone else, or the game ending, eases you back to the normal view to watch the shooter's pose.
-			-- F still switches any time, and nobody waiting or watching is moved.
+			-- passing to someone else keeps you in it, eased a little farther out. The game ending, or leaving the
+			-- table, eases you back to your normal view. F still switches any time, and nobody waiting or watching is
+			-- moved.
 			local mine = turn ~= nil and turn.mine
+			local over = turn ~= nil and turn.over
 			powerOn = powerOn and mine and wasMine
-			if (wasSeated and not seated) or (wasMine and shooter ~= nil and not mine) then
+			if (wasSeated and not seated) or (seated and over and not wasOver) then
 				leaveView()
 			elseif mine and not wasMine then
 				if view.isOn() then
@@ -763,6 +770,8 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 				else
 					enterView()
 				end
+			elseif wasMine and not mine then
+				view.setFar(true)
 			end
 		end
 	)
@@ -834,6 +843,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			elseif relayed and relayed.from then
 				cueBall.CFrame = relayed.from
 			end
+			Hud.onSlotPress(nil)
 			controlsGui:Destroy()
 			indicator.destroy()
 			cue.part:Destroy()
