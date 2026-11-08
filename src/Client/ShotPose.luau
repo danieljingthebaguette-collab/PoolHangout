@@ -3,8 +3,8 @@
 -- R6 character leans over the table, the back arm drawn back as if holding a cue and the front arm reaching out along
 -- the felt. It eases in, and out again while their shot rolls or when the turn passes. Built from joint offsets in code,
 -- with no animation asset; each screen poses the shooters it sees, players and Coach alike. A shooter casts no shadow,
--- on or beside the table, and one standing on top of it is drawn see-through on every screen, so the balls under them
--- stay easy to see.
+-- on or beside the table, and one standing on top of it is drawn see-through on every screen, with their accessories
+-- (hair, hats, wings) hidden, so the balls under them stay easy to see.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -99,11 +99,13 @@ local function step(dt: number)
 	end
 end
 
+-- See-through by `amount`, with accessories hidden while it's more than 0
 local function setSeeThrough(character: Model, amount: number)
 	for _, item in character:GetDescendants() do
 		-- Both have it, but the type checker can't write to a mix of two classes
 		if item:IsA("BasePart") or item:IsA("Decal") then
-			(item :: any).LocalTransparencyModifier = amount
+			local accessory = amount > 0 and item:FindFirstAncestorOfClass("Accessory") ~= nil
+			(item :: any).LocalTransparencyModifier = if accessory then Theme.Pose.OnTableAccessories else amount
 		end
 	end
 end

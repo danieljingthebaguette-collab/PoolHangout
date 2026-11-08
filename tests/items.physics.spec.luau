@@ -66,7 +66,7 @@ return function(test, check)
 			local touching, halfway, past = find(sim, 2), find(sim, 4), find(sim, 3)
 			check.near(speed(touching), STRONGEST, STRONGEST * 0.01, "touching: the full push")
 			-- The hit ball has moved a hair by the instant of the blast, under a degree here
-		check.near(touching.vx / speed(touching), 0, 0.03, "straight away from the hit ball")
+			check.near(touching.vx / speed(touching), 0, 0.03, "straight away from the hit ball")
 			check.truthy(touching.vy > 0)
 			check.near(speed(halfway), STRONGEST / 2, STRONGEST * 0.01, "halfway out: half")
 			check.truthy(halfway.vy < 0, "away from the hit ball")
@@ -116,22 +116,25 @@ return function(test, check)
 
 	-- Frozen balls, pocket lids and oil
 
-	test("a ball rolling into a frozen ball bounces straight back off it like a rail, and the frozen ball stays put", function()
-		local balls = { ball(0, -3, 0), ball(1, 0, 0) }
-		local sim = Simulate.start(balls, SHOT, nil, { frozen = { 1 } })
-		local before = 0
-		while not sim.firstHit and not Simulate.step(sim, 1) do
-			before = if sim.firstHit then before else speed(find(sim, 0))
+	test(
+		"a ball rolling into a frozen ball bounces straight back off it like a rail, and the frozen ball stays put",
+		function()
+			local balls = { ball(0, -3, 0), ball(1, 0, 0) }
+			local sim = Simulate.start(balls, SHOT, nil, { frozen = { 1 } })
+			local before = 0
+			while not sim.firstHit and not Simulate.step(sim, 1) do
+				before = if sim.firstHit then before else speed(find(sim, 0))
+			end
+			check.equal(sim.firstHit, 1, "it counts as the first ball hit, for the rules")
+			local cue = find(sim, 0)
+			check.truthy(cue.vx < 0, "back the way it came")
+			check.near(speed(cue) / before, Config.Physics.RailBounce, 0.01, "keeping RailBounce of its speed")
+			Simulate.step(sim, math.huge)
+			check.equal(find(sim, 1).x, 0, "the frozen ball never moved")
+			check.equal(find(sim, 1).y, 0)
+			check.equal(find(sim, 1).pocket, nil)
 		end
-		check.equal(sim.firstHit, 1, "it counts as the first ball hit, for the rules")
-		local cue = find(sim, 0)
-		check.truthy(cue.vx < 0, "back the way it came")
-		check.near(speed(cue) / before, Config.Physics.RailBounce, 0.01, "keeping RailBounce of its speed")
-		Simulate.step(sim, math.huge)
-		check.equal(find(sim, 1).x, 0, "the frozen ball never moved")
-		check.equal(find(sim, 1).y, 0)
-		check.equal(find(sim, 1).pocket, nil)
-	end)
+	)
 
 	test("a ball glancing off a frozen ball comes off at the angle it hit", function()
 		local balls = { ball(0, -3, -R), ball(1, 0, 0) }
@@ -162,7 +165,12 @@ return function(test, check)
 			local shot = { dirX = case.dir[1], dirY = case.dir[2], power = 0.3 }
 			local open = Simulate.run({ ball(0, case.from[1], case.from[2]) }, shot)
 			check.equal(find(open, 0).pocket, case.pocket, `pocket {case.pocket} open: it drops`)
-			local lidded = Simulate.run({ ball(0, case.from[1], case.from[2]) }, shot, nil, { blocked = { case.pocket } })
+			local lidded = Simulate.run(
+				{ ball(0, case.from[1], case.from[2]) },
+				shot,
+				nil,
+				{ blocked = { case.pocket } }
+			)
 			check.equal(find(lidded, 0).pocket, nil, `pocket {case.pocket} blocked: it doesn't`)
 			local railHits = 0
 			for _, event in lidded.events do
@@ -184,7 +192,12 @@ return function(test, check)
 		local oiled = lostOver(100, { { x = 0, y = 0 } })
 		check.near(oiled / plain, Config.Items.OilSlowdown, 1e-6)
 		check.near(lostOver(100, { { x = 0, y = 0 }, { x = 0.1, y = 0 } }), oiled, 1e-9, "patches don't stack")
-		local far = Simulate.run({ ball(0, -6, 0) }, { dirX = 1, dirY = 0, power = 0 }, nil, { oil = { { x = -5, y = 0 } } })
+		local far = Simulate.run(
+			{ ball(0, -6, 0) },
+			{ dirX = 1, dirY = 0, power = 0 },
+			nil,
+			{ oil = { { x = -5, y = 0 } } }
+		)
 		local near = Simulate.run({ ball(0, -6, 0) }, { dirX = 1, dirY = 0, power = 0 })
 		check.truthy(find(far, 0).x > find(near, 0).x, "crossing a patch, it rolls farther")
 	end)

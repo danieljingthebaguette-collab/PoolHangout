@@ -19,7 +19,8 @@
 -- stick; this module decides what they show.
 -- Items: on your turn, before the shot, 1 or 2 uses the item in that slot. Freeze, Oil Slick and Pocket Block first ask
 -- for a target, a click on a ball, a spot on the felt or a pocket, and the same key again backs out. One item a shot,
--- never mid-pull; the server checks it all again (Items.use).
+-- never mid-pull; the server checks it all again (Items.use), and when it turns a target down its row says why until
+-- another click.
 -- Live aim: in a game the shooter's screen sends its aim, pull, placed cue ball and called pocket a few times a second,
 -- and every other screen in the top-down view draws the shooter's cue and aim indicator from it, easing towards each
 -- update so a slow connection only makes it lag. Display only: the shot itself goes by RequestShot.
@@ -188,7 +189,8 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	local calling: { pocket: number, clicked: boolean }? = nil
 	-- Live aim while someone else shoots: the latest update the server passed on, what this screen draws as it eases
 	-- towards it, and where the cue ball was before the update moved it here. Nil until one arrives this turn.
-	local relayed: { target: TableFlow.AimState, aim: number, pull: number, x: number?, y: number?, from: CFrame? }? = nil
+	local relayed: { target: TableFlow.AimState, aim: number, pull: number, x: number?, y: number?, from: CFrame? }? =
+		nil
 	-- When this player's own live aim was last sent, and what it said, so only changes go out
 	local sentAt, lastSent = -math.huge, ""
 	-- Items, from ItemsChanged and ItemUsed: every seat's bar and slots, whether this player has used an item on this
@@ -200,6 +202,8 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	local blastShot = false
 	local tableEffects: Simulate.Effects = {}
 	local picking: { slot: number, kind: string }? = nil
+	-- Why the server turned down the last target picked, shown on that slot's row
+	local refusal: { slot: number, text: string }? = nil
 
 	-- The top-down view's camera, and everything the view connected while it's on
 	local view = TopDownView.new(tableModel, felt)
@@ -339,8 +343,8 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		return best
 	end
 
-	-- What a click at (x, y) picks for an item: the nearest ball within PickRadius but the cue ball and the 8, a spot on
-	-- the felt, or a pocket. Nil for nothing there.
+	-- What a click at (x, y) picks for an item: the nearest ball within PickRadius (the cue ball and the 8 too, so the
+	-- server can say why not), a spot on the felt, or a pocket. Nil for nothing there.
 	local function pickTarget(kind: string, x: number, y: number): Items.Target?
 		if kind == "pocket" then
 			return pocketAt(x, y)
@@ -352,7 +356,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		local best: number?, bestSq = nil, (Config.Items.PickRadius * radius) ^ 2
 		for _, ball in shownBalls() do
 			local distSq = (ball.x - x) ^ 2 + (ball.y - y) ^ 2
-			if ball.id ~= 0 and ball.id ~= 8 and distSq <= bestSq then
+			if distSq <= bestSq then
 				best, bestSq = ball.id, distSq
 			end
 		end
@@ -367,9 +371,10 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		if not item or not canUseItem() or (item == "powerShot" and powerOn) then
 			return
 		elseif picking and picking.slot == slot then
-			picking = nil
+			picking, refusal = nil, nil
 			return
 		end
+		refusal = nil
 		local kind = Items.TARGETS[item]
 		if kind then
 			picking = { slot = slot, kind = kind }
@@ -502,7 +507,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		-- Back inside the cancel zone after leaving it, where letting go cancels
 		local cancelling = pulling ~= nil and pulling.state.left and pull == 0
 		if picking and not canUseItem() then
-			picking = nil
+			picking, refusal = nil, nil
 		end
 		Hud.setHints(
 			if hidden
@@ -516,7 +521,12 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		)
 		lockButton.Text = if held then "Unlock" else "Lock"
 		-- Your slots show while you play here, dimmed when you can't use an item
-		Hud.setSlots(if turn and turn.seated then mySlots() else nil, if picking then picking.slot else nil, canUseItem())
+		Hud.setSlots(
+			if turn and turn.seated then mySlots() else nil,
+			if picking then picking.slot else nil,
+			canUseItem(),
+			refusal
+		)
 		indicator.hide()
 		if hidden then
 			Stance.stop()
@@ -561,12 +571,13 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			return
 		end
 		local x, y = pointerOnTable(inputRay(input))
-		-- Choosing an item's target, a click picks it; a click on nothing waits for another
+		-- Choosing an item's target, a click picks it, and picking goes on until the server says it's used; a click on
+		-- nothing waits for another
 		if picking then
 			local target = pickTarget(picking.kind, x, y)
 			if target then
 				Remotes.UseItem:FireServer(picking.slot, target)
-				picking = nil
+				refusal = nil
 			end
 			return
 		end
@@ -642,7 +653,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		connections = {}
 		ContextActionService:UnbindAction(LOCK_ACTION)
 		ContextActionService:UnbindAction(ITEM_ACTION)
-		picking = nil
+		picking, refusal = nil, nil
 		Stance.stop()
 		-- A shot you've let go of still goes
 		if strike then
@@ -716,13 +727,17 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			end
 			relayed, lastSent = nil, ""
 			-- Each shot may use an item; Power Shot stays on for the rest of a turn
-			usedThisShot, picking, blastShot = false, nil, false
+			usedThisShot, picking, blastShot, refusal = false, nil, false, nil
 			local wasSeated = turn ~= nil and turn.seated
 			local wasMine = turn ~= nil and turn.mine
 			local seated = table.find(seats or {}, Players.LocalPlayer) ~= nil
 			-- Seats with no shooter: the game is over and its result is showing, so nobody shoots
 			turn = if seats
-				then { mine = shooter == Players.LocalPlayer, seated = seated, seat = table.find(seats, Players.LocalPlayer) }
+				then {
+					mine = shooter == Players.LocalPlayer,
+					seated = seated,
+					seat = table.find(seats, Players.LocalPlayer),
+				}
 				else nil
 			if seats and seated and not wasSeated then
 				view.faceTable(table.find(seats, Players.LocalPlayer) :: number)
@@ -778,8 +793,13 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			blastShot = true
 		end
 		if model == tableModel and turn and turn.mine and seat == turn.seat then
-			usedThisShot, picking = true, nil
+			usedThisShot, picking, refusal = true, nil, nil
 			powerOn = powerOn or item == "powerShot"
+		end
+	end)
+	lasting[#lasting + 1] = Remotes.ItemRefused.OnClientEvent:Connect(function(model: Model?, slot: number, why: string)
+		if model == tableModel and picking and picking.slot == slot then
+			refusal = { slot = slot, text = why }
 		end
 	end)
 	-- Once the shot goes, the replay places the balls and the live aim is done with

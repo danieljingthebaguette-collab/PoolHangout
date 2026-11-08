@@ -250,12 +250,7 @@ end
 
 -- Starts a shot on this screen before the server's copy arrives, from the balls as they're shown, with what this
 -- screen knows items change about it
-function TableView.predict(
-	tableModel: Model,
-	shot: Simulate.Shot,
-	params: Simulate.Params,
-	effects: Simulate.Effects?
-)
+function TableView.predict(tableModel: Model, shot: Simulate.Shot, params: Simulate.Params, effects: Simulate.Effects?)
 	local view = findView(tableModel)
 	if not view or busy[tableModel] then
 		return

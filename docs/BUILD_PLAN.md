@@ -7,7 +7,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current step:** Phase 3, Items
-- **In progress:** every Claude task in Phase 3 is built. All 5 items can be earned and used, change the shot on the server and every screen, and last their time, with the lock-outs. Placeholder looks until Phase 4. What's left in Phase 3 is mine: the store page's name and description, the music and sound picks, the age check, then the friends playtest. Phase 2 passed my solo tests on 2026-11-08; its 2-player and 4-player checks moved to the Phase 3 and Phase 4 friend playtests
+- **In progress:** getting ready for my friends playtest. Every Claude task in Phase 3 is built, plus item descriptions so nobody needs the items explained: a row per held item at the bottom (key, icon, name, one line, and why a target isn't allowed), and the line under the big name at the top. The test panel, Give buttons and Coach stay owner-only on a published server. Left in Phase 3 is mine: the store page's name and description, the music and sound picks, the age check, publishing, then the friends playtest. After it: Phase 4, with the item balance pass and the tutorial's items step waiting for what my friends find. Phase 2's 2-player and 4-player checks are in the Phase 3 and Phase 4 friend playtests
 - **Dates:** launch moved to Friday, Dec 18 when the plan was reordered. The phase dates are Claude's proposal for that launch
 - **Last session:** 2026-11-08. Phase 2 marked done, the pulse skipped on an open table, the art director's review of my recorded clips, my store page and sound picks moved into Phase 3 (icon and thumbnails to Phase 6), then Phase 3 started
 - **Next up:** the Phase 3 tasks in order. My Phase 3 jobs: the store page's name and description, the music and sound picks, then the age check before the friends playtest
@@ -137,7 +137,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] Touch controls: bring the existing touch code (drag to aim, a touch near the cue ball to pull, the Lock button, the F button) up to date with everything built since Phase 1, and make the tutorial's tips name the touch controls on phones (Claude)
 - [ ] Touch for items: tap a slot to use an item, and tap a ball, a spot on the felt or a pocket to pick a target, choosing the nearest one within a finger's reach (Claude)
 - [ ] Phone HUD layout: the power meter with the Lock button beside it, the item slots, the cards with their item bars, the hints and the top bar all fit a phone held sideways, with touch targets of at least 44 px (Claude)
-- [ ] Power Shot near-rail check on a phone: a 150% pull fits on screen for a cue ball against a long rail shooting straight across; if it doesn't, make the extra 50% take less pull (Claude)
+- [ ] Power Shot near-rail check on a phone: a 150% pull fits on screen for a cue ball against a long rail shooting straight across; if it doesn't, make the extra 50% take less pull. Recheck the 1920×1080 PC case too: it fits only just today (Claude)
 - [ ] Phone pass: button sizes, readable text, 30+ fps on a mid-range phone (I test, Claude fixes)
 - [ ] Check on my real phone: everything works by touch (Me)
 

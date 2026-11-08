@@ -54,6 +54,15 @@ Items.NAMES = {
 	pocketBlock = "Pocket Block",
 } :: { [Item]: string }
 
+-- What each item does, in one short line for players, shown under its slot and under its big name as it's used
+Items.LINES = {
+	powerShot = "Hit harder: up to 150% power for the rest of your turn",
+	blastBall = "The first ball you hit blasts the balls around it away",
+	freeze = "Pick a ball: it can't move, and balls bounce off it, until after their next turn",
+	oilSlick = "Pick a spot: balls roll farther across the oil",
+	pocketBlock = "Pick a pocket: a lid blocks it until after their next turn",
+} :: { [Item]: string }
+
 -- What each item needs picked before it's used: a ball, a spot on the felt or a pocket. The others act at once.
 Items.TARGETS = { freeze = "ball", oilSlick = "spot", pocketBlock = "pocket" } :: { [Item]: string }
 
@@ -190,7 +199,8 @@ end
 -- - a ball on the table that isn't the cue ball, the 8, the last ball left in its group or frozen already
 -- - a finite spot on the felt
 -- - a pocket that isn't blocked already, and not while the other side is shooting at the 8
--- and for a ball or a pocket, not one this side picked on its turn before. Returns it as checked, or nil.
+-- and for a ball or a pocket, not one this side picked on its turn before. Returns it as checked, or nil and why, in
+-- words for the player.
 local function checkTarget(
 	state: State,
 	side: EightBall.Side,
@@ -199,18 +209,31 @@ local function checkTarget(
 	balls: { EightBall.Ball },
 	tableParams: Geometry.TableParams,
 	groups: EightBall.Groups
-): Target?
+): (Target?, string?)
 	local before = state.targets[side].before
 	if kind == "ball" then
-		local id = wholeIn(target, 1, 15)
-		if not id or id == 8 or state.frozen[id] or before[`ball {id}`] then
-			return nil
+		local id = wholeIn(target, 0, 15)
+		if id == 0 then
+			return nil, "Can't freeze the cue ball"
+		elseif id == 8 then
+			return nil, "Can't freeze the 8"
+		elseif not id then
+			return nil, "Pick a ball on the table"
+		elseif state.frozen[id] then
+			return nil, "That ball is frozen already"
+		elseif before[`ball {id}`] then
+			return nil, "You froze that ball last turn"
 		end
 		local here, last = onTable(balls, id)
-		return if here and not last then id else nil
+		if not here then
+			return nil, "Pick a ball on the table"
+		elseif last then
+			return nil, `Can't freeze the last {if id < 8 then "solid" else "stripe"}`
+		end
+		return id, nil
 	elseif kind == "spot" then
 		if type(target) ~= "table" then
-			return nil
+			return nil, "Pick a spot on the felt"
 		end
 		local x, y = (target :: any).x, (target :: any).y
 		if
@@ -220,23 +243,29 @@ local function checkTarget(
 			or math.abs(x) > tableParams.Length / 2
 			or math.abs(y) > tableParams.Width / 2
 		then
-			return nil
+			return nil, "Pick a spot on the felt"
 		end
-		return { x = x, y = y }
+		return { x = x, y = y }, nil
 	end
 	local pocket = wholeIn(target, 1, #Geometry.build(tableParams).pockets)
 	local other: EightBall.Side = TableFlow.otherSide(side)
-	local otherOnEight = groups[other] ~= nil and EightBall.groupCleared(groups, other, balls)
-	if not pocket or state.blocked[pocket] or before[`pocket {pocket}`] or otherOnEight then
-		return nil
+	if not pocket then
+		return nil, "Pick a pocket"
+	elseif state.blocked[pocket] then
+		return nil, "That pocket is blocked already"
+	elseif before[`pocket {pocket}`] then
+		return nil, "You blocked that pocket last turn"
+	elseif groups[other] ~= nil and EightBall.groupCleared(groups, other, balls) then
+		return nil, "Can't block a pocket while they're on the 8"
 	end
-	return pocket
+	return pocket, nil
 end
 
 -- The seat's shooter uses the item in `slot`, with `target` for the items that need one (Items.TARGETS). From a client,
 -- so every argument is checked: one item a shot, a slot holding an item, no second Power Shot while one is on, and an
 -- allowed target, the lock-outs included (`groups` are each side's group now). It's spent at once and its slot frees,
--- so a full bar's waiting item arrives. Returns the item and its checked target, or nil when it's refused.
+-- so a full bar's waiting item arrives. Returns the item and its checked target, or nil when it's refused, with why in
+-- words for the player when it's the target.
 function Items.use(
 	state: State,
 	seat: number,
@@ -246,18 +275,21 @@ function Items.use(
 	tableParams: Geometry.TableParams,
 	roll: () -> number,
 	groups: EightBall.Groups?
-): (Item?, Target?)
+): (Item?, Target?, string?)
 	local index = wholeIn(slot, 1, Config.Items.Slots)
 	local bar = state.bars[seat]
 	local item = if index and bar and not state.used and bar.slots[index] then bar.slots[index] :: Item else nil
 	if not (index and item) or (item == "powerShot" and state.powerShot) then
-		return nil, nil
+		return nil, nil, nil
 	end
 	local side: EightBall.Side = TableFlow.sideOf(seat)
 	local kind = Items.TARGETS[item]
-	local checked = if kind then checkTarget(state, side, kind, target, balls, tableParams, groups or {}) else nil
-	if kind and not checked then
-		return nil, nil
+	local checked: Target?, why: string? = nil, nil
+	if kind then
+		checked, why = checkTarget(state, side, kind, target, balls, tableParams, groups or {})
+		if not checked then
+			return nil, nil, why
+		end
 	end
 	local lasting: Lasting = { side = side, started = false }
 	if item == "powerShot" then
@@ -277,7 +309,7 @@ function Items.use(
 	bar.slots[index] = false
 	state.used = true
 	Items.award(state, seat, roll)
-	return item, checked
+	return item, checked, nil
 end
 
 -- What the items on now change about the next shot, for the simulation on the server and every screen, and to draw

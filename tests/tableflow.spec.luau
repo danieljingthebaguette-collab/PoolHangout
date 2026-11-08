@@ -332,7 +332,8 @@ return function(test, check)
 		check.equal(read(0 / 0, 0, nil, true), nil, "NaN spot")
 		check.equal(read(nil, nil, 7, true), nil, "a pocket that doesn't exist")
 		check.equal(read(nil, nil, 1.5, true), nil, "half a pocket")
-		local noHand = TableFlow.readAim(0, 0, false, true, nil, nil, nil, false, layout, tableParams) :: TableFlow.AimState
+		local noHand =
+			TableFlow.readAim(0, 0, false, true, nil, nil, nil, false, layout, tableParams) :: TableFlow.AimState
 		check.truthy(not noHand.placing, "no placing without ball in hand")
 	end)
 
@@ -353,14 +354,24 @@ return function(test, check)
 		check.truthy(not TableFlow.cueSpotAllowed(true, 0 / 0, 1, balls, tableParams), "NaN")
 	end)
 
-	test("power past 1 is let in only up to the top the server allows, which is past 1 only with Power Shot on", function()
-		local top = Config.Items.PowerShotMax
-		check.equal(TableFlow.readShot(1, 0, 1.2, nil, false, layout), nil, "past 1 without Power Shot")
-		local request = TableFlow.readShot(1, 0, 1.2, nil, false, layout, top)
-		check.equal(request and request.power, 1.2, "past 1 with it")
-		check.equal(TableFlow.readShot(1, 0, top + 0.01, nil, false, layout, top), nil, "past the top")
-		local tableParams = Config.Table
-		check.equal(TableFlow.readAim(0, 1.2, true, false, nil, nil, nil, false, layout, tableParams), nil, "live pull")
-		check.truthy(TableFlow.readAim(0, 1.2, true, false, nil, nil, nil, false, layout, tableParams, top), "with it")
-	end)
+	test(
+		"power past 1 is let in only up to the top the server allows, which is past 1 only with Power Shot on",
+		function()
+			local top = Config.Items.PowerShotMax
+			check.equal(TableFlow.readShot(1, 0, 1.2, nil, false, layout), nil, "past 1 without Power Shot")
+			local request = TableFlow.readShot(1, 0, 1.2, nil, false, layout, top)
+			check.equal(request and request.power, 1.2, "past 1 with it")
+			check.equal(TableFlow.readShot(1, 0, top + 0.01, nil, false, layout, top), nil, "past the top")
+			local tableParams = Config.Table
+			check.equal(
+				TableFlow.readAim(0, 1.2, true, false, nil, nil, nil, false, layout, tableParams),
+				nil,
+				"live pull"
+			)
+			check.truthy(
+				TableFlow.readAim(0, 1.2, true, false, nil, nil, nil, false, layout, tableParams, top),
+				"with it"
+			)
+		end
+	)
 end

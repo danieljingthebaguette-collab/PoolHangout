@@ -148,7 +148,8 @@ function PhysicsTestPanel.start()
 	for i, item in Config.Items.List do
 		button(`Give {Items.NAMES[item :: Items.Item]}`, #Config.Debug.TestSliders + 1 + i, function()
 			Remotes.GiveItem:FireServer(item)
-		end).Parent = panel
+		end).Parent =
+			panel
 	end
 
 	UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)

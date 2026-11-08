@@ -226,8 +226,7 @@ local function glideCoach(match: Match, bot: Model, toX: number, toY: number, fa
 			local dt = task.wait()
 			local at = bot:GetPivot().Position
 			local x, y = TableSpace.toTable(felt, at)
-			local newX, newY, height =
-				ShotStance.step(x, y, at.Y, toX, toY, toHeight, stance.Speed, stance.Climb, dt)
+			local newX, newY, height = ShotStance.step(x, y, at.Y, toX, toY, toHeight, stance.Speed, stance.Climb, dt)
 			local spot = TableSpace.toWorld(felt, newX, newY, 0).Position
 			local position = Vector3.new(spot.X, height, spot.Z)
 			bot:PivotTo(CFrame.lookAt(position, Vector3.new(ball.X, height, ball.Z)))
@@ -551,12 +550,15 @@ local function useItem(match: Match, player: Seat.Seat, slot: unknown, target: u
 	match.lastUse[player] = now
 	local tableModel = match.tableModel
 	local tableParams = PhysicsTestAccess.params().Table
-	local item, checked =
+	local item, checked, why =
 		Items.use(match.items, match.turnSeat, slot, target, Balls.get(tableModel), tableParams, roll, match.groups)
 	if item then
 		log(match, `{player.Name} uses {Items.NAMES[item]}`)
 		Remotes.ItemUsed:FireAllClients(tableModel, match.turnSeat, item, checked)
 		sendItems(match)
+	elseif why and player:IsA("Player") then
+		-- Its target wasn't allowed: tell them why, so they can pick another
+		Remotes.ItemRefused:FireClient(player, tableModel, slot, why)
 	end
 end
 

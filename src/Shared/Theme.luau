@@ -20,6 +20,8 @@ local Theme = {
 	-- Bold condensed, for every bit of HUD text. It's a Font, so set it as FontFace.
 	Font = Font.new(Font.fromEnum(Enum.Font.RobotoCondensed).Family, Enum.FontWeight.Bold),
 	TextSize = 18,
+	-- For big moments only: an item's name shown big (docs/STYLE.md)
+	DisplayFont = Font.fromEnum(Enum.Font.LuckiestGuy),
 
 	Colors = {
 		Panel = CREAM, -- cards and panels
@@ -47,7 +49,9 @@ local Theme = {
 		BallMark = Color3.fromRGB(245, 242, 230), -- the white on the placeholder balls: stripes and number dots
 		CueBallMark = Color3.fromRGB(200, 35, 35),
 		BallShadow = Color3.fromRGB(10, 20, 40),
-		ItemPicking = ACCENT, -- the outline round the item slot you're picking a target for
+		ItemPicking = ACCENT, -- the outline round the item row you're picking a target for
+		ItemLine = Color3.fromRGB(98, 82, 70), -- an item row's description, a softer ink so the name leads
+		ItemRefusal = Color3.fromRGB(255, 138, 118), -- coral, an item row's label box while it says why it can't be used
 	},
 
 	Ui = {
@@ -111,27 +115,19 @@ local Theme = {
 		ItemPopTextSize = 16, -- the "+4" that rises from a bar when it fills...
 		ItemPopRise = 16, -- ...this many pixels...
 		ItemPopSeconds = 0.8, -- ...as it fades out
-		-- Your own 2 item slots, bottom center of the top-down view (ItemSlots). With the key boxes poking out they stay
-		-- inside Hints.bottomBand(). Placeholder looks until the GUI pass.
-		ItemSlotSize = 52,
-		ItemSlotSpacing = 10, -- between the two
-		ItemSlotIconInset = 9, -- the icon's margin inside a slot, clear of its corner brackets
-		ItemKeySize = 20, -- the dark key box on each slot's top-left corner, "1" or "2"...
-		ItemKeyTextSize = 14,
-		ItemKeyOverhang = 6, -- ...poking out of the slot this far...
-		ItemKeyEdge = 1, -- ...with a thin cream edge, so it reads on the dark slot
-		ItemEmptyTransparency = 0.5, -- an empty slot is see-through, with a dashed outline...
-		ItemDashCount = 3, -- ...of this many dashes along each side...
-		ItemDashLength = 8, -- ...this long, as thick as the cards' brackets
-		-- While you can't use an item: a dark veil over each full slot, this see-through, and the keys' text and edges
-		-- this see-through
-		ItemDimVeil = 0.4,
-		ItemDimKey = 0.6,
-		-- An item's name shown big in the middle of the screen as it's used (ItemName)
-		ItemNameTextSize = 48,
-		ItemNameHeight = 76, -- its dark box...
-		ItemNameIconSize = 52, -- ...with the item's icon beside the name
-		ItemNameSeconds = 1.5, -- on screen in all (GAME_SPEC)...
+		-- Your items, bottom center of the top-down view (ItemSlots): a row for each, like a control hint. Two rows fit
+		-- the bottom band (Hints.bottomBand()). Placeholder looks until the GUI pass.
+		ItemRowIconInset = 3, -- the icon's margin inside its dark box, as tall as a hint
+		ItemLineTextSize = 16, -- the item's one-line description, beside its name at TextSize
+		ItemDimText = 0.55, -- while you can't use an item: the rows' text this see-through...
+		ItemDimBox = 0.5, -- ...their label boxes this see-through...
+		ItemDimVeil = 0.4, -- ...and a dark veil this see-through over each icon
+		-- An item's name shown big at the top center as it's used, under the banner (ItemName)
+		ItemNameTextSize = 40, -- in the display font...
+		ItemNameLineTextSize = 18, -- ...with its one-line description under it...
+		ItemNameHeight = 84, -- ...on a dark box...
+		ItemNameIconSize = 60, -- ...with the item's icon beside them
+		ItemNameSeconds = 3, -- on screen in all, long enough to read the line...
 		ItemNamePopSeconds = 0.15, -- ...popping in...
 		ItemNamePopScale = 0.6, -- ...from this size, with a little overshoot...
 		ItemNameFadeSeconds = 0.3, -- ...and fading out at the end
@@ -277,7 +273,8 @@ local Theme = {
 		Head = 20, -- the head tilts up a little, to look along the shot
 		EaseSeconds = 0.25, -- into and out of the pose
 		StillSpeed = 1, -- studs/s: slower than this counts as standing still
-		OnTableSeeThrough = 0.6, -- a shooter standing on top of the table is this see-through (40% opaque)
+		OnTableSeeThrough = 0.6, -- a shooter standing on top of the table is this see-through (40% opaque)...
+		OnTableAccessories = 1, -- ...with their accessories (hair, hats, wings) this see-through: hidden
 	},
 }
 

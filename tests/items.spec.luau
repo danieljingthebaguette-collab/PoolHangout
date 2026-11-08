@@ -216,7 +216,15 @@ return function(test, check)
 	test("Oil Slick needs a finite spot on the felt", function()
 		local halfX, halfY = TABLE.Length / 2, TABLE.Width / 2
 		for _, target in
-			{ { x = halfX + 0.1, y = 0 }, { x = 0, y = -halfY - 0.1 }, { x = 0 / 0, y = 0 }, { x = math.huge, y = 0 }, { x = 1 }, 3, nil } :: { any }
+			{
+				{ x = halfX + 0.1, y = 0 },
+				{ x = 0, y = -halfY - 0.1 },
+				{ x = 0 / 0, y = 0 },
+				{ x = math.huge, y = 0 },
+				{ x = 1 },
+				3,
+				nil,
+			} :: { any }
 		do
 			check.equal(Items.use(holding("oilSlick"), 1, 1, target, BALLS, TABLE, roll), nil)
 		end
@@ -272,20 +280,23 @@ return function(test, check)
 		check.equal(#state.oil, 0, "...and ends with it")
 	end)
 
-	test("the effects for the shot carry Blast Ball, and only a seat with Power Shot on may go past full power", function()
-		local state = holding("blastBall", "powerShot")
-		check.truthy(not Items.effects(state).blast)
-		Items.use(state, 1, 1, nil, BALLS, TABLE, roll)
-		check.truthy(Items.effects(state).blast, "on for this shot")
-		check.equal(Items.maxPower(state, 1), 1)
-		Items.newShot(state, 1, false)
-		check.truthy(not Items.effects(state).blast, "spent after it")
-		Items.use(state, 1, 2, nil, BALLS, TABLE, roll)
-		check.equal(Items.maxPower(state, 1), Config.Items.PowerShotMax, "with Power Shot")
-		check.equal(Items.maxPower(state, 2), 1, "nobody else")
-		Items.turnEnded(state, 1)
-		check.equal(Items.maxPower(state, 1), 1, "over with the turn")
-	end)
+	test(
+		"the effects for the shot carry Blast Ball, and only a seat with Power Shot on may go past full power",
+		function()
+			local state = holding("blastBall", "powerShot")
+			check.truthy(not Items.effects(state).blast)
+			Items.use(state, 1, 1, nil, BALLS, TABLE, roll)
+			check.truthy(Items.effects(state).blast, "on for this shot")
+			check.equal(Items.maxPower(state, 1), 1)
+			Items.newShot(state, 1, false)
+			check.truthy(not Items.effects(state).blast, "spent after it")
+			Items.use(state, 1, 2, nil, BALLS, TABLE, roll)
+			check.equal(Items.maxPower(state, 1), Config.Items.PowerShotMax, "with Power Shot")
+			check.equal(Items.maxPower(state, 2), 1, "nobody else")
+			Items.turnEnded(state, 1)
+			check.equal(Items.maxPower(state, 1), 1, "over with the turn")
+		end
+	)
 
 	test("Freeze can't pick the last ball left in either group", function()
 		local balls = {
@@ -361,5 +372,30 @@ return function(test, check)
 		check.equal(#oil, 1)
 		check.equal(oil[1].x, 1)
 		check.equal(oil[1].y, 2)
+	end)
+
+	test("a refused target says why, in words for the player", function()
+		local function why(item: string, target: any, balls: any?, groups: any?): string?
+			local _, _, reason = Items.use(holding(item), 1, 1, target, balls or BALLS, TABLE, roll, groups)
+			return reason
+		end
+		check.equal(why("freeze", 8), "Can't freeze the 8")
+		check.equal(why("freeze", 0), "Can't freeze the cue ball")
+		check.equal(why("freeze", 5), "Pick a ball on the table", "a ball that's down")
+		local lastSolid = { { id = 0, x = -4, y = 0, vx = 0, vy = 0 }, { id = 3, x = 2, y = 1, vx = 0, vy = 0 } }
+		check.equal(why("freeze", 3, lastSolid), "Can't freeze the last solid")
+		check.equal(why("oilSlick", { x = 99, y = 0 }), "Pick a spot on the felt")
+		local onEight = { { id = 0, x = -4, y = 0, vx = 0, vy = 0 }, { id = 3, x = 2, y = 1, vx = 0, vy = 0 } }
+		check.equal(
+			why("pocketBlock", 2, onEight, { A = "solids", B = "stripes" }),
+			"Can't block a pocket while they're on the 8"
+		)
+		local state = holding("freeze", "freeze")
+		Items.use(state, 1, 1, 3, BALLS, TABLE, roll)
+		Items.newShot(state, 1, false)
+		local _, _, frozen = Items.use(state, 1, 2, 3, BALLS, TABLE, roll)
+		check.equal(frozen, "That ball is frozen already")
+		local _, _, none = Items.use(holding("powerShot"), 1, 2, nil, BALLS, TABLE, roll)
+		check.equal(none, nil, "an empty slot isn't a target problem, so no words")
 	end)
 end

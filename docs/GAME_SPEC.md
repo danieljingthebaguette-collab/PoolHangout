@@ -106,7 +106,7 @@ Laid out like 8 Ball Duels, in the look `docs/STYLE.md` describes: cream cards, 
   - a settings button bottom-left with a sound volume slider. The volume lasts for the session and isn't saved *(default)*. It shows only in the top-down view, so it never covers the phones' thumbstick.
   - a gold ring pulses once around each of your balls, growing and fading over 2 seconds, when your turn starts, while the balls keep their own colors, so you can see which are yours: your group's, or the 8 once your group is cleared. No rings show on an open table, where no ball is yours yet
   - under each player's avatar on their card, their 2 item slots and their item bar, with a "+4" rising from the bar each time it fills and a glow while it's full with both slots taken
-  - your item slots 1 and 2 at the bottom center, each with its key and its item's icon drawn in code, dimmed while you can't use one, and outlined in gold while it waits for a target
+  - your items at the bottom center, one row per item you hold: its key, its icon drawn in code, its name and its one-line description (see Items), dimmed while you can't use one, outlined in gold while it waits for a target, and saying why when a target isn't allowed. An empty slot shows no row. The rows fit in the bottom band's height, so the table never shrinks for them. A plain look like the control hints until the GUI pass
 
 ## 8-ball rules
 
@@ -154,9 +154,15 @@ Each player has one item bar. At 12 points it gives an item, and leftover points
 ### Using items
 
 - On your own turn, before a shot, press 1 or 2 (phones: tap the slot). One item per shot. Like shooting, it works only in the top-down view.
-- Power Shot and Blast Ball take effect at once. Freeze, Oil Slick and Pocket Block then ask for a target: click or tap a ball, a spot on the felt or a pocket. Pressing the same key or tapping the slot again backs out without using it. Items can't be used mid-pull.
+- Power Shot and Blast Ball take effect at once. Freeze, Oil Slick and Pocket Block then ask for a target: click or tap a ball, a spot on the felt or a pocket, and their row lights up while they wait. Pressing the same key or tapping the slot again backs out without using it. If the target isn't allowed, the row says why, like "Can't freeze the 8", and you can pick another. Items can't be used mid-pull.
 - An item is spent the moment you use it, even if you then foul or the clock runs out. The shot clock keeps running while you pick a target.
-- Everyone at the table, players and watchers, sees the item's name big in the middle of the screen for about 1.5 seconds, and its effect stays visible on the table while it lasts. Every player's held items show on their card, for everyone to see.
+- Everyone at the table, players and watchers, sees the item's name big at the top center, under the clock and the banner, in Luckiest Guy, with its one-line description under it, for about 3 seconds, long enough to read. Its effect stays visible on the table while it lasts. Every player's held items show on their card, for everyone to see.
+- **What players read,** one short line per item, written for 10-year-olds, under its row at the bottom and under its big name:
+  - Power Shot: "Hit harder: up to 150% power for the rest of your turn"
+  - Blast Ball: "The first ball you hit blasts the balls around it away"
+  - Freeze: "Pick a ball: it can't move, and balls bounce off it, until after their next turn"
+  - Oil Slick: "Pick a spot: balls roll farther across the oil"
+  - Pocket Block: "Pick a pocket: a lid blocks it until after their next turn"
 - **How long they last:** Power Shot lasts your whole turn: every shot until you miss or foul. Blast Ball lasts one shot. Freeze, Oil Slick and Pocket Block last from when you use them until the end of the other side's next turn, so they also affect your own shots this turn. In 2v2, the other side's next turn is the next turn the other team takes.
 - A second Power Shot can't be used while one is on, since it would do nothing.
 - Combos are allowed: Power Shot on one shot, then Blast Ball on a later shot in the same turn, since each uses its own slot.
@@ -185,7 +191,7 @@ Each player has one item bar. At 12 points it gives an item, and leftover points
 
 - In a real game, the other players and anyone watching from the top-down view see the shooter's cue and aim indicator move live while they aim (Taking a shot, step 7).
 - Anyone can watch a game in 3D from where they stand, or press F for the same top-down view, with the shooter's live aim. A "Watch from above" button near a table with a game on comes in the first week after launch *(default)*.
-- While the shooter aims, their character glides to stand a few studs straight behind the cue ball, always facing it along the shot, on top of the table when that spot is over it, and leans into a ready-to-shoot pose once it stands still, so 3D watchers see who's shooting and where. On top of the table the shooter is drawn see-through (40% opaque) on every screen, so the balls stay easy to see. After their turn they step off the table, and Coach goes back to its seat.
+- While the shooter aims, their character glides to stand a few studs straight behind the cue ball, always facing it along the shot, on top of the table when that spot is over it, and leans into a ready-to-shoot pose once it stands still, so 3D watchers see who's shooting and where. On top of the table the shooter is drawn see-through (40% opaque) on every screen, with their accessories (hair, hats, wings) hidden, so the balls stay easy to see. After their turn they step off the table, and Coach goes back to its seat.
 - Roblox's own emotes, text chat and voice chat. Quick phrases (like "Nice shot!" and "GG") are on the Later list.
 - Public servers have no way to lock a table.
 

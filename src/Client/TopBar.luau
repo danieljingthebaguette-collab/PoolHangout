@@ -369,12 +369,7 @@ end
 
 -- Draws the bar from a TurnStarted message: this player's side on the left and the other side on the right, or side A
 -- on the left for anyone watching. With no game on, only this player's own card shows.
-function TopBar.show(
-	shooter: Seat.Seat?,
-	seats: { Seat.Seat }?,
-	groups: { [string]: string }?,
-	downIds: { number }?
-)
+function TopBar.show(shooter: Seat.Seat?, seats: { Seat.Seat }?, groups: { [string]: string }?, downIds: { number }?)
 	local me = Players.LocalPlayer
 	if not seats then
 		cardSides = nil

@@ -77,10 +77,15 @@ function Hud.setPower(share: number?)
 	PowerMeter.set(share)
 end
 
--- Shows your item slots at the bottom center, or hides them with nil: `picking` is the slot waiting for a target, and
--- `usable` false dims them
-function Hud.setSlots(slots: { Items.Item | false }?, picking: number?, usable: boolean)
-	ItemSlots.show(slots, picking, usable)
+-- Shows your items' rows at the bottom center, or hides them with nil: `picking` is the slot waiting for a target,
+-- `usable` false dims them, and `refusal` says why a slot's item can't be used
+function Hud.setSlots(
+	slots: { Items.Item | false }?,
+	picking: number?,
+	usable: boolean,
+	refusal: { slot: number, text: string }?
+)
+	ItemSlots.show(slots, picking, usable, refusal)
 end
 
 -- Shows control hints down the bottom right, or hides them with nil

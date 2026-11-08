@@ -78,6 +78,9 @@ return {
 	UseItem = remote("UseItem"),
 	-- server → clients: (table model, seat, item, target), an item was used, for the big name and its effect
 	ItemUsed = remote("ItemUsed"),
+	-- server → the shooter: (table model, slot, why), their item's target was turned down, with why in words, like
+	-- "Can't freeze the 8"
+	ItemRefused = remote("ItemRefused"),
 	-- server → clients: (table model, bars, pops, effects), each seat's item bar in turn order as Items.Bar (its points
 	-- and its slots, each an item name or false when empty), pops the { seat, points } earned since the last message,
 	-- for each bar's "+4", and the effects on the table now (Simulate.Effects: lists of frozen ball ids, blocked pocket
