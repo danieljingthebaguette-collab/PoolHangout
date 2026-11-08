@@ -43,7 +43,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 - 1v1 tables have 2 seats, one on each long side. 2v2 tables have 4, two on each long side. Your side is your team.
 - When every seat is taken, everyone at the table sees a 3-second "Starting..." banner, and the prompt reads "Starting…" and can't be used. Then each player is moved once to their seat's spot beside the table, facing it, their normal camera turns to look at the table from behind them, and the game starts. Players walk freely before, during and after a game.
 - If a player leaves during those 3 seconds, with the Leave button or by leaving the server, the start is called off, everyone at the table sees "Start called off: Player1 left.", and the others stay joined.
-- While a game is on, the prompt reads "Table in use" and can't be used.
+- While a game is on, the prompt only shows how many have joined, like "2/2 joined", and can't be used.
 - A player joins one table at a time, and a player in a game can't join another table.
 - No waiting line and no "winner stays on": whoever has joined when the last seat is taken plays.
 - **Parties** (the first update after launch): when a party's leader joins a table, their partner joins too: as their teammate on a 2v2 table, or their opponent on a 1v1 table *(default)*. A player on their own can take an open seat on a 2v2 table and get a random partner.

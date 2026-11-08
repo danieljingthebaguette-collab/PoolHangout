@@ -91,15 +91,17 @@ local function rack(tableModel: Model)
 	Balls.place(tableModel, EightBall.rack(Geometry.build(PhysicsTestAccess.params().Table), pick))
 end
 
--- The prompt's words. The client shows "Waiting for players" instead to a player who has joined.
+-- The prompt's words: how many have joined, which is all a table in use shows. The client shows "Waiting for
+-- players" instead to a player who has joined.
 local function updatePrompt(tableModel: Model)
 	local prompt = prompts[tableModel]
 	local lobby = lobbies[tableModel]
-	local count = `{#lobby.joined}/{seatCount(tableModel)}`
-	if matches[tableModel] then
-		prompt.ActionText, prompt.ObjectText = "Table in use", ""
+	local match = matches[tableModel]
+	local count = `{if match then #match.seats else #lobby.joined}/{seatCount(tableModel)}`
+	if match then
+		prompt.ActionText, prompt.ObjectText = `{count} joined`, ""
 	elseif lobby.countdown then
-		prompt.ActionText, prompt.ObjectText = "Starting…", count
+		prompt.ActionText, prompt.ObjectText = "Starting…", `{count} joined`
 	else
 		prompt.ActionText, prompt.ObjectText = "Join table", `{count} joined`
 	end
