@@ -28,6 +28,7 @@ export type Indicator = {
 	draw: (cueX: number, cueY: number, aim: number, balls: { Preview.Ball }) -> number?,
 	showPocketRing: (pocket: number) -> (),
 	showPlaceRing: (cueX: number, cueY: number) -> (),
+	destroy: () -> (),
 }
 
 -- Builds the indicator's screen, hidden. `ballParts` are the table's balls by id.
@@ -228,6 +229,9 @@ function AimIndicator.new(playerGui: Instance, felt: BasePart, ballParts: { [num
 		draw = draw,
 		showPocketRing = showPocketRing,
 		showPlaceRing = showPlaceRing,
+		destroy = function()
+			indicatorGui:Destroy()
+		end,
 	}
 end
 

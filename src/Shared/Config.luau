@@ -114,6 +114,10 @@ local Config = {
 		PromptHeight = 3, -- studs above the felt's top: the "Join table" prompt over each table's centre
 		PromptDistance = 12, -- studs: how close a player must be to use it
 		BannerDistance = 25, -- studs from a table's centre within which players see its banners, like "Starting..."
+		-- The table a screen's shot controls and HUD follow, when this player isn't playing at or joined to one: the
+		-- nearest, checked this often, and only once another is this many studs nearer than the one followed now
+		ActiveTableCheckSeconds = 0.5,
+		ActiveTableMargin = 2,
 	},
 
 	Timers = {
@@ -144,7 +148,7 @@ local Config = {
 	-- Studio only; the server also checks RunService:IsStudio() before using these, except PhysicsTestLive.
 	Debug = {
 		SoloTables = true,
-		-- Coach takes the other seat when a tester (PhysicsTestAccess) alone in the server joins a 1v1 table, instead of
+		-- Coach takes every other seat when a tester (PhysicsTestAccess) alone in the server joins a table, instead of
 		-- solo play. Like the test mode, it also works in published servers for the owner while PhysicsTestLive is on.
 		Coach = true,
 		LogShots = true,

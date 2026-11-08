@@ -57,29 +57,31 @@ local function showBanner(message: string, seconds: number)
 	end)
 end
 
--- Builds the banner's screen and shows the server's messages for `tableModel` while this player is at it: in the
--- top-down view (`inView`), joined, or standing near it
-function Banner.start(playerGui: Instance, tableModel: Model, inView: () -> boolean)
+-- Builds the banner's screen and shows the server's messages for a table while this player is at it: watching it in
+-- the top-down view (`inViewOf`), joined, or standing near it
+function Banner.start(playerGui: Instance, inViewOf: (Model) -> boolean)
 	local bannerGui = Instance.new("ScreenGui")
 	bannerGui.Name = "Banner"
 	bannerGui.ResetOnSpawn = false
 	bannerGui.IgnoreGuiInset = true -- so it lines up under the top bar's cards
 	bannerCard(bannerGui)
 	bannerGui.Parent = playerGui
-	local felt = tableModel:WaitForChild("Felt") :: BasePart
 	local player = Players.LocalPlayer
-	local function atTable(): boolean
+	local function atTable(tableModel: Model): boolean
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		return inView()
+		local felt = tableModel:FindFirstChild("Felt")
+		return inViewOf(tableModel)
 			or player:GetAttribute("JoinedTable") == tableModel.Name
 			or (
 				root ~= nil
 				and root:IsA("BasePart")
+				and felt ~= nil
+				and felt:IsA("BasePart")
 				and (root.Position - felt.Position).Magnitude <= Config.Join.BannerDistance
 			)
 	end
 	Remotes.Banner.OnClientEvent:Connect(function(model: Model?, message: string, seconds: number)
-		if model == tableModel and atTable() then
+		if model and atTable(model) then
 			showBanner(message, seconds)
 		end
 	end)

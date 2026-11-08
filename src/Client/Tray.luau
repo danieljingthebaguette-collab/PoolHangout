@@ -12,8 +12,8 @@ local Ui = require(script.Parent.Ui)
 
 local Tray = {}
 
--- Builds the tray in `gui`. Waits for the table's balls.
-function Tray.build(gui: ScreenGui, tableModel: Model)
+-- Builds the tray in `gui` for a table's balls, waiting for them. Returns a function that takes it down again.
+function Tray.build(gui: ScreenGui, tableModel: Model): () -> ()
 	local top = Theme.Ui.CardHeight + 2 * Theme.Ui.Padding
 	local box = Instance.new("Frame")
 	box.AnchorPoint = Vector2.new(0.5, 0)
@@ -40,6 +40,7 @@ function Tray.build(gui: ScreenGui, tableModel: Model)
 
 	local icons: { [number]: Frame } = {}
 	local sunk = 0
+	local connections: { RBXScriptConnection } = {}
 	local balls = tableModel:WaitForChild("Balls")
 	for id = 1, 15 do
 		local part = balls:WaitForChild(`Ball{id}`) :: BasePart
@@ -58,7 +59,13 @@ function Tray.build(gui: ScreenGui, tableModel: Model)
 			end
 		end
 		update()
-		part:GetPropertyChangedSignal("Transparency"):Connect(update)
+		table.insert(connections, part:GetPropertyChangedSignal("Transparency"):Connect(update))
+	end
+	return function()
+		for _, connection in connections do
+			connection:Disconnect()
+		end
+		box:Destroy()
 	end
 end
 

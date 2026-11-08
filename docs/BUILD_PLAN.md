@@ -72,7 +72,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [x] Live aim for everyone at the table. Anyone in the top-down view, not just the shooter, sees the shooter's cue and aim indicator move live: the aim line, the circle, both direction lines, the called-pocket ring, and the cue sliding back during a pull. The updates are display-only and smoothed, so a slow connection never affects the shot. (Claude)
 - [x] Sounds and hit effects: hit, rail and pocket sounds, and small chunky sparks on hard hits, in `docs/STYLE.md`'s timings. The free placeholder sounds stay until I pick final ones (Claude; I pick the sounds)
 - [x] Coach, a bot opponent for testing, in Studio or for me alone in a published server: when I'm alone in the server and join a 1v1 table, Coach takes the other seat and plays simple, sensible shots, built on the whole-game test bots' shot logic, so I can play the whole loop alone. It becomes the tutorial's bot in Phase 4, and never plays in normal matches (Claude)
-- [ ] 2v2 on one table: Table2, built as a 2v2 table with A1 and A2 on one long side and B1 and B2 on the other. Your side is your team, teammates share a group, and turns go A1 → B1 → A2 → B2 (Claude)
+- [x] 2v2 on one table: Table2, built as a 2v2 table with A1 and A2 on one long side and B1 and B2 on the other. Your side is your team, teammates share a group, and turns go A1 → B1 → A2 → B2 (Claude)
 - [ ] R6 shot pose: while you aim, your character moves around the table edge to stand behind the cue ball in a ready-to-shoot pose (Claude)
 - [ ] Your group's balls pulse white briefly when your turn starts (Claude)
 - [ ] 2-player test of the whole step: 1v1 on Table1 and 2v2 on Table2 (Me)

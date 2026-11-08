@@ -18,9 +18,11 @@ local FELT_THICKNESS = 0.4
 local PLATE_RADIUS = 0.5 -- the corner plates' outer rounding
 local CORNER_JAW_SLOPE, SIDE_JAW_SLOPE = 1, math.tan(math.rad(20)) -- how far each cushion's back runs past its nose
 -- The seat markers, exactly where the platforms they replaced were: the middle of each long side, this far from the
--- table's centre, sitting on the floor this far below the felt's top
+-- table's centre, sitting on the floor this far below the felt's top. On a 2v2 table the two seats of each side sit
+-- this far either side of the middle.
 local SEAT_OUT, SEAT_DROP = 7.1, 2.4
 local SEAT_SIZE = Vector3.new(4, 0.2, 3)
+local SEAT_SPREAD = 3
 
 local FELT_COLOR = Color3.fromRGB(50, 122, 76)
 local CUSHION_COLOR = Color3.fromRGB(34, 88, 52)
@@ -337,12 +339,20 @@ function TableBuilder.build(tableModel: Model, tableParams: Geometry.TableParams
 		end
 	end
 
-	-- A on the felt's −Z side, B on the other.
-	-- ponytail: 1v1 seats only; Phase 3's 2v2 tables add A2 and B2 beside them.
+	-- A on the felt's −Z side, B on the other. A 2v2 table (its Mode attribute) has A1 and A2 side by side, and B1 and
+	-- B2 across from them.
 	local seats = Instance.new("Folder")
 	seats.Name = "Seats"
-	for name, side in { A1 = -1, B1 = 1 } :: { [string]: number } do
-		local marker = part(name, SEAT_SIZE, CFrame.new(world(0, FELT_TOP - SEAT_DROP, side * SEAT_OUT)), BLACK)
+	local spots: { [string]: Vector2 } = if tableModel:GetAttribute("Mode") == "2v2"
+		then {
+			A1 = Vector2.new(-SEAT_SPREAD, -1),
+			A2 = Vector2.new(SEAT_SPREAD, -1),
+			B1 = Vector2.new(-SEAT_SPREAD, 1),
+			B2 = Vector2.new(SEAT_SPREAD, 1),
+		}
+		else { A1 = Vector2.new(0, -1), B1 = Vector2.new(0, 1) }
+	for name, spot in spots do
+		local marker = part(name, SEAT_SIZE, CFrame.new(world(spot.X, FELT_TOP - SEAT_DROP, spot.Y * SEAT_OUT)), BLACK)
 		marker.Transparency = 1
 		marker.CanCollide = false
 		marker.CanTouch = false

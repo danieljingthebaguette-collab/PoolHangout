@@ -23,7 +23,7 @@ How we build every model in Pool!. There's no modeler. Claude builds each model 
 
 ## Table
 
-Built by `src/Server/TableBuilder.luau` from table params. `tools/BuildTable.luau` runs it from `Config.Table` in edit mode, and the physics test mode runs it live when a pocket slider moves, without changing the saved place. Today it rebuilds Table1; Phase 2 adds Table2 as a 2v2 table, and Phase 4 builds all the tables.
+Built by `src/Server/TableBuilder.luau` from table params. `tools/BuildTable.luau` runs it from `Config.Table` in edit mode, and the physics test mode runs it live when a pocket slider moves, without changing the saved place. Today the tool rebuilds Table1 (1v1) and Table2 (2v2, beside it on the test floor at x = 22), making Table2 first if it's missing; Phase 4's arena builder places all the tables.
 
 The rails are slim: the whole table, cushions and wooden rails included, is about **18.2 × 10.2 studs** (about 1.1 studs on every side of the playing surface) and must stay within 20 × 12. Black plates cover the corner pockets, the side pockets are set into the rails, the cushions are angled at each pocket mouth, and white diamonds sit on the rails: 6 on each long rail, every eighth of the length, and 3 on each end. The felt's top sits about **2.5 studs** above the floor, about an avatar's hip height.
 
@@ -52,7 +52,7 @@ The cushion ends are the pockets' jaws. Inside the pocket, anything that looks l
 Players join a table with its "Join table" prompt, which the game makes. When the game starts, each player is moved to their seat's marker, facing the table.
 
 - Each marker is **a single invisible Part**, named `A1`, `B1`, and on 2v2 tables also `A2` and `B2`, inside the table's `Seats` folder. They don't collide, so nobody trips on them.
-- `A` seats go on one long side of the table (the felt's −Z side), `B` seats on the other. On 2v2 tables, A1 and A2 sit side by side along their long side, and so do B1 and B2.
+- `A` seats go on one long side of the table (the felt's −Z side), `B` seats on the other. On 2v2 tables (`Mode` = `"2v2"`), A1 and A2 sit side by side along their long side, 3 studs either side of its middle, and so do B1 and B2.
 - 4 × 3 studs, 0.2 thick, on the floor 7.1 studs from the table's center, just clear of the rails: where the platforms they replaced were. A player is placed standing on the marker's top.
 
 ## Cue

@@ -6,8 +6,9 @@
 -- and the game starts. Players walk freely the whole time. When a game is decided its end screen shows, then the same
 -- players play again if they all pressed Rematch, or the table re-racks and opens. It also ends, with no winner, when
 -- one of its players leaves the server, unless they had already pressed Leave.
--- Testing alone (Config.Debug): with Coach on, Coach, the bot, takes the other seat of a 1v1 table a tester joins while
--- alone in the server; otherwise, in Studio with SoloTables, one player is enough and takes every turn.
+-- Testing alone (Config.Debug): with Coach on, Coach, the bot, takes every other seat of a table a tester joins while
+-- alone in the server (in 2v2, a teammate and both opponents); otherwise, in Studio with SoloTables, one player is
+-- enough and takes every turn.
 -- ponytail: no sign or takeovers yet. Phase 4 adds them, with the table's states and its reset.
 
 local Players = game:GetService("Players")
@@ -68,9 +69,9 @@ local function seatMarker(tableModel: Model, seat: number): BasePart?
 	return if marker and marker:IsA("BasePart") then marker else nil
 end
 
--- Whether Coach plays here, for a tester alone in the server: on 1v1 tables while Config.Debug.Coach is on
-local function coachTable(tableModel: Model): boolean
-	return Config.Debug.Coach and seatCount(tableModel) == 2 and #Players:GetPlayers() == 1
+-- Whether Coach fills the other seats here, for a tester alone in the server, while Config.Debug.Coach is on
+local function coachTable(): boolean
+	return Config.Debug.Coach and #Players:GetPlayers() == 1
 end
 
 -- How many players a game on this table needs: one per seat, or one in Studio solo where Coach doesn't play
@@ -78,7 +79,7 @@ local function needed(tableModel: Model): number
 	local solo = RunService:IsStudio()
 		and Config.Debug.SoloTables
 		and #Players:GetPlayers() == 1
-		and not coachTable(tableModel)
+		and not coachTable()
 	return TableFlow.needed(seatCount(tableModel), solo)
 end
 
@@ -120,20 +121,21 @@ local function moveToSeat(player: Seat.Seat, marker: BasePart, felt: BasePart)
 	character:PivotTo(CFrame.lookAt(spot, Vector3.new(felt.Position.X, height, felt.Position.Z)))
 end
 
--- Coach's figure: a plain grey R6 character, standing still on the table's B1 spot
-local function spawnCoach(tableModel: Model): Model
+-- Coach's figure for a seat: a plain grey R6 character, standing still on that seat's spot. In 2v2 the second and
+-- third are "Coach 2" and "Coach 3".
+local function spawnCoach(tableModel: Model, seat: number, count: number): Model
 	local description = Instance.new("HumanoidDescription")
 	for _, bodyPart in { "HeadColor", "TorsoColor", "LeftArmColor", "RightArmColor", "LeftLegColor", "RightLegColor" } do
 		(description :: any)[bodyPart] = Theme.Colors.Coach
 	end
 	local model = Players:CreateHumanoidModelFromDescription(description, Enum.HumanoidRigType.R6)
-	model.Name = "Coach"
+	model.Name = if count == 1 then "Coach" else `Coach {count}`
 	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
-	humanoid.DisplayName = "Coach"
+	humanoid.DisplayName = model.Name
 	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart
 	root.Anchored = true
 	model.Parent = workspace
-	local marker = seatMarker(tableModel, 2)
+	local marker = seatMarker(tableModel, seat)
 	if marker then
 		moveToSeat(model, marker, tableModel:FindFirstChild("Felt") :: BasePart)
 	end
@@ -267,16 +269,20 @@ local function makePrompt(tableModel: Model)
 		end
 		-- Display only, so this player's prompt reads "Waiting for players" and they see the table's banners
 		player:SetAttribute("JoinedTable", tableModel.Name)
-		-- Testing alone: Coach takes the other seat, which starts the countdown
-		if not token and coachTable(tableModel) and PhysicsTestAccess.canTest(player) then
-			local coach = spawnCoach(tableModel)
-			if table.find(lobby.joined, player) then
+		-- Testing alone: Coach takes every other seat, and the last one starts the countdown
+		if not token and coachTable() and PhysicsTestAccess.canTest(player) then
+			local count = 0
+			while not token and #lobby.joined < seatCount(tableModel) do
+				count += 1
+				local coach = spawnCoach(tableModel, #lobby.joined + 1, count)
+				if not table.find(lobby.joined, player) then
+					-- They left while Coach was being made
+					coach:Destroy()
+					break
+				end
 				local _, coachToken =
 					TableFlow.join(lobby, coach, seatCount(tableModel), needed(tableModel), false, false)
 				token = coachToken
-			else
-				-- They left while Coach was being made
-				coach:Destroy()
 			end
 		end
 		updatePrompt(tableModel)

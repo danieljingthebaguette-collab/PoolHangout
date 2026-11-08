@@ -71,6 +71,9 @@ local HINTS = {
 
 local ShotController = {}
 
+-- One table's shot controls, until the screen follows another table (ActiveTable)
+export type Controller = { destroy: () -> () }
+
 -- Whether `input` moves the mouse button or finger that `started` pressed
 local function movesPointer(input: InputObject, started: InputObject): boolean
 	return input == started
@@ -96,9 +99,9 @@ local function styleText(textItem: TextLabel | TextButton, text: string)
 	label.Text = text
 end
 
--- `testMode` lets this player shoot while no game is on the table. `onView` hears when the top-down view turns on
--- and off, for the HUD and anything else that only shows there.
-function ShotController.start(tableModel: Model, testMode: boolean, onView: (boolean) -> ())
+-- The shot controls for one table, until `destroy`. `testMode` lets this player shoot while no game is on the table.
+-- `onView` hears when the top-down view turns on and off, for the HUD and anything else that only shows there.
+function ShotController.start(tableModel: Model, testMode: boolean, onView: (boolean) -> ()): Controller
 	local felt = tableModel:WaitForChild("Felt") :: BasePart
 	local ballFolder = tableModel:WaitForChild("Balls")
 	local ballParts: { [number]: BasePart } = {}
@@ -178,6 +181,8 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	-- The top-down view's camera, and everything the view connected while it's on
 	local view = TopDownView.new(tableModel, felt)
 	local connections: { RBXScriptConnection } = {}
+	-- Everything else this table's controls connected, until they're destroyed
+	local lasting: { RBXScriptConnection } = {}
 
 	-- The balls on the table as this screen shows them
 	local function shownBalls(): { Preview.Ball }
@@ -515,7 +520,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		end
 	end
 
-	lockButton.Activated:Connect(toggleLock)
+	table.insert(lasting, lockButton.Activated:Connect(toggleLock))
 
 	local function leaveView()
 		if not view.isOn() then
@@ -576,7 +581,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	end, true, Enum.KeyCode.F)
 	ContextActionService:SetTitle(VIEW_ACTION, "View")
 
-	Remotes.TurnStarted.OnClientEvent:Connect(
+	lasting[#lasting + 1] = Remotes.TurnStarted.OnClientEvent:Connect(
 		function(model: Model?, shooter: Player?, inHand: boolean?, seats: { Player }?, callPocket: boolean?)
 			if model ~= tableModel then
 				return
@@ -616,7 +621,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		end
 	)
 
-	Remotes.AimRelay.OnClientEvent:Connect(function(model: Model?, state: TableFlow.AimState)
+	lasting[#lasting + 1] = Remotes.AimRelay.OnClientEvent:Connect(function(model: Model?, state: TableFlow.AimState)
 		if model ~= tableModel or not (turn and not turn.mine) then
 			return
 		elseif relayed then
@@ -626,7 +631,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		end
 	end)
 	-- Once the shot goes, the replay places the balls and the live aim is done with
-	Remotes.ShotStarted.OnClientEvent:Connect(function(model: Model?)
+	lasting[#lasting + 1] = Remotes.ShotStarted.OnClientEvent:Connect(function(model: Model?)
 		if model == tableModel then
 			relayed = nil
 		end
@@ -635,7 +640,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	-- A new character gets fresh controls, so it starts in the normal view, and on your own turn goes back to the
 	-- top-down view. Roblox only points the camera at a new character while the camera isn't Scriptable, so a respawn
 	-- in the view would leave it on the old one: point it here.
-	Players.LocalPlayer.CharacterAdded:Connect(function(character: Model)
+	lasting[#lasting + 1] = Players.LocalPlayer.CharacterAdded:Connect(function(character: Model)
 		leaveView()
 		local camera = workspace.CurrentCamera
 		camera.CameraSubject = character:WaitForChild("Humanoid") :: Humanoid
@@ -643,6 +648,25 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			enterView()
 		end
 	end)
+
+	return {
+		destroy = function()
+			leaveView()
+			for _, connection in lasting do
+				connection:Disconnect()
+			end
+			ContextActionService:UnbindAction(VIEW_ACTION)
+			-- A cue ball moved here but never shot goes back where the server has it
+			if placed then
+				cueBall.CFrame = placed.from
+			elseif relayed and relayed.from then
+				cueBall.CFrame = relayed.from
+			end
+			controlsGui:Destroy()
+			indicator.destroy()
+			cue.part:Destroy()
+		end,
+	}
 end
 
 return ShotController

@@ -3,7 +3,8 @@
 -- ShotClock (between the cards), Banner (fouls and the winner, under the top bar), LeaveButton (top right while you're at a table), PowerMeter (left),
 -- Tray (right, where sunk balls collect), Hints (the control hints, bottom right) and SettingsPanel (the gear
 -- bottom-left, with the sound volume), and beside the gear "TEST MODE" while the physics test mode has the table.
--- It also starts TurnArrow, the "Turn" card over each shooter's head in the normal view.
+-- It also starts TurnArrow, the "Turn" card over each shooter's head in the normal view. The top bar, clock and tray
+-- follow one table at a time (ActiveTable); setTable switches them.
 
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -30,6 +31,10 @@ local guis: { ScreenGui } = {}
 local inView = false
 -- The "TEST MODE" box, once it's built
 local testLabel: TextLabel? = nil
+-- The table the top bar, clock and tray follow, the HUD's main screen, and taking down the tray built for that table
+local current: Model? = nil
+local hudGui: ScreenGui? = nil
+local removeTray: (() -> ())? = nil
 
 -- Shows the HUD while you're in the top-down view. In the normal view it would sit where phones put the thumbstick.
 function Hud.showTable(visible: boolean)
@@ -83,8 +88,30 @@ local function testModeLabel(gui: ScreenGui)
 	testLabel = box
 end
 
+-- Follows another table: its top bar and clock come with its next turn message, and its tray at once
+function Hud.setTable(tableModel: Model)
+	current = tableModel
+	TopBar.show(nil, nil, nil, nil)
+	ShotClock.show(nil)
+	if removeTray then
+		removeTray()
+		removeTray = nil
+	end
+	local gui = hudGui :: ScreenGui
+	task.spawn(function()
+		local remove = Tray.build(gui, tableModel)
+		-- Another switch while this one waited for the balls
+		if current == tableModel then
+			removeTray = remove
+		else
+			remove()
+		end
+	end)
+end
+
 function Hud.start(tableModel: Model)
 	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+	current = tableModel
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "Hud"
@@ -98,6 +125,7 @@ function Hud.start(tableModel: Model)
 	testModeLabel(gui)
 	gui.Parent = playerGui
 	table.insert(guis, gui)
+	hudGui = gui
 
 	local settingsGui = Instance.new("ScreenGui")
 	settingsGui.Name = "Settings"
@@ -112,28 +140,31 @@ function Hud.start(tableModel: Model)
 	LeaveButton.build(playerGui)
 	TurnArrow.start()
 	EndScreen.start(playerGui)
-	Banner.start(playerGui, tableModel, function(): boolean
-		return inView
+	Banner.start(playerGui, function(model: Model): boolean
+		return inView and model == current
 	end)
 
-	-- A player who has joined sees "Waiting for players" on the prompt, since there's no leaving until the game ends.
-	-- Only on this screen, and the server's own words come back each time it changes them, so check again then.
-	local felt = tableModel:WaitForChild("Felt") :: BasePart
+	-- A player who has joined sees "Waiting for players" on that table's prompt, since there's no leaving until the
+	-- game ends. Only on this screen, and the server's own words come back each time it changes them, so check again
+	-- then.
 	local player = Players.LocalPlayer
-	task.spawn(function()
-		local prompt = felt:WaitForChild("JoinPrompt"):WaitForChild("ProximityPrompt") :: ProximityPrompt
-		local function relabel()
-			local mine = player:GetAttribute("JoinedTable") == tableModel.Name
-			if mine and prompt.ActionText == "Join table" then
-				prompt.ActionText = "Waiting for players"
-			elseif not mine and prompt.ActionText == "Waiting for players" then
-				prompt.ActionText = "Join table"
+	for _, model in workspace:WaitForChild("Tables"):GetChildren() do
+		task.spawn(function()
+			local felt = model:WaitForChild("Felt")
+			local prompt = felt:WaitForChild("JoinPrompt"):WaitForChild("ProximityPrompt") :: ProximityPrompt
+			local function relabel()
+				local mine = player:GetAttribute("JoinedTable") == model.Name
+				if mine and prompt.ActionText == "Join table" then
+					prompt.ActionText = "Waiting for players"
+				elseif not mine and prompt.ActionText == "Waiting for players" then
+					prompt.ActionText = "Join table"
+				end
 			end
-		end
-		prompt:GetPropertyChangedSignal("ActionText"):Connect(relabel)
-		player:GetAttributeChangedSignal("JoinedTable"):Connect(relabel)
-		relabel()
-	end)
+			prompt:GetPropertyChangedSignal("ActionText"):Connect(relabel)
+			player:GetAttributeChangedSignal("JoinedTable"):Connect(relabel)
+			relabel()
+		end)
+	end
 	Remotes.TurnStarted.OnClientEvent:Connect(
 		function(
 			model: Model?,
@@ -145,7 +176,7 @@ function Hud.start(tableModel: Model)
 			down: { number }?,
 			clockEndsAt: number?
 		)
-			if model ~= tableModel then
+			if model ~= current then
 				return
 			end
 			TopBar.show(shooter, seats, groups, down)
@@ -163,13 +194,12 @@ function Hud.start(tableModel: Model)
 
 	-- The clock stops when the shot goes
 	Remotes.ShotStarted.OnClientEvent:Connect(function(model: Model?)
-		if model == tableModel then
+		if model == current then
 			ShotClock.show(nil)
 		end
 	end)
 
-	-- Waits for the table's balls, so it goes last
-	Tray.build(gui, tableModel)
+	Hud.setTable(tableModel)
 end
 
 return Hud
