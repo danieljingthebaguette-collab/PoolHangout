@@ -59,31 +59,38 @@ local function showBanner(message: string, seconds: number)
 	end)
 end
 
--- Builds the banner's screen and shows the server's messages for a table while this player is at it: watching it in
--- the top-down view (`inViewOf`), joined, or standing near it
+-- Whether this player is watching a table in the top-down view, from Banner.start
+local inView: ((Model) -> boolean)? = nil
+
+-- Whether this player is at a table, so its messages are for them: watching it in the top-down view, joined, or
+-- standing near it
+function Banner.atTable(tableModel: Model): boolean
+	local player = Players.LocalPlayer
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	local felt = tableModel:FindFirstChild("Felt")
+	return (inView ~= nil and inView(tableModel))
+		or player:GetAttribute("JoinedTable") == tableModel.Name
+		or (
+			root ~= nil
+			and root:IsA("BasePart")
+			and felt ~= nil
+			and felt:IsA("BasePart")
+			and (root.Position - felt.Position).Magnitude <= Config.Join.BannerDistance
+		)
+end
+
+-- Builds the banner's screen and shows the server's messages for a table while this player is at it. `inViewOf` says
+-- whether they're watching a table in the top-down view.
 function Banner.start(playerGui: Instance, inViewOf: (Model) -> boolean)
+	inView = inViewOf
 	local bannerGui = Instance.new("ScreenGui")
 	bannerGui.Name = "Banner"
 	bannerGui.ResetOnSpawn = false
 	bannerGui.IgnoreGuiInset = true -- so it lines up under the top bar's cards
 	bannerCard(bannerGui)
 	bannerGui.Parent = playerGui
-	local player = Players.LocalPlayer
-	local function atTable(tableModel: Model): boolean
-		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		local felt = tableModel:FindFirstChild("Felt")
-		return inViewOf(tableModel)
-			or player:GetAttribute("JoinedTable") == tableModel.Name
-			or (
-				root ~= nil
-				and root:IsA("BasePart")
-				and felt ~= nil
-				and felt:IsA("BasePart")
-				and (root.Position - felt.Position).Magnitude <= Config.Join.BannerDistance
-			)
-	end
 	Remotes.Banner.OnClientEvent:Connect(function(model: Model?, message: string, seconds: number)
-		if model and atTable(model) then
+		if model and Banner.atTable(model) then
 			showBanner(message, seconds)
 		end
 	end)

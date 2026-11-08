@@ -17,6 +17,8 @@ local Banner = require(script.Parent.Banner)
 local Effects = require(script.Parent.Effects)
 local EndScreen = require(script.Parent.EndScreen)
 local Hints = require(script.Parent.Hints)
+local ItemName = require(script.Parent.ItemName)
+local ItemSlots = require(script.Parent.ItemSlots)
 local LeaveButton = require(script.Parent.LeaveButton)
 local PowerMeter = require(script.Parent.PowerMeter)
 local SettingsPanel = require(script.Parent.SettingsPanel)
@@ -73,6 +75,12 @@ end
 -- Shows the pull on the power meter, 0 to 1, or hides the meter with nil while you can't shoot
 function Hud.setPower(share: number?)
 	PowerMeter.set(share)
+end
+
+-- Shows your item slots at the bottom center, or hides them with nil: `picking` is the slot waiting for a target, and
+-- `usable` false dims them
+function Hud.setSlots(slots: { Items.Item | false }?, picking: number?, usable: boolean)
+	ItemSlots.show(slots, picking, usable)
 end
 
 -- Shows control hints down the bottom right, or hides them with nil
@@ -147,6 +155,7 @@ function Hud.start(tableModel: Model)
 	TopBar.show(nil, nil, nil, nil)
 	ShotClock.build(gui)
 	Hints.build(gui)
+	ItemSlots.build(gui)
 	testModeLabel(gui)
 	gui.Parent = playerGui
 	table.insert(guis, gui)
@@ -167,6 +176,13 @@ function Hud.start(tableModel: Model)
 	EndScreen.start(playerGui)
 	Banner.start(playerGui, function(model: Model): boolean
 		return inView and model == current
+	end)
+	ItemName.build(playerGui)
+	-- An item used at your table: its name big in the middle of the screen, for its players and anyone watching
+	Remotes.ItemUsed.OnClientEvent:Connect(function(model: Model?, _: number, item: string)
+		if model and (model == current or Banner.atTable(model)) then
+			ItemName.show(item)
+		end
 	end)
 
 	-- A player who has joined sees "Waiting for players" on that table's prompt, since there's no leaving until the

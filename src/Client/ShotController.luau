@@ -17,6 +17,9 @@
 -- at, until a click on a pocket calls that one for the rest of the shot. With no game on, the physics test mode lets
 -- testers shoot any time. TopDownView moves the camera, AimIndicator draws the indicator and the rings, and Cue is the
 -- stick; this module decides what they show.
+-- Items: on your turn, before the shot, 1 or 2 uses the item in that slot. Freeze, Oil Slick and Pocket Block first ask
+-- for a target, a click on a ball, a spot on the felt or a pocket, and the same key again backs out. One item a shot,
+-- never mid-pull; the server checks it all again (Items.use).
 -- Live aim: in a game the shooter's screen sends its aim, pull, placed cue ball and called pocket a few times a second,
 -- and every other screen in the top-down view draws the shooter's cue and aim indicator from it, easing towards each
 -- update so a slow connection only makes it lag. Display only: the shot itself goes by RequestShot.
@@ -32,6 +35,7 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local EightBall = require(ReplicatedStorage.Shared.Rules.EightBall)
 local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
+local Items = require(ReplicatedStorage.Shared.Items)
 local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Preview = require(ReplicatedStorage.Shared.Physics.Preview)
 local Pull = require(ReplicatedStorage.Shared.Pull)
@@ -49,6 +53,7 @@ local Ui = require(script.Parent.Ui)
 
 local VIEW_ACTION = "TopDownView"
 local LOCK_ACTION = "LockAim"
+local ITEM_ACTION = "UseItem"
 -- Control hints, shown on the bottom right as a label and its key, top to bottom. Keep each list within
 -- Theme.Ui.HintRows rows.
 local HINTS = {
@@ -69,7 +74,13 @@ local HINTS = {
 		placing = { { "Lock aim to pull from anywhere", "Tap Lock" }, { "Shoot", "Drag back from ball" } },
 	},
 	cancel = { { "Cancel", "Let go" } },
+	-- Choosing an item's target, by what it needs and the slot's key, which backs out. Filled in below.
+	picking = {} :: { [string]: { { { string } } } },
 }
+local PICK_TEXT: { [string]: string } = { ball = "Pick a ball", spot = "Pick a spot", pocket = "Pick a pocket" }
+for kind, text in PICK_TEXT do
+	HINTS.picking[kind] = { { { text, "Click" }, { "Back", "1" } }, { { text, "Click" }, { "Back", "2" } } }
+end
 
 local ShotController = {}
 
@@ -179,6 +190,11 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	local relayed: { target: TableFlow.AimState, aim: number, pull: number, x: number?, y: number?, from: CFrame? }? = nil
 	-- When this player's own live aim was last sent, and what it said, so only changes go out
 	local sentAt, lastSent = -math.huge, ""
+	-- Items, from ItemsChanged and ItemUsed: every seat's bar and slots, whether this player has used an item on this
+	-- shot, whether their Power Shot is on, and the slot whose item is waiting for a target
+	local bars: { Items.Bar }? = nil
+	local usedThisShot, powerOn = false, false
+	local picking: { slot: number, kind: string }? = nil
 
 	-- The top-down view's camera, and everything the view connected while it's on
 	local view = TopDownView.new(tableModel, felt)
@@ -206,6 +222,17 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	-- Whether this player may place the cue ball now
 	local function canPlace(): boolean
 		return ballInHand and canShoot()
+	end
+
+	-- This player's item slots, while they're playing at this table
+	local function mySlots(): { Items.Item | false }?
+		local bar = if bars and turn and turn.seat then bars[turn.seat] else nil
+		return if bar then bar.slots else nil
+	end
+
+	-- Whether this player may use an item now: their turn, the balls still, no pull under way and none used this shot
+	local function canUseItem(): boolean
+		return turn ~= nil and turn.mine and canShoot() and not (pulling or strike or usedThisShot)
 	end
 
 	-- The cue has reached the ball: the shot goes, here at once and to the server
@@ -289,6 +316,47 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			end
 		end
 		return best
+	end
+
+	-- What a click at (x, y) picks for an item: the nearest ball within PickRadius but the cue ball and the 8, a spot on
+	-- the felt, or a pocket. Nil for nothing there.
+	local function pickTarget(kind: string, x: number, y: number): Items.Target?
+		if kind == "pocket" then
+			return pocketAt(x, y)
+		elseif kind == "spot" then
+			local tableParams = PhysicsTestAccess.params().Table
+			local onFelt = math.abs(x) <= tableParams.Length / 2 and math.abs(y) <= tableParams.Width / 2
+			return if onFelt then { x = x, y = y } else nil
+		end
+		local best: number?, bestSq = nil, (Config.Items.PickRadius * radius) ^ 2
+		for _, ball in shownBalls() do
+			local distSq = (ball.x - x) ^ 2 + (ball.y - y) ^ 2
+			if ball.id ~= 0 and ball.id ~= 8 and distSq <= bestSq then
+				best, bestSq = ball.id, distSq
+			end
+		end
+		return best
+	end
+
+	-- 1 or 2: uses that slot's item, or for one that needs a target, waits for a click on it. The same key again backs
+	-- out.
+	local function useSlot(slot: number)
+		local slots = mySlots()
+		local item = if slots and slots[slot] then slots[slot] :: Items.Item else nil
+		if not item or not canUseItem() or (item == "powerShot" and powerOn) then
+			return
+		elseif picking and picking.slot == slot then
+			picking = nil
+			return
+		end
+		local kind = Items.TARGETS[item]
+		if kind then
+			picking = { slot = slot, kind = kind }
+			drag = nil
+		else
+			picking = nil
+			Remotes.UseItem:FireServer(slot)
+		end
 	end
 
 	-- Ball in hand: moves the cue ball to the allowed spot nearest the pointer. Where none turns up, like over a cluster
@@ -412,9 +480,13 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		local held = locked or pulling ~= nil or strike ~= nil
 		-- Back inside the cancel zone after leaving it, where letting go cancels
 		local cancelling = pulling ~= nil and pulling.state.left and pull == 0
+		if picking and not canUseItem() then
+			picking = nil
+		end
 		Hud.setHints(
 			if hidden
 				then nil
+				elseif picking then HINTS.picking[picking.kind][picking.slot]
 				elseif placing then hints.placing
 				elseif cancelling then HINTS.cancel
 				elseif held then hints.locked
@@ -422,6 +494,8 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 				else hints.aiming
 		)
 		lockButton.Text = if held then "Unlock" else "Lock"
+		-- Your slots show while you play here, dimmed when you can't use an item
+		Hud.setSlots(if turn and turn.seated then mySlots() else nil, if picking then picking.slot else nil, canUseItem())
 		indicator.hide()
 		if hidden then
 			Stance.stop()
@@ -466,6 +540,15 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			return
 		end
 		local x, y = pointerOnTable(inputRay(input))
+		-- Choosing an item's target, a click picks it; a click on nothing waits for another
+		if picking then
+			local target = pickTarget(picking.kind, x, y)
+			if target then
+				Remotes.UseItem:FireServer(picking.slot, target)
+				picking = nil
+			end
+			return
+		end
 		-- With ball in hand, a click sets the following cue ball down, and a click on it picks it up again
 		if canPlace() then
 			local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
@@ -536,6 +619,8 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		end
 		connections = {}
 		ContextActionService:UnbindAction(LOCK_ACTION)
+		ContextActionService:UnbindAction(ITEM_ACTION)
+		picking = nil
 		Stance.stop()
 		-- A shot you've let go of still goes
 		if strike then
@@ -575,6 +660,12 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			end
 			return Enum.ContextActionResult.Sink
 		end, false, Enum.KeyCode.Space)
+		ContextActionService:BindAction(ITEM_ACTION, function(_, state: Enum.UserInputState, input: InputObject)
+			if state == Enum.UserInputState.Begin then
+				useSlot(if input.KeyCode == Enum.KeyCode.One then 1 else 2)
+			end
+			return Enum.ContextActionResult.Sink
+		end, false, Enum.KeyCode.One, Enum.KeyCode.Two)
 	end
 
 	ContextActionService:BindAction(VIEW_ACTION, function(_, state: Enum.UserInputState)
@@ -602,6 +693,8 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 				cueBall.CFrame = relayed.from
 			end
 			relayed, lastSent = nil, ""
+			-- Each shot may use an item; Power Shot stays on for the rest of a turn
+			usedThisShot, picking = false, nil
 			local wasSeated = turn ~= nil and turn.seated
 			local wasMine = turn ~= nil and turn.mine
 			local seated = table.find(seats or {}, Players.LocalPlayer) ~= nil
@@ -624,6 +717,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			-- passing to someone else, or the game ending, eases you back to the normal view to watch the shooter's pose.
 			-- F still switches any time, and nobody waiting or watching is moved.
 			local mine = turn ~= nil and turn.mine
+			powerOn = powerOn and mine and wasMine
 			if (wasSeated and not seated) or (wasMine and shooter ~= nil and not mine) then
 				leaveView()
 			elseif mine and not wasMine then
@@ -643,6 +737,17 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			relayed.target = state
 		else
 			relayed = { target = state, aim = state.aim, pull = state.pull, x = nil, y = nil, from = nil }
+		end
+	end)
+	lasting[#lasting + 1] = Remotes.ItemsChanged.OnClientEvent:Connect(function(model: Model?, newBars: { Items.Bar }?)
+		if model == tableModel then
+			bars = newBars
+		end
+	end)
+	lasting[#lasting + 1] = Remotes.ItemUsed.OnClientEvent:Connect(function(model: Model?, seat: number, item: string)
+		if model == tableModel and turn and turn.mine and seat == turn.seat then
+			usedThisShot, picking = true, nil
+			powerOn = powerOn or item == "powerShot"
 		end
 	end)
 	-- Once the shot goes, the replay places the balls and the live aim is done with

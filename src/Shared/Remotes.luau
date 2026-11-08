@@ -72,6 +72,11 @@ return {
 	-- server → clients, unreliable: (table model, aim), that shooter's live aim as TableFlow.AimState, to everyone but
 	-- the shooter, so anyone in the top-down view sees their cue and aim indicator move
 	AimRelay = unreliable("AimRelay"),
+	-- client → server: (slot, target?), the shooter uses the item in slot 1 or 2 before their shot, with for Freeze a
+	-- ball id, for Oil Slick a spot { x, y } in table space, and for Pocket Block a pocket id
+	UseItem = remote("UseItem"),
+	-- server → clients: (table model, seat, item, target), an item was used, for the big name and its effect
+	ItemUsed = remote("ItemUsed"),
 	-- server → clients: (table model, bars, pops), each seat's item bar in turn order as Items.Bar (its points and its
 	-- slots, each an item name or false when empty), and pops the { seat, points } earned since the last message, for
 	-- each bar's "+4". No bars: no game is on, so no bars or slots show.

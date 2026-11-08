@@ -132,4 +132,141 @@ return function(test, check)
 			end
 		end
 	end)
+
+	-- A few balls: the cue ball, the 3 and the 8 on the table, and the 5 already down
+	local BALLS = {
+		{ id = 0, x = -4, y = 0, vx = 0, vy = 0 },
+		{ id = 3, x = 2, y = 1, vx = 0, vy = 0 },
+		{ id = 8, x = 4, y = 0, vx = 0, vy = 0 },
+		{ id = 5, x = 0, y = 0, vx = 0, vy = 0, pocket = 2 },
+	}
+	local TABLE = Config.Table
+
+	local function holding(...: string): Items.State
+		local state = Items.new(4)
+		for _, item in { ... } do
+			Items.give(state, 1, item :: Items.Item)
+		end
+		return state
+	end
+
+	test("using an item spends it at once and frees its slot, so a full bar's waiting item arrives", function()
+		local state = holding("blastBall", "powerShot")
+		Items.add(state, 1, BAR, roll)
+		check.equal(state.bars[1].points, BAR, "waiting for a slot")
+		local item = Items.use(state, 1, 2, nil, BALLS, TABLE, roll)
+		check.equal(item, "powerShot")
+		check.equal(state.bars[1].slots[1], "blastBall")
+		check.equal(state.bars[1].slots[2], Config.Items.List[1], "the waiting item took the freed slot")
+		check.equal(state.bars[1].points, 0)
+		check.equal(state.powerShot, 1)
+	end)
+
+	test("one item per shot, until the next shot", function()
+		local state = holding("blastBall", "freeze")
+		check.truthy(Items.use(state, 1, 1, nil, BALLS, TABLE, roll))
+		check.equal(Items.use(state, 1, 2, 3, BALLS, TABLE, roll), nil, "a second item this shot")
+		Items.newShot(state, 1, false)
+		check.equal(Items.use(state, 1, 2, 3, BALLS, TABLE, roll), "freeze", "the next shot")
+	end)
+
+	test("a slot that's empty, missing or not a slot number is refused", function()
+		local state = holding("blastBall")
+		for _, slot in { 2, 0, 3, 1.5, "1", nil, math.huge, 0 / 0 } :: { any } do
+			check.equal(Items.use(state, 1, slot, nil, BALLS, TABLE, roll), nil, tostring(slot))
+		end
+		check.equal(Items.use(state, 2, 1, nil, BALLS, TABLE, roll), nil, "another seat's slot")
+		check.equal(state.bars[1].slots[1], "blastBall", "nothing spent")
+	end)
+
+	test("Power Shot lasts the turn, and a second can't be used while it's on", function()
+		local state = holding("powerShot", "powerShot")
+		check.truthy(Items.use(state, 1, 1, nil, BALLS, TABLE, roll))
+		Items.newShot(state, 1, false)
+		check.equal(state.powerShot, 1, "still on for the next shot of the turn")
+		check.equal(Items.use(state, 1, 2, nil, BALLS, TABLE, roll), nil, "a second Power Shot")
+		Items.turnEnded(state, 1)
+		check.equal(state.powerShot, nil, "over when the turn passes")
+	end)
+
+	test("Blast Ball lasts one shot, even one the clock ran out on", function()
+		local state = holding("blastBall")
+		Items.use(state, 1, 1, nil, BALLS, TABLE, roll)
+		check.truthy(state.blast)
+		Items.newShot(state, 2, true)
+		check.truthy(not state.blast)
+	end)
+
+	test("Freeze needs a ball on the table that isn't the cue ball, the 8 or frozen already", function()
+		for _, target in { 0, 8, 5, 16, 3.5, "3", nil, { x = 0, y = 0 } } :: { any } do
+			check.equal(Items.use(holding("freeze"), 1, 1, target, BALLS, TABLE, roll), nil, tostring(target))
+		end
+		local state = holding("freeze")
+		local item, target = Items.use(state, 1, 1, 3, BALLS, TABLE, roll)
+		check.equal(item, "freeze")
+		check.equal(target, 3)
+		check.truthy(state.frozen[3])
+		Items.newShot(state, 1, false)
+		Items.give(state, 1, "freeze")
+		check.equal(Items.use(state, 1, 1, 3, BALLS, TABLE, roll), nil, "frozen already")
+	end)
+
+	test("Oil Slick needs a finite spot on the felt", function()
+		local halfX, halfY = TABLE.Length / 2, TABLE.Width / 2
+		for _, target in
+			{ { x = halfX + 0.1, y = 0 }, { x = 0, y = -halfY - 0.1 }, { x = 0 / 0, y = 0 }, { x = math.huge, y = 0 }, { x = 1 }, 3, nil } :: { any }
+		do
+			check.equal(Items.use(holding("oilSlick"), 1, 1, target, BALLS, TABLE, roll), nil)
+		end
+		local state = holding("oilSlick")
+		local item, spot = Items.use(state, 1, 1, { x = 1, y = -2, extra = "ignored" }, BALLS, TABLE, roll)
+		check.equal(item, "oilSlick")
+		check.equal((spot :: any).x, 1)
+		check.equal((spot :: any).extra, nil, "only the checked numbers are kept")
+		check.equal(#state.oil, 1)
+	end)
+
+	test("Pocket Block needs a pocket that isn't blocked already", function()
+		for _, target in { 0, 7, 2.5, "1", nil } :: { any } do
+			check.equal(Items.use(holding("pocketBlock"), 1, 1, target, BALLS, TABLE, roll), nil, tostring(target))
+		end
+		local state = holding("pocketBlock", "pocketBlock")
+		check.equal(Items.use(state, 1, 1, 6, BALLS, TABLE, roll), "pocketBlock")
+		check.truthy(state.blocked[6])
+		Items.newShot(state, 1, false)
+		check.equal(Items.use(state, 1, 2, 6, BALLS, TABLE, roll), nil, "blocked already")
+	end)
+
+	test("Freeze, Oil Slick and Pocket Block last until the end of the other side's next turn", function()
+		local state = holding("freeze")
+		Items.newShot(state, 1, true)
+		Items.use(state, 1, 1, 3, BALLS, TABLE, roll)
+		Items.newShot(state, 1, false)
+		check.truthy(state.frozen[3], "for the rest of your own turn")
+		Items.turnEnded(state, 1)
+		Items.newShot(state, 2, true)
+		check.truthy(state.frozen[3], "through the other side's next turn")
+		Items.newShot(state, 2, false)
+		check.truthy(state.frozen[3], "every shot of it")
+		Items.turnEnded(state, 2)
+		check.equal(state.frozen[3], nil, "gone once it ends")
+	end)
+
+	test("in 2v2 an effect ends after the other team's next turn, and the other side's effects keep going", function()
+		local state = Items.new(4)
+		Items.give(state, 1, "pocketBlock")
+		Items.give(state, 2, "oilSlick")
+		-- A1 blocks a pocket, then B1 lays oil
+		Items.newShot(state, 1, true)
+		Items.use(state, 1, 1, 2, BALLS, TABLE, roll)
+		Items.turnEnded(state, 1)
+		Items.newShot(state, 2, true)
+		Items.use(state, 2, 1, { x = 0, y = 0 }, BALLS, TABLE, roll)
+		Items.turnEnded(state, 2)
+		check.equal(state.blocked[2], nil, "A1's lid ends after B1's turn")
+		check.equal(#state.oil, 1, "B1's oil lasts through A2's turn...")
+		Items.newShot(state, 3, true)
+		Items.turnEnded(state, 3)
+		check.equal(#state.oil, 0, "...and ends with it")
+	end)
 end

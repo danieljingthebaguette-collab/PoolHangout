@@ -45,13 +45,16 @@ export type Match = {
 	clock: {}?,
 	isBreak: boolean,
 	groups: EightBall.Groups,
-	-- When each player last asked for a shot, for the rate limit
+	-- When each player last asked for a shot, and last used an item, for the rate limits
 	lastRequest: { [Seat.Seat]: number },
+	lastUse: { [Seat.Seat]: number },
 	-- No more shots: the game is over, or was ended
 	ended: boolean,
-	-- The game's RequestShot, AimUpdate and GiveItem connections, and when the shooter's last live aim was passed on
+	-- The game's RequestShot, AimUpdate, UseItem and GiveItem connections, and when the shooter's last live aim was
+	-- passed on
 	connection: RBXScriptConnection?,
 	aimConnection: RBXScriptConnection?,
+	useConnection: RBXScriptConnection?,
 	giveConnection: RBXScriptConnection?,
 	lastAim: number,
 	-- Each player's stats for the end screen
@@ -156,8 +159,10 @@ local function sendItems(match: Match, player: Player?)
 	match.pops = {}
 end
 
--- The turn passes from `seat`: with SinkItemsWaitForTurnEnd on, the items its sinks filled arrive now
+-- The turn passes from `seat`: its Power Shot ends, so do the other side's effects whose next turn this was, and with
+-- SinkItemsWaitForTurnEnd on, the items its sinks filled arrive now
 local function turnEnds(match: Match, seat: number)
+	Items.turnEnded(match.items, seat)
 	if Config.Items.SinkItemsWaitForTurnEnd then
 		Items.award(match.items, seat, roll)
 	end
@@ -312,6 +317,7 @@ function startTurn(match: Match, fresh: boolean)
 	if pop then
 		table.insert(match.pops, pop)
 	end
+	Items.newShot(match.items, match.turnSeat, fresh)
 	-- Tells the shooter's screen to start the shot at break power before the server's copy arrives. Display only.
 	match.tableModel:SetAttribute("BreakNext", match.isBreak)
 	local clock = {}
@@ -519,6 +525,30 @@ function shoot(
 	startTurn(match, fresh)
 end
 
+-- The shooter uses an item before their shot: while their clock runs, at most one UseItem every
+-- Config.Items.UseCooldown, and through every check in Items.use. It's for their turn's seat, which in 2v2 can be a
+-- teammate's who left. Everyone hears, for the big name and the effect.
+local function useItem(match: Match, player: Seat.Seat, slot: unknown, target: unknown)
+	local now = os.clock()
+	if
+		match.ended
+		or not match.clock
+		or player ~= match.shooter
+		or now - (match.lastUse[player] or -math.huge) < Config.Items.UseCooldown
+	then
+		return
+	end
+	match.lastUse[player] = now
+	local tableModel = match.tableModel
+	local tableParams = PhysicsTestAccess.params().Table
+	local item, checked = Items.use(match.items, match.turnSeat, slot, target, Balls.get(tableModel), tableParams, roll)
+	if item then
+		log(match, `{player.Name} uses {Items.NAMES[item]}`)
+		Remotes.ItemUsed:FireAllClients(tableModel, match.turnSeat, item, checked)
+		sendItems(match)
+	end
+end
+
 -- The test panel's buttons (testers only, PhysicsTestAccess): puts an item in the sender's first empty slot
 local function give(match: Match, player: Player, item: unknown)
 	local seat = table.find(match.seats, player)
@@ -562,6 +592,7 @@ function Match.new(
 		isBreak = true,
 		groups = {},
 		lastRequest = {},
+		lastUse = {},
 		ended = false,
 		connection = nil,
 		aimConnection = nil,
@@ -581,6 +612,9 @@ function Match.new(
 	end)
 	match.aimConnection = Remotes.AimUpdate.OnServerEvent:Connect(function(player: Player, ...: unknown)
 		relayAim(match, player, ...)
+	end)
+	match.useConnection = Remotes.UseItem.OnServerEvent:Connect(function(player: Player, slot: unknown, target: unknown)
+		useItem(match, player, slot, target)
 	end)
 	match.giveConnection = Remotes.GiveItem.OnServerEvent:Connect(function(player: Player, item: unknown)
 		give(match, player, item)
@@ -667,6 +701,9 @@ function Match.destroy(match: Match)
 	end
 	if match.aimConnection then
 		match.aimConnection:Disconnect()
+	end
+	if match.useConnection then
+		match.useConnection:Disconnect()
 	end
 	if match.giveConnection then
 		match.giveConnection:Disconnect()

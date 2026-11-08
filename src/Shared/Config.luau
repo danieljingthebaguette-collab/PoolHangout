@@ -98,6 +98,8 @@ local Config = {
 		-- When true, an item your own sinks fill waits for the end of your turn, instead of arriving at once
 		SinkItemsWaitForTurnEnd = false,
 		Slots = 2,
+		UseCooldown = 0.5, -- the server ignores a player's item uses closer together than this
+		PickRadius = 2, -- ball radii: picking a ball for Freeze takes the nearest one within this of the click
 		-- Every item a bar can give, each equally likely
 		List = { "powerShot", "blastBall", "freeze", "oilSlick", "pocketBlock" },
 	},

@@ -43,6 +43,7 @@ local Theme = {
 		BallMark = Color3.fromRGB(245, 242, 230), -- the white on the placeholder balls: stripes and number dots
 		CueBallMark = Color3.fromRGB(200, 35, 35),
 		BallShadow = Color3.fromRGB(10, 20, 40),
+		ItemPicking = ACCENT, -- the outline round the item slot you're picking a target for
 	},
 
 	Ui = {
@@ -101,11 +102,55 @@ local Theme = {
 		-- the item bar under them. Placeholder looks until the GUI pass.
 		ItemStripGap = 3, -- between the card and the slots
 		ItemSlotGap = 2, -- between the two slots, and between the slots and the bar
-		ItemSlotTextSize = 12, -- the short name on a slot, until slots get icons
 		ItemBarHeight = 4,
 		ItemPopTextSize = 16, -- the "+4" that rises from a bar when it fills...
 		ItemPopRise = 16, -- ...this many pixels...
 		ItemPopSeconds = 0.8, -- ...as it fades out
+		-- Your own 2 item slots, bottom center of the top-down view (ItemSlots). With the key boxes poking out they stay
+		-- inside Hints.bottomBand(). Placeholder looks until the GUI pass.
+		ItemSlotSize = 52,
+		ItemSlotSpacing = 10, -- between the two
+		ItemSlotIconInset = 9, -- the icon's margin inside a slot, clear of its corner brackets
+		ItemKeySize = 20, -- the dark key box on each slot's top-left corner, "1" or "2"...
+		ItemKeyTextSize = 14,
+		ItemKeyOverhang = 6, -- ...poking out of the slot this far...
+		ItemKeyEdge = 1, -- ...with a thin cream edge, so it reads on the dark slot
+		ItemEmptyTransparency = 0.5, -- an empty slot is see-through, with a dashed outline...
+		ItemDashCount = 3, -- ...of this many dashes along each side...
+		ItemDashLength = 8, -- ...this long, as thick as the cards' brackets
+		-- While you can't use an item: a dark veil over each full slot, this see-through, and the keys' text and edges
+		-- this see-through
+		ItemDimVeil = 0.4,
+		ItemDimKey = 0.6,
+		-- An item's name shown big in the middle of the screen as it's used (ItemName)
+		ItemNameTextSize = 48,
+		ItemNameHeight = 76, -- its dark box...
+		ItemNameIconSize = 52, -- ...with the item's icon beside the name
+		ItemNameSeconds = 1.5, -- on screen in all (GAME_SPEC)...
+		ItemNamePopSeconds = 0.15, -- ...popping in...
+		ItemNamePopScale = 0.6, -- ...from this size, with a little overshoot...
+		ItemNameFadeSeconds = 0.3, -- ...and fading out at the end
+	},
+
+	-- The item icons (ItemIcons), drawn in code on the dark slots. Icy blue is the one color outside the palette, since
+	-- Freeze glows icy blue (GAME_SPEC)
+	ItemIcons = {
+		Flame = ORANGE, -- Power Shot: an orange flame...
+		FlameHeart = ACCENT, -- ...with a gold heart...
+		FlameCore = CREAM, -- ...and a cream core
+		Burst = ACCENT, -- Blast Ball: a gold burst...
+		BurstInner = ORANGE, -- ...an orange one inside it...
+		BurstCore = CREAM, -- ...and a cream core
+		Ice = Color3.fromRGB(150, 215, 255), -- Freeze: an icy blue snowflake...
+		IceCore = CREAM, -- ...with a cream heart
+		Oil = Color3.fromRGB(66, 50, 42), -- Oil Slick: a dark drop over a puddle...
+		OilEdge = CREAM, -- ...edged in cream, so they read on the dark slots...
+		OilShine = CREAM, -- ...with a cream gloss on each
+		PocketRim = Color3.fromRGB(122, 70, 40), -- Pocket Block: a black pocket in painted wood...
+		PocketHole = Color3.fromRGB(14, 11, 9),
+		Lid = ACCENT, -- ...with a gold lid across it...
+		LidEdge = INK, -- ...edged in ink
+		Edge = 0.05, -- the edges, as a share of the icon's width
 	},
 
 	-- The placeholder balls' markings, so you can see them roll, in ball radii. Solids, the 8 and the cue ball

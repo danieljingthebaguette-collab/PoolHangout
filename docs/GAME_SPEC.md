@@ -105,9 +105,8 @@ Laid out like 8 Ball Duels, in the look `docs/STYLE.md` describes: cream cards, 
   - a Leave button top right while you're at a table, in both views (see Leaving)
   - a settings button bottom-left with a sound volume slider. The volume lasts for the session and isn't saved *(default)*. It shows only in the top-down view, so it never covers the phones' thumbstick.
   - a gold ring pulses once around each of your balls, growing and fading over 2 seconds, when your turn starts, while the balls keep their own colors, so you can see which are yours: your group's, or the 8 once your group is cleared. No rings show on an open table, where no ball is yours yet
-  - under each player's avatar on their card, their 2 item slots and their item bar, with a "+4" rising from the bar each time it fills and a glow while it's full with both slots taken. Short names stand in for the slots' icons until the Using items step
-- **Coming next:**
-  - your item slots 1 and 2 at the bottom center (Items), with icons drawn in code
+  - under each player's avatar on their card, their 2 item slots and their item bar, with a "+4" rising from the bar each time it fills and a glow while it's full with both slots taken
+  - your item slots 1 and 2 at the bottom center, each with its key and its item's icon drawn in code, dimmed while you can't use one, and outlined in gold while it waits for a target
 
 ## 8-ball rules
 

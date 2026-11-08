@@ -13,12 +13,13 @@ local Items = require(ReplicatedStorage.Shared.Items)
 local Seat = require(ReplicatedStorage.Shared.Seat)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Card = require(script.Parent.Card)
+local ItemIcons = require(script.Parent.ItemIcons)
 local Ui = require(script.Parent.Ui)
 
 local TopBar = {}
 
 -- Under an avatar: its seat's item slots, and the bar's gold fill with the glow it gets when full
-type Strip = { frame: Frame, slots: { TextLabel }, fill: Frame, glow: UIStroke }
+type Strip = { frame: Frame, slots: { Frame }, fill: Frame, glow: UIStroke }
 
 -- One side's card: the card and its glow, up to two players' avatars with their rings and item strips, the names, and the
 -- row with the group and its balls
@@ -45,10 +46,6 @@ local shownUsers: { [ImageLabel]: number } = {}
 local cardSides: { string }? = nil
 local shownBars: { Items.Bar }? = nil
 
--- Short names on the slots until they get icons drawn in code (Phase 3's Using items step)
-local SHORT: { [string]: string } =
-	{ powerShot = "PS", blastBall = "BB", freeze = "FR", oilSlick = "OS", pocketBlock = "PB" }
-
 local function avatarSize(): number
 	return Theme.Ui.CardHeight - 2 * Theme.Ui.Padding
 end
@@ -71,13 +68,12 @@ local function itemStrip(gui: ScreenGui, anchorX: number, x: number): Strip
 	frame.Parent = gui
 	local slots = {}
 	for i = 1, Config.Items.Slots do
-		local slot = Ui.label("", frame)
+		local slot = Instance.new("Frame")
 		slot.Position = UDim2.fromOffset((i - 1) * (size + ui.ItemSlotGap), 0)
 		slot.Size = UDim2.fromOffset(size, size)
-		slot.BackgroundTransparency = 0
 		slot.BackgroundColor3 = Theme.Colors.Dark
-		slot.TextColor3 = Theme.Colors.DarkText
-		slot.TextSize = ui.ItemSlotTextSize
+		slot.BorderSizePixel = 0
+		slot.Parent = frame
 		Ui.roundCorners(slot)
 		slots[i] = slot
 	end
@@ -336,9 +332,9 @@ local function showStrips(pops: { Items.Pop }?)
 			local bar = if seat and shownBars then shownBars[seat] else nil
 			strip.frame.Visible = bar ~= nil and card.card.Visible and card.avatars[i].Visible
 			if bar then
-				for slot, label in strip.slots do
+				for slot, holder in strip.slots do
 					local item = bar.slots[slot]
-					label.Text = if item then SHORT[item :: string] or "?" else ""
+					ItemIcons.draw(if item then item :: string else "", holder)
 				end
 				local share = math.clamp(bar.points / Config.Items.BarPoints, 0, 1)
 				strip.fill.Size = UDim2.fromScale(share, 1)
