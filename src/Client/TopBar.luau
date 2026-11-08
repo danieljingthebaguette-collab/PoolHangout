@@ -1,11 +1,15 @@
 --!strict
 -- The top bar: a card for each side, left and right of the gap kept in the middle for the shot clock. Each shows its
--- players' avatars and names, whose turn it is, and with a game on, its group and that group's balls. Every screen draws
--- it from the server's TurnStarted message, so they all agree.
+-- players' avatars and names, whose turn it is, and with a game on, its group and that group's balls. Under each
+-- avatar, that seat's 2 item slots and its item bar, with a "+4" rising from the bar each time it fills. Every screen
+-- draws it from the server's TurnStarted and ItemsChanged messages, so they all agree.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
+local Config = require(ReplicatedStorage.Shared.Config)
+local Items = require(ReplicatedStorage.Shared.Items)
 local Seat = require(ReplicatedStorage.Shared.Seat)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Card = require(script.Parent.Card)
@@ -13,8 +17,11 @@ local Ui = require(script.Parent.Ui)
 
 local TopBar = {}
 
--- One side's card: the card and its glow, up to two players' avatars with their rings, the names, and the row with the
--- group and its balls
+-- Under an avatar: its seat's item slots, and the bar's gold fill with the glow it gets when full
+type Strip = { frame: Frame, slots: { TextLabel }, fill: Frame, glow: UIStroke }
+
+-- One side's card: the card and its glow, up to two players' avatars with their rings and item strips, the names, and the
+-- row with the group and its balls
 type SideCard = {
 	left: boolean,
 	halo: Frame,
@@ -22,6 +29,7 @@ type SideCard = {
 	outline: UIStroke,
 	avatars: { ImageLabel },
 	rings: { UIStroke },
+	strips: { Strip },
 	text: Frame,
 	names: TextLabel,
 	row: Frame,
@@ -32,6 +40,85 @@ local sideCards: { SideCard } = {}
 -- Avatar pictures by user id, so each is only asked for once, and the user each avatar shows
 local thumbnails: { [number]: string } = {}
 local shownUsers: { [ImageLabel]: number } = {}
+-- The side each card shows, "A" or "B", from the last turn message, and the bars from the last ItemsChanged. Nil with no
+-- game on.
+local cardSides: { string }? = nil
+local shownBars: { Items.Bar }? = nil
+
+-- Short names on the slots until they get icons drawn in code (Phase 3's Using items step)
+local SHORT: { [string]: string } =
+	{ powerShot = "PS", blastBall = "BB", freeze = "FR", oilSlick = "OS", pocketBlock = "PB" }
+
+local function avatarSize(): number
+	return Theme.Ui.CardHeight - 2 * Theme.Ui.Padding
+end
+
+local function slotSize(): number
+	return (avatarSize() - Theme.Ui.ItemSlotGap) / 2
+end
+
+-- An avatar's item strip, in `gui` under the card: two slots side by side, as wide as the avatar together, and the bar
+-- under them. Hidden until there are items to show.
+local function itemStrip(gui: ScreenGui, anchorX: number, x: number): Strip
+	local ui = Theme.Ui
+	local size = slotSize()
+	local frame = Instance.new("Frame")
+	frame.AnchorPoint = Vector2.new(anchorX, 0)
+	frame.Position = UDim2.new(0.5, x, 0, ui.Padding + ui.CardHeight + ui.ItemStripGap)
+	frame.Size = UDim2.fromOffset(avatarSize(), size + ui.ItemSlotGap + ui.ItemBarHeight)
+	frame.BackgroundTransparency = 1
+	frame.Visible = false
+	frame.Parent = gui
+	local slots = {}
+	for i = 1, Config.Items.Slots do
+		local slot = Ui.label("", frame)
+		slot.Position = UDim2.fromOffset((i - 1) * (size + ui.ItemSlotGap), 0)
+		slot.Size = UDim2.fromOffset(size, size)
+		slot.BackgroundTransparency = 0
+		slot.BackgroundColor3 = Theme.Colors.Dark
+		slot.TextColor3 = Theme.Colors.DarkText
+		slot.TextSize = ui.ItemSlotTextSize
+		Ui.roundCorners(slot)
+		slots[i] = slot
+	end
+	local track = Instance.new("Frame")
+	track.Position = UDim2.fromOffset(0, size + ui.ItemSlotGap)
+	track.Size = UDim2.new(1, 0, 0, ui.ItemBarHeight)
+	track.BackgroundColor3 = Theme.Colors.Dark
+	track.BorderSizePixel = 0
+	track.Parent = frame
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.fromScale(0, 1)
+	fill.BackgroundColor3 = Theme.Colors.Fill
+	fill.BorderSizePixel = 0
+	fill.Parent = track
+	-- Full with both slots full: it glows until a slot frees and its item arrives
+	local glow = Instance.new("UIStroke")
+	glow.Color = Theme.Colors.TurnGlow
+	glow.Thickness = ui.TurnGlow
+	glow.Enabled = false
+	glow.Parent = track
+	return { frame = frame, slots = slots, fill = fill, glow = glow }
+end
+
+-- A "+4" that rises from a strip's bar and fades, so players learn what fills it
+local function pop(strip: Strip, points: number)
+	local ui = Theme.Ui
+	local label = Ui.label(`+{points}`, strip.frame)
+	label.AnchorPoint = Vector2.new(0.5, 1)
+	label.Position = UDim2.fromScale(0.5, 1)
+	label.Size = UDim2.new(1, 0, 0, ui.ItemPopTextSize)
+	label.TextSize = ui.ItemPopTextSize
+	label.TextColor3 = Theme.Colors.Fill
+	label.ZIndex = 2
+	local edge = Instance.new("UIStroke")
+	edge.Color = Theme.Colors.Text
+	edge.Parent = label
+	local info = TweenInfo.new(ui.ItemPopSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TweenService:Create(label, info, { Position = UDim2.new(0.5, 0, 1, -ui.ItemPopRise), TextTransparency = 1 }):Play()
+	TweenService:Create(edge, info, { Transparency = 1 }):Play()
+	task.delay(ui.ItemPopSeconds, label.Destroy, label)
+end
 
 -- A side's card. The two are mirrored, so the avatars sit by the gap. Hidden until it has players to show.
 local function sideCard(gui: ScreenGui, left: boolean): SideCard
@@ -67,15 +154,17 @@ local function sideCard(gui: ScreenGui, left: boolean): SideCard
 	outline.Enabled = false
 	outline.Parent = card
 
-	-- Two avatars side by side from the edge by the gap, for 2v2. The shooter's gets a gold ring.
-	local avatarSize = Theme.Ui.CardHeight - 2 * Theme.Ui.Padding
-	local avatars, rings = {}, {}
+	-- Two avatars side by side from the edge by the gap, for 2v2. The shooter's gets a gold ring. Each has its item
+	-- strip under the card.
+	local size = avatarSize()
+	local avatars, rings, strips = {}, {}, {}
 	for i = 1, 2 do
+		local fromEdge = inward * (Theme.Ui.Padding + (i - 1) * (size + Theme.Ui.Padding / 2))
+		strips[i] = itemStrip(gui, anchorX, x + fromEdge)
 		local avatar = Instance.new("ImageLabel")
 		avatar.AnchorPoint = Vector2.new(anchorX, 0.5)
-		avatar.Position =
-			UDim2.new(anchorX, inward * (Theme.Ui.Padding + (i - 1) * (avatarSize + Theme.Ui.Padding / 2)), 0.5, 0)
-		avatar.Size = UDim2.fromOffset(avatarSize, avatarSize)
+		avatar.Position = UDim2.new(anchorX, fromEdge, 0.5, 0)
+		avatar.Size = UDim2.fromOffset(size, size)
 		avatar.BackgroundColor3 = Theme.Colors.Dark
 		avatar.Visible = false
 		avatar.Parent = card
@@ -129,6 +218,7 @@ local function sideCard(gui: ScreenGui, left: boolean): SideCard
 		outline = outline,
 		avatars = avatars,
 		rings = rings,
+		strips = strips,
 		text = text,
 		names = names,
 		row = row,
@@ -194,8 +284,7 @@ local function showSide(
 	end
 	side.names.Text = table.concat(names, " · ")
 	-- The text starts beside the last avatar shown
-	local avatarSize = Theme.Ui.CardHeight - 2 * Theme.Ui.Padding
-	local used = Theme.Ui.Padding * 3 / 2 + math.max(#players, 1) * (avatarSize + Theme.Ui.Padding / 2)
+	local used = Theme.Ui.Padding * 3 / 2 + math.max(#players, 1) * (avatarSize() + Theme.Ui.Padding / 2)
 	side.text.Position = UDim2.new(if side.left then 1 else 0, (if side.left then -1 else 1) * used, 0.5, 0)
 	side.text.Size = UDim2.new(1, -used - Theme.Ui.Padding * 2, 1, 0)
 
@@ -237,6 +326,46 @@ local function showSide(
 	end
 end
 
+-- Draws each shown avatar's item strip from the last bars, and the pops just earned. Seats go A1, B1, A2, B2, so a
+-- side's avatars are its seats in that order.
+local function showStrips(pops: { Items.Pop }?)
+	for k, card in sideCards do
+		local side = cardSides and cardSides[k]
+		for i, strip in card.strips do
+			local seat = if side == "A" then 2 * i - 1 elseif side == "B" then 2 * i else nil
+			local bar = if seat and shownBars then shownBars[seat] else nil
+			strip.frame.Visible = bar ~= nil and card.card.Visible and card.avatars[i].Visible
+			if bar then
+				for slot, label in strip.slots do
+					local item = bar.slots[slot]
+					label.Text = if item then SHORT[item :: string] or "?" else ""
+				end
+				local share = math.clamp(bar.points / Config.Items.BarPoints, 0, 1)
+				strip.fill.Size = UDim2.fromScale(share, 1)
+				strip.glow.Enabled = share >= 1
+				for _, earned in (pops or {}) :: { Items.Pop } do
+					if earned.seat == seat and strip.frame.Visible then
+						pop(strip, earned.points)
+					end
+				end
+			end
+		end
+	end
+end
+
+-- Draws every seat's item slots and bar from an ItemsChanged message, with a pop for each bar's points just earned.
+-- No bars hides them.
+function TopBar.showItems(bars: { Items.Bar }?, pops: { Items.Pop }?)
+	shownBars = bars
+	showStrips(pops)
+end
+
+-- How far down the screen the top bar reaches, item strips included, for the top-down view's reserve
+function TopBar.height(): number
+	local ui = Theme.Ui
+	return ui.Padding + ui.CardHeight + ui.ItemStripGap + slotSize() + ui.ItemSlotGap + ui.ItemBarHeight
+end
+
 -- Builds both cards in `gui`, hidden
 function TopBar.build(gui: ScreenGui)
 	sideCards = { sideCard(gui, true), sideCard(gui, false) }
@@ -252,8 +381,10 @@ function TopBar.show(
 )
 	local me = Players.LocalPlayer
 	if not seats then
+		cardSides = nil
 		showSide(sideCards[1], { me }, nil, nil, nil)
 		showSide(sideCards[2], {}, nil, nil, nil)
+		showStrips(nil)
 		return
 	end
 	-- Seats go A1, B1, A2, B2. A 2v2 player who left shows as the teammate playing for them, so only once.
@@ -273,6 +404,8 @@ function TopBar.show(
 	end
 	showSide(sideCards[1], sides[mine], shooter, (groups or {})[mine], down)
 	showSide(sideCards[2], sides[theirs], shooter, (groups or {})[theirs], down)
+	cardSides = { mine, theirs }
+	showStrips(nil)
 end
 
 return TopBar

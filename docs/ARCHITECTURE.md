@@ -47,7 +47,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Client/Hud.luau` | Starts the HUD's parts below, shows them in the top-down view, and "TEST MODE"; later item slots with icons drawn in code and the item's name shown big |
 | `Client/ShotClock.luau` | The shot clock between the top bar's cards, counting to the server's clock end time |
 | `Client/TurnArrow.luau` | The gold "Turn" card over each table's shooter in the normal view, with their name under "Turn" |
-| `Client/TopBar.luau` | Each side's card: avatars, names, the turn glow, and the group with its balls; later every card's item slots and bar with its "+4" pops |
+| `Client/TopBar.luau` | Each side's card: avatars, names, the turn glow, and the group with its balls; under each avatar, that seat's 2 item slots (short names until they get icons) and its item bar, glowing when full, with a "+4" rising each time it fills, from `ItemsChanged` |
 | `Client/Banner.luau` | The banner under the top bar for the server's messages, for everyone at the table |
 | `Client/LeaveButton.luau` | The Leave button and the question it asks mid-game |
 | `Client/EndScreen.luau` | The end screen: who won and why, each player's stats, Rematch and Back to lobby |
@@ -60,7 +60,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Client/Slider.luau` | A labelled slider row for mouse and touch, for the settings and the test panel |
 | `Client/Card.luau` | The card look from `docs/STYLE.md`: cream or dark, with corner brackets and a faint dot texture |
 | `Client/Spectate.luau` | "Watch from above" (first week after launch; until then F) |
-| `Client/PhysicsTestPanel.luau` | Physics test mode controls (Studio, or the owner in a published server) |
+| `Client/PhysicsTestPanel.luau` | Physics test mode controls (Studio, or the owner in a published server), and Give buttons that put any item in your slots during a game (`GiveItem`) |
 
 Pure modules require each other only by relative string path, like `require("./Geometry")` or `require("../Config")`. That form works in both Roblox and Lune.
 
@@ -107,12 +107,12 @@ Starting values for Config (tune by feel):
 
 ## A shot, end to end
 
-1. `Match` starts a turn: it sets the shooter, `clockEndsAt` from `workspace:GetServerTimeNow()`, the ball-in-hand area, whether a pocket must be called, any item the shooter earns for the turn, everyone's held items and the active effects, then fires `TurnStarted` to everyone.
+1. `Match` starts a turn: it sets the shooter, `clockEndsAt` from `workspace:GetServerTimeNow()`, the ball-in-hand area and whether a pocket must be called, adds `TurnPoints` to the seat's bar when a new turn starts, then fires `TurnStarted` to everyone, and `ItemsChanged` with every seat's bar and slots and the points just earned.
 2. The shooter's `ShotController` runs the camera, placement, aim, pocket call, any item use and power meter locally, then fires `RequestShot` with the aim direction, power (0–1, or up to `PowerShotMax` while the shooter's Power Shot is on), cue ball placement and called pocket. An item goes first, through `UseItem` (see Items).
 3. The server validates the request (see `.claude/rules/server.md`) and normalizes the direction.
 4. It fires `ShotStarted` with the exact start balls, the shot, the item effects and the physics params it used, so every client simulates with the server's numbers even while test mode changes them live. Then it simulates the shot in slices of a couple of milliseconds per frame, so even a break never stalls the server. It finishes long before the replay does.
 5. Each client steps the same simulation as it plays the shot back in real time, so every client sees the same shot and no frame does much work.
-6. Once the server's simulation is done and the shot's duration plus a short buffer has passed, the server runs `EightBall.resolveShot`, moves the ball parts to their final positions and fires `ShotResolved` with the final balls, the outcome and any item earned by sinking. Clients snap to those positions, which also corrects any drift.
+6. Once the server's simulation is done and the shot's duration plus a short buffer has passed, the server runs `EightBall.resolveShot`, moves the ball parts to their final positions and fires `ShotResolved` with the final balls, after adding the sink points to the bars (sent with the next turn's `ItemsChanged`). Clients snap to those positions, which also corrects any drift.
 7. Then the next turn, or the end of the game.
 
 - **Ball parts** are anchored, non-colliding parts the server creates for each table and moves only between shots. During a replay each client moves them locally. Players who join later get the resting positions through normal replication.
@@ -161,7 +161,7 @@ Notes from the health pass on where each part of the Items phase joins today's c
   - The point where `shoot` clears `match.clock` (the shot has gone) is where "an item was used this shot" resets.
   - Effects that last "until the end of the other side's next turn" end where the turn passes: `TableFlow.afterShot` or `TableFlow.afterTimeout` returning a different seat.
 - **Key item state by seat number, not by player.** `stats` and `votes` are keyed by the seat's occupant (a Player or Coach's model). GAME_SPEC gives a player who takes over a leaver's spot that spot's items and bar, so slots and bars belong to the seat.
-- **`TurnStarted` gets a table.** It already carries 8 values in order, and items add held items, bars, the points just added and the active effects. Switch it to one table argument in a single change: `Remotes.luau`, `Match`'s `turnMessage`, `PhysicsTest`, and the client listeners in `ShotController`, `Hud`, `TurnArrow` and `EndScreen`.
+- **Items get their own remote, `ItemsChanged`** (decided 2026-11-08, instead of growing `TurnStarted` into a table): the bars, slots and pops go to every screen right after each `TurnStarted`, so no `TurnStarted` listener changes.
 - **`effects` through the simulation.** `Simulate.start(balls, shot, params)` and `Preview` take no effects yet. Add an `effects` argument, where an empty table gives today's behavior, and pass it through `Balls.shoot`, `ShotStarted` and `TableView`'s replay and `predict`, so every screen simulates the same shot. Coach's `ShotPicker` can ignore effects at first.
 - **Power past 100%.** Four places cap power at 1, and each needs `PowerShotMax` while the shooter's Power Shot is on:
   - `Pull.power`
@@ -211,10 +211,11 @@ Workspace
 | `SayPhrase` | client → server | A quick phrase, by index (Later list) |
 | `UseItem` | client → server | Slot, and a target: a ball id, a point on the felt or a pocket id |
 | `TableChanged` | server → clients | Sign text, state, seats |
-| `TurnStarted` | server → clients | Shooter, the game's players in turn order (a 2v2 player who pressed Leave shows as their teammate), clock end time, ball in hand (true or false), pocket call needed, each side's group and the balls down (the top bar draws from these, so every screen agrees), held items, item bars and the points just added, any item earned, active effects. Players with no shooter: the game is over and its result is showing, so nobody shoots. No players means no game is on: the game just ended, or the physics test mode's ball in hand |
+| `TurnStarted` | server → clients | Shooter, the game's players in turn order (a 2v2 player who pressed Leave shows as their teammate), clock end time, ball in hand (true or false), pocket call needed, each side's group and the balls down (the top bar draws from these, so every screen agrees). Players with no shooter: the game is over and its result is showing, so nobody shoots. No players means no game is on: the game just ended, or the physics test mode's ball in hand |
+| `ItemsChanged` | server → clients | Each seat's item bar in turn order: its points and its slots (an item name, or false when empty), and the `{ seat, points }` pops earned since the last message. Sent after each `TurnStarted` and whenever slots change; none when the game ends, which clears them |
 | `ItemUsed` | server → clients | Who used which item, and its target |
 | `ShotStarted` | server → clients | Start balls, shot, item effects and physics params to replay |
-| `ShotResolved` | server → clients | Final balls, the outcome, item bars and the points just added, and any item earned |
+| `ShotResolved` | server → clients | Final balls |
 | `Banner` | server → clients | A message for everyone at the table and how many seconds to show it: a foul and who has ball in hand, or until the end screen, who won and why |
 | `GameOver` | server → clients | To each player still in a decided game: who won and why, the winning side, each seat's stats, whether a rematch is possible, and when the end screen closes |
 | `Rematch` | client → server, and server → clients | Rematch (true) or Back to lobby (false), once per game. Back to the game's players: every answer so far |
@@ -223,6 +224,7 @@ Workspace
 | `TestShoot` | client → server | Physics test mode: direction, power and cue ball placement |
 | `TestTune` | client → server, and server → client | Physics test mode: a slider's name and value. Its attributes hold every slider's current value. Back to one client, with nothing, when the server turned its change down, so its panel shows the kept values |
 | `TestPrint` | client → server | Physics test mode: the server prints every slider's value to the Output |
+| `GiveItem` | client → server | Test panel, testers only: an item name, put in the sender's first empty slot in their game |
 
 ## Tutorial (Phase 4, planned)
 

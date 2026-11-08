@@ -5,7 +5,8 @@
 -- player's stats, and anyone else near the table sees the result as a banner. When every player still in presses
 -- Rematch, or the end screen's time is up, the game tells TableService, which starts the rematch or ends the game.
 -- Each turn has a shot clock: running out is a foul. A seat can hold Coach, the bot (Seat.luau), which plays its turns
--- here with ShotPicker's shots, through the same checks as a player's.
+-- here with ShotPicker's shots, through the same checks as a player's. Each seat's item bar fills as turns start and
+-- balls drop (Items.luau), and every screen hears about it through ItemsChanged.
 -- ponytail: no takeovers, or removal after 2 timeouts in a row, until Phase 4's leaving rules.
 
 local Players = game:GetService("Players")
@@ -15,6 +16,7 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local EightBall = require(ReplicatedStorage.Shared.Rules.EightBall)
 local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
+local Items = require(ReplicatedStorage.Shared.Items)
 local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Seat = require(ReplicatedStorage.Shared.Seat)
@@ -47,12 +49,16 @@ export type Match = {
 	lastRequest: { [Seat.Seat]: number },
 	-- No more shots: the game is over, or was ended
 	ended: boolean,
-	-- The game's RequestShot and AimUpdate connections, and when the shooter's last live aim was passed on
+	-- The game's RequestShot, AimUpdate and GiveItem connections, and when the shooter's last live aim was passed on
 	connection: RBXScriptConnection?,
 	aimConnection: RBXScriptConnection?,
+	giveConnection: RBXScriptConnection?,
 	lastAim: number,
 	-- Each player's stats for the end screen
 	stats: { [Seat.Seat]: EightBall.Stats },
+	-- Each seat's item bar and slots, and the points earned since every screen last heard, for their pops
+	items: Items.State,
+	pops: { Items.Pop },
 	-- Once the game is over, each player's answer on the end screen: true for Rematch, false for Back to lobby. Closed
 	-- once the end screen is done with, after which nothing more happens.
 	votes: { [Seat.Seat]: boolean },
@@ -63,8 +69,11 @@ export type Match = {
 
 local Match = {}
 
--- Coach's aim error
+-- Coach's aim error, and the items bars give
 local random = Random.new()
+local function roll(): number
+	return random:NextNumber()
+end
 
 -- The banner's words for each foul, and for how a game ended
 local FOUL_TEXT: { [EightBall.Foul]: string } = {
@@ -137,7 +146,24 @@ local function turnMessage(match: Match): ...any
 		if shooter then match.clockEndsAt else nil
 end
 
-local startTurn: (Match) -> ()
+-- Tells every screen, or one, about each seat's bar and slots, with the pops earned since the last time
+local function sendItems(match: Match, player: Player?)
+	if player then
+		Remotes.ItemsChanged:FireClient(player, match.tableModel, match.items.bars, {})
+		return
+	end
+	Remotes.ItemsChanged:FireAllClients(match.tableModel, match.items.bars, match.pops)
+	match.pops = {}
+end
+
+-- The turn passes from `seat`: with SinkItemsWaitForTurnEnd on, the items its sinks filled arrive now
+local function turnEnds(match: Match, seat: number)
+	if Config.Items.SinkItemsWaitForTurnEnd then
+		Items.award(match.items, seat, roll)
+	end
+end
+
+local startTurn: (Match, boolean) -> ()
 
 -- The shot clock ran out: a foul, so the turn passes with ball in hand, or on the break the next player breaks
 local function timeOut(match: Match)
@@ -146,13 +172,14 @@ local function timeOut(match: Match)
 	end
 	log(match, `{match.shooter.Name} ran out of time`)
 	EightBall.countTimeout(match.stats[match.shooter])
+	turnEnds(match, match.turnSeat)
 	local wasBreak = match.isBreak
 	match.turnSeat, match.ballInHand = TableFlow.afterTimeout(match.turnSeat, #match.seats, match.isBreak)
 	match.shooter = shooterFor(match, match.turnSeat)
 	local name = Seat.name(match.shooter)
 	local text = if wasBreak then `Time's up. {name} breaks.` else `Time's up. {name} has ball in hand.`
 	Remotes.Banner:FireAllClients(match.tableModel, text, Config.Timers.FoulBannerSeconds)
-	startTurn(match)
+	startTurn(match, true)
 end
 
 local shoot: (Match, Seat.Seat, ...unknown) -> ()
@@ -278,7 +305,13 @@ local function botTurn(match: Match, clock: {})
 	end)
 end
 
-function startTurn(match: Match)
+-- Starts a shot's clock and tells every screen. `fresh` when a new turn starts, a new player's visit to the table,
+-- rather than a shot the same player keeps: its seat's bar gets TurnPoints.
+function startTurn(match: Match, fresh: boolean)
+	local pop = if fresh then Items.add(match.items, match.turnSeat, Config.Items.TurnPoints, roll) else nil
+	if pop then
+		table.insert(match.pops, pop)
+	end
 	-- Tells the shooter's screen to start the shot at break power before the server's copy arrives. Display only.
 	match.tableModel:SetAttribute("BreakNext", match.isBreak)
 	local clock = {}
@@ -290,6 +323,7 @@ function startTurn(match: Match)
 		end
 	end)
 	Remotes.TurnStarted:FireAllClients(turnMessage(match))
+	sendItems(match)
 	seatCoaches(match)
 	if Seat.isBot(match.shooter) then
 		botTurn(match, clock)
@@ -351,6 +385,8 @@ local function finish(match: Match, winner: EightBall.Side, why: string)
 		else `{table.concat(names, " and ")} {if #names == 1 then "wins" else "win"}: {why}`
 	log(match, text)
 	Remotes.TurnStarted:FireAllClients(turnMessage(match))
+	-- Items and bars are cleared at the end of a game
+	Remotes.ItemsChanged:FireAllClients(match.tableModel, nil)
 	seatCoaches(match)
 	local rows = {}
 	for seat, player in match.seats do
@@ -440,6 +476,10 @@ function shoot(
 	if outcome.groups[side] and not match.groups[side] then
 		log(match, `{player.Name} ({side}) takes {outcome.groups[side]}`)
 	end
+	local pots = Items.scoringPots(match.groups[side], shot.isBreak == true, outcome.foul ~= nil, Simulate.dropped(sim))
+	for _, pop in Items.afterPots(match.items, match.turnSeat, pots, roll) do
+		table.insert(match.pops, pop)
+	end
 	match.groups = outcome.groups
 	EightBall.countShot(match.stats[player], side, outcome, Simulate.dropped(sim))
 	if outcome.foul then
@@ -451,8 +491,13 @@ function shoot(
 	-- The same seat or the next, with ball in hand after a foul: where the cue ball stopped, or back on the head line
 	-- if it went in. A shooter who left mid-shot hands it to their teammate.
 	local balls = sim.balls
+	local shotSeat = match.turnSeat
 	match.turnSeat, match.ballInHand =
 		TableFlow.afterShot(match.turnSeat, #match.seats, outcome, balls, layout, params.Table)
+	local fresh = match.turnSeat ~= shotSeat
+	if fresh then
+		turnEnds(match, shotSeat)
+	end
 	match.shooter = shooterFor(match, match.turnSeat)
 	if not outcome.keepsTurn and not outcome.winner then
 		log(match, `turn passes to {match.shooter.Name}`)
@@ -471,7 +516,25 @@ function shoot(
 		local text = `Foul: {FOUL_TEXT[outcome.foul]}. {Seat.name(match.shooter)} has ball in hand.`
 		Remotes.Banner:FireAllClients(tableModel, text, Config.Timers.FoulBannerSeconds)
 	end
-	startTurn(match)
+	startTurn(match, fresh)
+end
+
+-- The test panel's buttons (testers only, PhysicsTestAccess): puts an item in the sender's first empty slot
+local function give(match: Match, player: Player, item: unknown)
+	local seat = table.find(match.seats, player)
+	if
+		match.ended
+		or not seat
+		or type(item) ~= "string"
+		or not table.find(Config.Items.List, item)
+		or not PhysicsTestAccess.canTest(player)
+	then
+		return
+	end
+	if Items.give(match.items, seat, item :: Items.Item) then
+		log(match, `{player.Name} gave themself {item}`)
+		sendItems(match)
+	end
 end
 
 -- Racks the table and starts a game, with a random player breaking. `pick(n)` returns a random whole number from 1
@@ -504,6 +567,8 @@ function Match.new(
 		aimConnection = nil,
 		lastAim = -math.huge,
 		stats = {},
+		items = Items.new(#seats),
+		pops = {},
 		votes = {},
 		closed = false,
 		onEnd = onEnd,
@@ -517,12 +582,16 @@ function Match.new(
 	match.aimConnection = Remotes.AimUpdate.OnServerEvent:Connect(function(player: Player, ...: unknown)
 		relayAim(match, player, ...)
 	end)
+	match.giveConnection = Remotes.GiveItem.OnServerEvent:Connect(function(player: Player, item: unknown)
+		give(match, player, item)
+	end)
 	local names = {}
 	for _, player in seats do
 		table.insert(names, player.Name)
 	end
 	log(match, `game started: {table.concat(names, ", ")}. {match.shooter.Name} breaks.`)
-	startTurn(match)
+	-- The break is the breaker's first turn
+	startTurn(match, true)
 	return match
 end
 
@@ -540,7 +609,7 @@ function Match.leave(match: Match, player: Player)
 		if match.shooter == player and not Balls.isRolling(match.tableModel) then
 			-- Their turn, with the balls still: the teammate shoots now, and every screen drops the leaver
 			match.shooter = shooterFor(match, match.turnSeat)
-			startTurn(match)
+			startTurn(match, false)
 		else
 			-- Every other screen drops them at the next turn. A shot of theirs still rolling hands the turn on
 			-- when it's done.
@@ -583,6 +652,9 @@ end
 -- Tells one screen about the game as it stands, for a player who joined the server after it started
 function Match.showTo(match: Match, player: Player)
 	Remotes.TurnStarted:FireClient(player, turnMessage(match))
+	if not match.ended then
+		sendItems(match, player)
+	end
 end
 
 -- Ends the game at once. A shot still rolling finishes and is shown, but no turn follows it.
@@ -596,7 +668,11 @@ function Match.destroy(match: Match)
 	if match.aimConnection then
 		match.aimConnection:Disconnect()
 	end
+	if match.giveConnection then
+		match.giveConnection:Disconnect()
+	end
 	Remotes.TurnStarted:FireAllClients(match.tableModel, nil, false)
+	Remotes.ItemsChanged:FireAllClients(match.tableModel, nil)
 end
 
 return Match

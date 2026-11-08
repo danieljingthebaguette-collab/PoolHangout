@@ -88,6 +88,20 @@ local Config = {
 		RelaySmoothSeconds = 0.1,
 	},
 
+	-- Items (GAME_SPEC, Items): each player's item bar gives a random item every BarPoints, into the first empty slot
+	Items = {
+		BarPoints = 12,
+		TurnPoints = 3, -- at the start of each of your turns; the break is the breaker's first turn
+		OwnBallPoints = 4, -- for each of your own group's balls you sink, when the balls stop. On an open table, any legal pot
+		-- For each ball the other side sinks that earns them OwnBallPoints, to the other side's player who shoots next
+		OpponentBallPoints = 2,
+		-- When true, an item your own sinks fill waits for the end of your turn, instead of arriving at once
+		SinkItemsWaitForTurnEnd = false,
+		Slots = 2,
+		-- Every item a bar can give, each equally likely
+		List = { "powerShot", "blastBall", "freeze", "oilSlick", "pocketBlock" },
+	},
+
 	-- Placeholder sounds, the free "Pool Table SFX" set by m6oru on the Creator Store. Final ones come in Phase 4.
 	Sounds = {
 		CueStrike = "rbxassetid://99615500877700",

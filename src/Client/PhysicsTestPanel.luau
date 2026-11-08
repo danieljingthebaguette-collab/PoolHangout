@@ -1,13 +1,14 @@
 --!strict
 -- Physics test mode (see Config.Debug.PhysicsTest and PhysicsTestLive): R or the Rack button racks Table1, and the
--- sliders tune the physics live for everyone. Shots use the real controls (ShotController). The panel stays closed
--- until you open it with the Test button.
+-- sliders tune the physics live for everyone. Shots use the real controls (ShotController). Its Give buttons put an
+-- item in your slots during a game. The panel stays closed until you open it with the Test button.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Items = require(ReplicatedStorage.Shared.Items)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Card = require(script.Parent.Card)
@@ -142,6 +143,13 @@ function PhysicsTestPanel.start()
 		Remotes.TestPrint:FireServer()
 	end)
 	printButton.Parent = panel
+
+	-- Gives you an item in your game, into your first empty slot
+	for i, item in Config.Items.List do
+		button(`Give {Items.NAMES[item :: Items.Item]}`, #Config.Debug.TestSliders + 1 + i, function()
+			Remotes.GiveItem:FireServer(item)
+		end).Parent = panel
+	end
 
 	UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 		if gameProcessed then

@@ -7,7 +7,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current step:** Phase 3, Items
-- **In progress:** the first Phase 3 task, earning items. Phase 2 passed my solo tests on 2026-11-08; its 2-player and 4-player checks moved to the Phase 3 and Phase 4 friend playtests
+- **In progress:** Phase 3's second task, using items. Earning items is built: each seat's bar fills (+3 a turn, +4 your pots, +2 to the next opponent), gives items into its 2 slots, and shows under each avatar with "+4" pops; the test panel's Give buttons hand out any item. Phase 2 passed my solo tests on 2026-11-08; its 2-player and 4-player checks moved to the Phase 3 and Phase 4 friend playtests
 - **Dates:** launch moved to Friday, Dec 18 when the plan was reordered. The phase dates are Claude's proposal for that launch
 - **Last session:** 2026-11-08. Phase 2 marked done, the pulse skipped on an open table, the art director's review of my recorded clips, my store page and sound picks moved into Phase 3 (icon and thumbnails to Phase 6), then Phase 3 started
 - **Next up:** the Phase 3 tasks in order. My Phase 3 jobs: the store page's name and description, the music and sound picks, then the age check before the friends playtest
@@ -93,7 +93,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 **Goal:** players earn the 5 items during a game and use them, and games stay fair.
 
-- [ ] Earning items: one item bar per player that gives a random item at 12 points: +3 at the start of your turn, +4 for each of your balls you sink, +2 for each ball the other side sinks (in 2v2, all to the opponent who shoots next). When the bar fills with both slots full, it glows and the item arrives as soon as a slot frees. The bar sits under each card's 2 slots, with a small pop like "+4" for each fill. Test-panel buttons to give myself any item (Claude)
+- [x] Earning items: one item bar per player that gives a random item at 12 points: +3 at the start of your turn, +4 for each of your balls you sink, +2 for each ball the other side sinks (in 2v2, all to the opponent who shoots next). When the bar fills with both slots full, it glows and the item arrives as soon as a slot frees. The bar sits under each card's 2 slots, with a small pop like "+4" for each fill. Test-panel buttons to give myself any item (Claude)
 - [ ] Using items: press 1 or 2, on your own turn, one per shot, with the item's name shown big to everyone at the table. Slot icons drawn in code. Plain placeholder looks until the arena step (Claude)
 - [ ] Power Shot (for the rest of the turn the meter keeps filling past 100%, up to 150% at 1.5× the full pull) and Blast Ball (one shot), with Lune tests for the blast. Check that a 150% pull fits on screen for a cue ball against a long rail shooting straight across, on a 1920×1080 PC; if it doesn't, make the extra 50% take less pull. The phone check is in the Mobile phase (Claude)
 - [ ] Freeze, Oil Slick and Pocket Block: frozen balls and pocket lids bounce balls like rails, oil patches slow balls less, and the aim indicator knows about frozen balls and lids. The lock-out rules: no freezing the 8 or a side's last group ball, no Pocket Block against a side shooting at the 8, and no side targeting the same ball or pocket two turns running. With Lune tests (Claude)

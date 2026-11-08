@@ -97,6 +97,15 @@ local Theme = {
 		BannerHeight = 44,
 		LockButtonWidth = 80, -- the phones' Lock button, beside the power meter
 		TestButtonWidth = 80, -- the physics test panel's Test button, beside the settings gear
+		-- Under each avatar on a top bar card: its seat's 2 item slots side by side, as wide as the avatar together, and
+		-- the item bar under them. Placeholder looks until the GUI pass.
+		ItemStripGap = 3, -- between the card and the slots
+		ItemSlotGap = 2, -- between the two slots, and between the slots and the bar
+		ItemSlotTextSize = 12, -- the short name on a slot, until slots get icons
+		ItemBarHeight = 4,
+		ItemPopTextSize = 16, -- the "+4" that rises from a bar when it fills...
+		ItemPopRise = 16, -- ...this many pixels...
+		ItemPopSeconds = 0.8, -- ...as it fades out
 	},
 
 	-- The placeholder balls' markings, so you can see them roll, in ball radii. Solids, the 8 and the cue ball

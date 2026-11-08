@@ -10,6 +10,7 @@ local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Items = require(ReplicatedStorage.Shared.Items)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Banner = require(script.Parent.Banner)
@@ -115,6 +116,7 @@ function Hud.setTable(tableModel: Model)
 	current = tableModel
 	lastShooter = nil
 	TopBar.show(nil, nil, nil, nil)
+	TopBar.showItems(nil, nil)
 	ShotClock.show(nil)
 	if removeTray then
 		removeTray()
@@ -220,6 +222,12 @@ function Hud.start(tableModel: Model)
 			LeaveButton.update(seat ~= nil and shooter ~= nil, teammate)
 		end
 	)
+
+	Remotes.ItemsChanged.OnClientEvent:Connect(function(model: Model?, bars: { Items.Bar }?, pops: { Items.Pop }?)
+		if model == current then
+			TopBar.showItems(bars, pops)
+		end
+	end)
 
 	-- The clock stops when the shot goes
 	Remotes.ShotStarted.OnClientEvent:Connect(function(model: Model?)

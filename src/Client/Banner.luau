@@ -11,6 +11,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Card = require(script.Parent.Card)
+local TopBar = require(script.Parent.TopBar)
 local Ui = require(script.Parent.Ui)
 
 local Banner = {}
@@ -24,7 +25,8 @@ local bannersShown = 0
 local function bannerCard(gui: ScreenGui)
 	local box = Instance.new("Frame")
 	box.AnchorPoint = Vector2.new(0.5, 0)
-	box.Position = UDim2.new(0.5, 0, 0, Theme.Ui.CardHeight + 2 * Theme.Ui.Padding)
+	-- Under the top bar's cards and their item strips
+	box.Position = UDim2.new(0.5, 0, 0, TopBar.height() + Theme.Ui.Padding)
 	box.Size = UDim2.fromOffset(Theme.Ui.BannerWidth, Theme.Ui.BannerHeight)
 	box.Visible = false
 	Card.style(box)

@@ -72,6 +72,10 @@ return {
 	-- server → clients, unreliable: (table model, aim), that shooter's live aim as TableFlow.AimState, to everyone but
 	-- the shooter, so anyone in the top-down view sees their cue and aim indicator move
 	AimRelay = unreliable("AimRelay"),
+	-- server → clients: (table model, bars, pops), each seat's item bar in turn order as Items.Bar (its points and its
+	-- slots, each an item name or false when empty), and pops the { seat, points } earned since the last message, for
+	-- each bar's "+4". No bars: no game is on, so no bars or slots show.
+	ItemsChanged = remote("ItemsChanged"),
 	-- server → clients: (table model, starting balls, shot, physics params) to replay
 	ShotStarted = remote("ShotStarted"),
 	-- server → clients: (table model, final balls)
@@ -85,6 +89,8 @@ return {
 	-- this remote, so every screen shows the same numbers, including players who join later. server → client: ()
 	-- when it turned that player's change down, like a pocket size during a game, so their panel shows the kept values.
 	TestTune = remote("TestTune"),
+	-- client → server: (item name), puts that item in the sender's first empty slot in their game
+	GiveItem = remote("GiveItem"),
 	-- client → server: (). The server prints the sliders' values, so they show in Studio's Output in any playtest
 	-- and under Server in a published server's console (F9)
 	TestPrint = remote("TestPrint"),

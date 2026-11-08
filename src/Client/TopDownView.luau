@@ -13,6 +13,7 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Hints = require(script.Parent.Hints)
+local TopBar = require(script.Parent.TopBar)
 
 local TopDownView = {}
 
@@ -47,13 +48,13 @@ function TopDownView.new(tableModel: Model, felt: BasePart): View
 	local connection: RBXScriptConnection? = nil
 
 	-- Screen space, in pixels, the view keeps clear around the table for the HUD: the meter (and on phones the Lock
-	-- button) on the left, the sunk-ball tray on the right, the top bar's cards above, and the gear and the control
-	-- hints below
+	-- button) on the left, the sunk-ball tray on the right, the top bar's cards and their item strips above, and the
+	-- gear and the control hints below
 	local reserve = {
 		left = Theme.Ui.MeterReserve
 			+ (if UserInputService.TouchEnabled then Theme.Ui.LockButtonWidth + Theme.Ui.Padding else 0),
 		right = Theme.Ui.TrayReserve,
-		top = Theme.Ui.CardHeight + 2 * Theme.Ui.Padding,
+		top = TopBar.height() + Theme.Ui.Padding,
 		bottom = Hints.bottomBand(),
 	}
 
