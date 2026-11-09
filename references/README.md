@@ -21,4 +21,5 @@ Screenshots that show the look and feel Pool! is after. `docs/STYLE.md` is the r
 
 ## Files
 
-None yet.
+- `illegal-soccer/lobby-bottom-buttons.png`: the row of wide buttons at the bottom center of the lobby (Shop, Inventory, Friends), each with its key letter on a small tag above it. Look at the row's layout and the key tags, not the colors or icons.
+- `illegal-soccer/in-game-item-slots.png`: the 2 item slots at the bottom center during a game, side by side with 1 and 2 on small tags, outlined when empty, and the thin bar above them. Look at the layout and how empty slots read, not the green stamina bars under them.
