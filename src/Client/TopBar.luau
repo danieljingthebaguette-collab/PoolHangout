@@ -45,8 +45,8 @@ local shownUsers: { [ImageLabel]: number } = {}
 -- game on.
 local cardSides: { string }? = nil
 local shownBars: { Items.Bar }? = nil
--- This player's seat from the last turn message: their own squares don't show on their card, since their abilities
--- are the rows at the bottom of the screen (ItemSlots). Their bar does.
+-- This player's seat from the last turn message: their own strip doesn't show on their card, since their abilities and
+-- their bar are at the bottom of the screen (ItemSlots)
 local mySeat: number? = nil
 
 local function avatarSize(): number
@@ -333,12 +333,11 @@ local function showStrips(pops: { Items.Pop }?)
 		for i, strip in card.strips do
 			local seat = if side == "A" then 2 * i - 1 elseif side == "B" then 2 * i else nil
 			local bar = if seat and shownBars then shownBars[seat] else nil
-			strip.frame.Visible = bar ~= nil and card.card.Visible and card.avatars[i].Visible
+			strip.frame.Visible = bar ~= nil and card.card.Visible and card.avatars[i].Visible and seat ~= mySeat
 			if bar then
 				for slot, holder in strip.slots do
 					local item = bar.slots[slot]
 					ItemIcons.draw(if item then item :: string else "", holder)
-					holder.Visible = seat ~= mySeat
 				end
 				local share = math.clamp(bar.points / Config.Items.BarPoints, 0, 1)
 				strip.fill.Size = UDim2.fromScale(share, 1)

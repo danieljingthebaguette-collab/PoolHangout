@@ -43,6 +43,8 @@ local hudGui: ScreenGui? = nil
 local removeTray: (() -> ())? = nil
 -- Who was shooting at that table, so your balls pulse only as your turn starts, not on every shot you keep
 local lastShooter: Instance? = nil
+-- This player's seat at that table from the last turn message, for their own item bar at the bottom
+local mySeat: number? = nil
 
 -- The ball parts that are yours on this table: your group's, or the 8 once your group is cleared. None on an open
 -- table, where nothing is yours yet. Only the ones still on the table.
@@ -135,6 +137,8 @@ end
 function Hud.setTable(tableModel: Model)
 	current = tableModel
 	lastShooter = nil
+	mySeat = nil
+	ItemSlots.showBar(nil)
 	TopBar.show(nil, nil, nil, nil)
 	TopBar.showItems(nil, nil)
 	ShotClock.show(nil)
@@ -237,6 +241,7 @@ function Hud.start(tableModel: Model)
 			ShotClock.show(if shooter then clockEndsAt else nil)
 			-- Your turn starting: your balls pulse once, so you can see which they are
 			local seat = seats and table.find(seats, player)
+			mySeat = seat
 			if shooter == player and lastShooter ~= player and seat then
 				local side = if seat % 2 == 1 then "A" else "B"
 				Effects.pulse(yourBalls(model :: Model, (groups or {})[side], onEight == true))
@@ -255,6 +260,15 @@ function Hud.start(tableModel: Model)
 	Remotes.ItemsChanged.OnClientEvent:Connect(function(model: Model?, bars: { Items.Bar }?, pops: { Items.Pop }?)
 		if model == current then
 			TopBar.showItems(bars, pops)
+			-- Your own bar is at the bottom, over your ability rows, with its pops
+			local mine = if bars and mySeat then bars[mySeat] else nil
+			local earned = {}
+			for _, popped in (pops or {}) :: { Items.Pop } do
+				if popped.seat == mySeat then
+					table.insert(earned, popped.points)
+				end
+			end
+			ItemSlots.showBar(if mine then mine.points else nil, earned)
 		end
 	end)
 

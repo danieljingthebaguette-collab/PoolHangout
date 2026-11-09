@@ -1,11 +1,13 @@
 --!strict
--- Your items, bottom center of the top-down view: a row for each item you hold, in slot order with slot 1 on top, each
--- like a control hint: its key, "1" or "2", in a dark key box, its icon on a dark box, then a cream label with its name
--- and what it does. An empty slot has no row. The row you're picking a target for gets a gold outline, the rows dim
--- while you can't use an item, and a refused item's label turns coral and says why. Clicking a row does what its key
--- does (onPress). ShotController decides what they show.
+-- Your abilities, bottom center of the top-down view while you play: your item bar, filling toward your next one, and
+-- under it a row for each slot, slot 1 on top, each like a control hint: its key, "1" or "2", in a dark key box, its
+-- icon on a dark box, then a cream label with its name and what it does. An empty slot shows only its key and an empty
+-- dark square. The row you're picking a target for gets a gold outline, the rows dim while you can't use one, and a
+-- refused one's label turns coral and says why. Clicking a row does what its key does (onPress). ShotController
+-- decides what the rows show, Hud the bar.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Items = require(ReplicatedStorage.Shared.Items)
@@ -31,6 +33,8 @@ type Row = {
 local column: Frame? = nil
 local rows: { Row } = {}
 local shown: string? = nil
+-- Your item bar above the rows: its track, its gold fill and the glow it gets when full
+local bar: { track: Frame, fill: Frame, glow: UIStroke }? = nil
 -- What a click on a row does, given its slot: the same as pressing its key
 local pressed: ((slot: number) -> ())? = nil
 
@@ -151,12 +155,66 @@ function ItemSlots.build(gui: ScreenGui)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Padding = UDim.new(0, ui.Padding / 2)
 	layout.Parent = frame
+	-- Your item bar, above the rows, as wide as an ability's name and line need to be noticed
+	local track = Instance.new("Frame")
+	track.LayoutOrder = 0
+	track.Size = UDim2.fromOffset(ui.ItemBottomBarWidth, ui.ItemBarHeight)
+	track.BackgroundColor3 = Theme.Colors.Dark
+	track.BorderSizePixel = 0
+	track.Parent = frame
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.fromScale(0, 1)
+	fill.BackgroundColor3 = Theme.Colors.Fill
+	fill.BorderSizePixel = 0
+	fill.Parent = track
+	-- Full with both slots full: it glows until a slot frees and its ability arrives
+	local glow = Instance.new("UIStroke")
+	glow.Color = Theme.Colors.TurnGlow
+	glow.Thickness = ui.TurnGlow
+	glow.Enabled = false
+	glow.Parent = track
+	bar = { track = track, fill = fill, glow = glow }
 	rows = {}
 	for i = 1, Config.Items.Slots do
 		rows[i] = row(frame, i)
 	end
 	column = frame
 	shown = nil
+end
+
+-- A "+4" that rises from your bar and fades, so you learn what fills it
+local function pop(track: Frame, points: number)
+	local ui = Theme.Ui
+	local label = Ui.label(`+{points}`, track)
+	label.AnchorPoint = Vector2.new(0.5, 1)
+	label.Position = UDim2.fromScale(0.5, 0)
+	label.Size = UDim2.new(1, 0, 0, ui.ItemPopTextSize)
+	label.TextSize = ui.ItemPopTextSize
+	label.TextColor3 = Theme.Colors.Fill
+	label.ZIndex = 2
+	local edge = Instance.new("UIStroke")
+	edge.Color = Theme.Colors.Text
+	edge.Parent = label
+	local info = TweenInfo.new(ui.ItemPopSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TweenService:Create(label, info, { Position = UDim2.new(0.5, 0, 0, -ui.ItemPopRise), TextTransparency = 1 }):Play()
+	TweenService:Create(edge, info, { Transparency = 1 }):Play()
+	task.delay(ui.ItemPopSeconds, label.Destroy, label)
+end
+
+-- Shows your item bar's points, with a pop for each fill just earned, or hides it with nil while you're not playing
+function ItemSlots.showBar(points: number?, pops: { number }?)
+	if not bar then
+		return
+	end
+	bar.track.Visible = points ~= nil
+	if points then
+		local share = math.clamp(points / Config.Items.BarPoints, 0, 1)
+		bar.fill.Size = UDim2.fromScale(share, 1)
+		bar.glow.Enabled = share >= 1
+		for _, earned in (pops or {}) :: { number } do
+			pop(bar.track, earned)
+		end
+	end
 end
 
 -- What clicking a row does, given its slot, or nothing with nil. ShotController sets it to the same as the keys.
@@ -187,13 +245,19 @@ function ItemSlots.show(
 	local ui = Theme.Ui
 	for i, r in rows do
 		local item = if items[i] then items[i] :: string else nil
-		r.frame.Visible = item ~= nil
-		if item then
+		-- Every slot has its row: an empty one shows only its key and an empty dark square
+		r.frame.Visible = true
+		r.label.Visible = item ~= nil
+		ItemIcons.draw(item or "", r.icon)
+		if not item then
+			r.glow.Enabled = false
+			r.veil.Visible = false
+			r.key.TextTransparency = if usable then 0 else ui.ItemDimText
+		else
 			local refused = refusal ~= nil and refusal.slot == i
 			-- A refusal is a warning, so it stays readable while the rest dim
 			local dim = not usable and not refused
 			local fade = if dim then ui.ItemDimText else 0
-			ItemIcons.draw(item, r.icon)
 			r.name.Text = Items.NAMES[item] or item
 			r.line.Text = if refusal and refused then refusal.text else Items.LINES[item] or ""
 			r.line.TextColor3 = if refused then Theme.Colors.Text else Theme.Colors.ItemLine
