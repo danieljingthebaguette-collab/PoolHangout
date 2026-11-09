@@ -117,7 +117,9 @@ local Theme = {
 		ItemPopSeconds = 0.8, -- ...as it fades out
 		-- Your abilities, bottom center of the top-down view (ItemSlots): a row for each, like a control hint. Two rows fit
 		-- the bottom band (Hints.bottomBand()). Placeholder looks until the GUI pass.
-		ItemBottomBarWidth = 160, -- your item bar above the rows, ItemBarHeight tall; it and the rows fill the band
+		-- Your bar and rows' fixed width, room for the longest line (Freeze's) at 1920 wide, so nothing shifts as slots
+		-- fill. The bar above the rows is ItemBarHeight tall; it and the rows fill the band.
+		ItemRowsWidth = 560,
 		ItemRowIconInset = 3, -- the icon's margin inside its dark box, as tall as a hint
 		ItemLineTextSize = 16, -- the ability's one-line description, beside its name at TextSize
 		ItemDimText = 0.55, -- while you can't use an ability: the rows' text this see-through...

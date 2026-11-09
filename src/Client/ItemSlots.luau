@@ -143,9 +143,11 @@ end
 function ItemSlots.build(gui: ScreenGui)
 	local ui = Theme.Ui
 	local frame = Instance.new("Frame")
+	-- A fixed width, room for the longest line, so the key boxes and the bar stay put as abilities come and go
 	frame.AnchorPoint = Vector2.new(0.5, 1)
 	frame.Position = UDim2.new(0.5, 0, 1, -ui.Padding) -- level with the hints' bottoms
-	frame.AutomaticSize = Enum.AutomaticSize.XY
+	frame.Size = UDim2.fromOffset(ui.ItemRowsWidth, 0)
+	frame.AutomaticSize = Enum.AutomaticSize.Y
 	frame.BackgroundTransparency = 1
 	frame.Visible = false
 	frame.Parent = gui
@@ -155,10 +157,10 @@ function ItemSlots.build(gui: ScreenGui)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Padding = UDim.new(0, ui.Padding / 2)
 	layout.Parent = frame
-	-- Your item bar, above the rows, as wide as an ability's name and line need to be noticed
+	-- Your item bar, above the rows, as wide as they are
 	local track = Instance.new("Frame")
 	track.LayoutOrder = 0
-	track.Size = UDim2.fromOffset(ui.ItemBottomBarWidth, ui.ItemBarHeight)
+	track.Size = UDim2.new(1, 0, 0, ui.ItemBarHeight)
 	track.BackgroundColor3 = Theme.Colors.Dark
 	track.BorderSizePixel = 0
 	track.Parent = frame
