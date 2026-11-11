@@ -11,6 +11,7 @@ Item-based 8-ball pool on Roblox, 1v1 and 2v2. Controls and physics match the fe
 | Anything visual | docs/STYLE.md and the images in references/ |
 | Building models | docs/MODELS.md |
 | Who the game is for and why | docs/VISION.md |
+| Speed, memory, network traffic, cleanup or refactoring a module | .claude/skills/optimize/SKILL.md (measure first, one module at a time) |
 
 ## Always
 - The server decides everything: turns, fouls, ball results. Clients send inputs only (aim, power, item), through src/Shared/Remotes.luau.
