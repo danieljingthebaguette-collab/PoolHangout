@@ -62,6 +62,12 @@ return {
 	-- client → server: (), once this player's scripts are listening. The server answers with TurnStarted for every game
 	-- on, and the physics test mode's ball in hand, since what it fired before then may not have reached them.
 	ClientReady = remote("ClientReady"),
+	-- server → client: (settings, saving), this player's saved settings (SaveData.Settings) once their record is
+	-- loaded, and whether changes will be saved: false when it couldn't be loaded, so they last this session only
+	PlayerDataLoaded = remote("PlayerDataLoaded"),
+	-- client → server: (settings), the whole settings page after a change. The server cleans every field
+	-- (SaveData.cleanSettings) and takes one at most every Config.Data.SaveCooldown.
+	SaveSettings = remote("SaveSettings"),
 	-- client → server: (), the Leave button. Off the table this player joined, calling off its start, or out of
 	-- their game: the server decides which.
 	LeaveTable = remote("LeaveTable"),

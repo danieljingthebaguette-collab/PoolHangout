@@ -14,6 +14,7 @@ local Theme = require(ReplicatedStorage.Shared.Theme)
 local Card = require(script.Parent.Card)
 local TopBar = require(script.Parent.TopBar)
 local Ui = require(script.Parent.Ui)
+local UiScale = require(script.Parent.UiScale)
 
 local Banner = {}
 
@@ -29,7 +30,11 @@ local function bannerCard(gui: ScreenGui)
 	local box = Instance.new("Frame")
 	box.AnchorPoint = Vector2.new(0.5, 0)
 	-- Under the top bar's cards and their item strips
-	box.Position = UDim2.new(0.5, 0, 0, TopBar.height() + Theme.Ui.Padding)
+	local function place()
+		box.Position = UDim2.new(0.5, 0, 0, TopBar.height() * UiScale.get() + Theme.Ui.Padding)
+	end
+	place()
+	UiScale.onChanged(place)
 	box.Size = UDim2.fromOffset(Theme.Ui.BannerWidth, Theme.Ui.BannerHeight)
 	box.Visible = false
 	Card.style(box)

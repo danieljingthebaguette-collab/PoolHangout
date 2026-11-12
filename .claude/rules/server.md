@@ -18,5 +18,5 @@ Also:
 - Each table's state lives on the server in its `Match`. Anything shown on the table model (attributes, sign text) is display only.
 - Timers check that the game and step they were made for are still current before they act.
 - Clean up on `PlayerRemoving` and when a game ends: seats, connections, the Turn arrow, timers.
-- DataStore calls happen only in `StatsService`, wrapped in `pcall`, and never hold up gameplay.
+- DataStore calls happen only in `Server/PlayerData.luau`, wrapped in `pcall`, and never hold up gameplay. The record's shape, defaults and migrations are in the pure `Shared/SaveData.luau`.
 - When a remote's arguments change, update `Remotes.luau`, both sides, and the remotes table in ARCHITECTURE.md together.

@@ -189,6 +189,30 @@ local Config = {
 	},
 
 	-- Studio only; the server also checks RunService:IsStudio() before using these, except PhysicsTestLive.
+	-- Each player's settings page: the defaults and the UI scale's range. Saved in their record (SaveData).
+	Settings = {
+		Music = 0.5, -- volume, 0 to 1
+		Sound = 1,
+		CameraGlide = true, -- the camera eases between views; off, it cuts
+		ScreenShake = true,
+		ControlHints = true,
+		UiScale = 1,
+		ShowStats = false, -- frame rate and ping, bottom left
+		UiScaleMin = 0.8,
+		UiScaleMax = 1.25,
+		UiScaleStep = 0.05, -- 10 steps from min to max
+	},
+
+	-- The saved player record (SaveData, Server/PlayerData)
+	Data = {
+		StoreName = "PlayerData",
+		KeyPrefix = "player_",
+		Tries = 3, -- a load or save tries this many times...
+		RetrySeconds = 2, -- ...this far apart
+		AutosaveSeconds = 120, -- changed records are saved this often, and when the player leaves
+		SaveCooldown = 1, -- the server takes a player's settings at most this often
+	},
+
 	Debug = {
 		SoloTables = true,
 		-- Coach takes every other seat when a tester (PhysicsTestAccess) alone in the server joins a table, instead of

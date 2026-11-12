@@ -21,6 +21,8 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	task.defer(player.Destroy, player)
 end)
 
+-- Loads each player's saved record and keeps it saved
+require(script.Parent.PlayerData).start()
 -- Makes every table's balls, which the test mode then uses
 require(script.Parent.TableService).start()
 if Config.Debug.PhysicsTest and (RunService:IsStudio() or Config.Debug.PhysicsTestLive) then

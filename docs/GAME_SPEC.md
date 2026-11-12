@@ -106,11 +106,24 @@ Laid out like 8 Ball Duels, in the look `docs/STYLE.md` describes: cream cards, 
   - soft shadows under the balls (the normal view has Roblox's own shadows)
   - the shot clock in the middle of the top bar, between the two cards
   - a Leave button top right while you're at a table, in both views (see Leaving)
-  - a settings button bottom-left with a sound volume slider. The volume lasts for the session and isn't saved *(default)*. It shows only in the top-down view, so it never covers the phones' thumbstick.
+  - a settings button bottom-left (the gear) that opens the settings page (see Settings). It shows only in the top-down view, so it never covers the phones' thumbstick.
   - a gold ring pulses once around each of your balls, growing and fading over 2 seconds, when your turn starts, while the balls keep their own colors, so you can see which are yours: your group's, or the 8 once your group is cleared. No rings show on an open table, where no ball is yours yet
   - under each other player's avatar on their card, their 2 item slots as small squares and their item bar under them, with a "+4" rising from it each time it fills and a glow while it's full with both slots taken. Your own card shows neither: yours are at the bottom
   - your abilities at the bottom center whenever you're at a table, in either view, laid out like Illegal Soccer's item slots: 2 large squares side by side, about 100 px each on a 1080-pixel-high screen and scaling with it, each with its key (1 or 2) on a small tab on its bottom edge. An empty square is just an outline; a held ability's icon, drawn in code, fills its square. Directly under the squares, your item bar, a little wider than both together, in 4 segments of 3 points each, with its "+4" pops and a glow while it's full with both slots taken. The square waiting for a target is outlined in gold, the squares dim while you can't use one, and when a target isn't allowed a coral note just above the squares says why, like "Can't freeze the 8". Clicking a square does the same as its key. The table shrinks a little to keep clear of them. A plain look until the GUI pass
-- **Anywhere, while you're not at a table:** a row of buttons at the bottom center, where your ability squares sit at a table, each with its key letter on a tag above it, laid out like Illegal Soccer's lobby buttons: **Abilities (Z)** and **Invite (X)**. Abilities opens one panel listing all 5 abilities, each with its icon, name and one line (see Items), under a short part on how you earn them (the bar under your ability squares fills as you play) and use them (press 1 or 2, or click a square, on your turn). Its close button, Esc and Z close it, and so does joining a table. Invite opens Roblox's invite-friends prompt. A plain look in `docs/STYLE.md`'s colors until the GUI pass
+- **Anywhere, while you're not at a table:** a row of buttons at the bottom center, where your ability squares sit at a table, each with its key letter on a tag above it, laid out like Illegal Soccer's lobby buttons: **Abilities (Z)**, **Invite (X)**, **Shop (C)** and **Settings (V)**. Shop opens a mock shop and Settings the settings page (see Settings). Abilities opens one panel listing all 5 abilities, each with its icon, name and one line (see Items), under a short part on how you earn them (the bar under your ability squares fills as you play) and use them (press 1 or 2, or click a square, on your turn). Its close button, Esc and Z close it, and so does joining a table. Invite opens Roblox's invite-friends prompt. A plain look in `docs/STYLE.md`'s colors until the GUI pass
+
+## Settings
+
+- One settings page, opened by the gear in the top-down view or the lobby's Settings button (V); Close, Esc and V close it:
+  - **Sound:** music volume and sound volume, as sliders.
+  - **Camera:** camera glide on/off; off, the camera cuts between views instead of easing.
+  - **Screen:** screen shake on/off (it has nothing to switch until screen shake is built in Phase 4), control hints on/off (the hints and the F reminder), UI scale (80% to 125% in 10 steps, from Illegal Soccer), and show stats (frame rate and ping, bottom left, from Illegal Soccer).
+- Each change applies at once and is saved in the player's record, one DataStore key with a version number, with room for the tutorial, XP, coins and owned items later. If the record can't be loaded the player keeps the defaults, a note on the page says changes last this session only, and nothing is saved over their record. In Studio, saving needs Game Settings → Security → Enable Studio Access to API Services.
+
+## The shop (a mock)
+
+- The lobby's Shop button (C) opens it: three tabs from Illegal Soccer's structure, with our own items. **Daily Shop**: today's 5 items (cues, a ball set, a felt, a pocket effect), which leave at midnight UTC, with a countdown, and a bigger featured item. **Bundles** and **Passes**: a few offers each. Prices are in coins.
+- Every buy button says "Coming soon". Nothing is for sale, and there's no rolls tab until paid rolls are decided.
 
 ## 8-ball rules
 

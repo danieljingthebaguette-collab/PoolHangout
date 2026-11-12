@@ -27,12 +27,15 @@ local LobbyButtons = require(script.Parent.LobbyButtons)
 local LeaveButton = require(script.Parent.LeaveButton)
 local NiceShot = require(script.Parent.NiceShot)
 local PowerMeter = require(script.Parent.PowerMeter)
+local Settings = require(script.Parent.Settings)
 local SettingsPanel = require(script.Parent.SettingsPanel)
+local ShopPanel = require(script.Parent.ShopPanel)
 local ShotClock = require(script.Parent.ShotClock)
 local TopBar = require(script.Parent.TopBar)
 local TurnArrow = require(script.Parent.TurnArrow)
 local Tray = require(script.Parent.Tray)
 local Ui = require(script.Parent.Ui)
+local UiScale = require(script.Parent.UiScale)
 
 local Hud = {}
 
@@ -55,6 +58,22 @@ local lastGroup: string? = nil
 local lastOnEight = false
 
 local GROUP_NAMES: { [string]: string } = { solids = "Solids", stripes = "Stripes" }
+
+-- The screens the UI scale setting reaches (UiScale.apply)
+local SCALED = {
+	"Hud",
+	"PowerMeter",
+	"Settings",
+	"Leave",
+	"Banner",
+	"ItemName",
+	"EndScreen",
+	"Abilities",
+	"WatchHint",
+	"Stats",
+	"Shop",
+	"SettingsPage",
+}
 
 -- The banner's callouts for this player, from each turn message, marking what changed: before the break "Who
 -- breaks?" for everyone at the table, then for players in the game "You're Solids" when their side gets a group, and
@@ -203,6 +222,8 @@ end
 
 function Hud.start(tableModel: Model)
 	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+	-- The saved settings first, so every part starts with them
+	Settings.start(playerGui)
 	current = tableModel
 
 	local gui = Instance.new("ScreenGui")
@@ -224,7 +245,7 @@ function Hud.start(tableModel: Model)
 	settingsGui.ResetOnSpawn = false
 	settingsGui.Enabled = false
 	settingsGui.DisplayOrder = 3 -- the open panel covers the test panel's button beside the gear
-	SettingsPanel.build(settingsGui)
+	SettingsPanel.build(settingsGui, playerGui)
 	settingsGui.Parent = playerGui
 	table.insert(guis, settingsGui)
 
@@ -232,6 +253,7 @@ function Hud.start(tableModel: Model)
 	Hints.buildWatch(playerGui)
 	AbilitiesPanel.build(playerGui)
 	ItemSlots.build(playerGui)
+	ShopPanel.build(playerGui)
 	LobbyButtons.build(playerGui)
 	-- At a table your ability squares show; in the lobby, its buttons in the same spot
 	LeaveButton.build(playerGui, function(atTable: boolean)
@@ -246,6 +268,13 @@ function Hud.start(tableModel: Model)
 		return inView and model == current
 	end)
 	ItemName.build(playerGui)
+	-- The UI scale setting reaches every HUD screen; the ability squares and lobby row scale themselves
+	for _, name in SCALED do
+		local screen = playerGui:FindFirstChild(name)
+		if screen and screen:IsA("ScreenGui") then
+			UiScale.apply(screen)
+		end
+	end
 	-- An item used at your table: its name big in the middle of the screen, for its players and anyone watching
 	Remotes.ItemUsed.OnClientEvent:Connect(function(model: Model?, _: number, item: string)
 		if model and (model == current or Banner.atTable(model)) then

@@ -15,6 +15,7 @@ local Theme = require(ReplicatedStorage.Shared.Theme)
 local Hints = require(script.Parent.Hints)
 local ItemSlots = require(script.Parent.ItemSlots)
 local TopBar = require(script.Parent.TopBar)
+local UiScale = require(script.Parent.UiScale)
 
 local TopDownView = {}
 
@@ -35,6 +36,13 @@ export type View = {
 -- The normal camera to come back to: its type, which way it looks, how far it sits from your character, and its field
 -- of view
 type Normal = { cameraType: Enum.CameraType, look: Vector3, distance: number, fieldOfView: number }
+
+-- The "Camera glide" setting: on, every change of view eases over Config.Camera.EaseSeconds; off, it cuts
+local glide = true
+
+function TopDownView.setGlide(on: boolean)
+	glide = on
+end
 
 function TopDownView.new(tableModel: Model, felt: BasePart): View
 	-- Set while the view is on, and while it eases back out to it
@@ -63,10 +71,11 @@ function TopDownView.new(tableModel: Model, felt: BasePart): View
 	local function framing(): (CFrame, number)
 		local camera = workspace.CurrentCamera
 		local viewport = camera.ViewportSize
-		local freeWidth = 1 - (reserve.left + reserve.right) / viewport.X
+		local s = UiScale.get()
+		local freeWidth = 1 - (reserve.left + reserve.right) * s / viewport.X
 		-- The bottom keeps clear for the control hints and your ability squares and bar, which scale with the screen
-		local bottom = math.max(reserve.bottom, ItemSlots.reserve(viewport.Y))
-		local freeHeight = 1 - (reserve.top + bottom) / viewport.Y
+		local bottom = math.max(reserve.bottom * s, ItemSlots.reserve(viewport.Y))
+		local freeHeight = 1 - (reserve.top * s + bottom) / viewport.Y
 		local tanHalfHeight = math.tan(math.rad(Config.Camera.TopDownFieldOfView / 2))
 		local tanHalfWidth = tanHalfHeight * viewport.X / viewport.Y
 		-- High enough that the whole table fits between the reserves, with its length across the screen
@@ -77,8 +86,8 @@ function TopDownView.new(tableModel: Model, felt: BasePart): View
 		) * (if far then Config.Camera.WatchingHeight else 1)
 		-- Slide the view so the table sits in the middle of the space the reserves leave. The screen's up is the
 		-- felt's LookVector.
-		local shiftX = (reserve.left - reserve.right) / viewport.X * height * tanHalfWidth
-		local shiftY = (reserve.top - bottom) / viewport.Y * height * tanHalfHeight
+		local shiftX = (reserve.left - reserve.right) * s / viewport.X * height * tanHalfWidth
+		local shiftY = (reserve.top * s - bottom) / viewport.Y * height * tanHalfHeight
 		-- The screen's right and up: along the felt's length, and its far long side
 		local right, up = felt.CFrame.RightVector, felt.CFrame.LookVector
 		if flipped then
@@ -107,7 +116,7 @@ function TopDownView.new(tableModel: Model, felt: BasePart): View
 		local camera = workspace.CurrentCamera
 		local ease = easing
 		if ease then
-			ease.t = math.min(ease.t + dt / Config.Camera.EaseSeconds, 1)
+			ease.t = if glide then math.min(ease.t + dt / Config.Camera.EaseSeconds, 1) else 1
 			local smooth = ease.t * ease.t * (3 - 2 * ease.t)
 			local to, toFov = ease.target()
 			camera.CFrame = ease.from:Lerp(to, smooth)

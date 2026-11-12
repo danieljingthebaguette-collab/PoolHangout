@@ -14,6 +14,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local ItemIcons = require(script.Parent.ItemIcons)
 local Ui = require(script.Parent.Ui)
+local UiScale = require(script.Parent.UiScale)
 
 local ItemSlots = {}
 
@@ -37,7 +38,7 @@ local look = Theme.Abilities
 -- How tall the squares and bar stand above the screen's bottom edge, in real pixels, for the top-down view to keep
 -- clear
 function ItemSlots.reserve(screenHeight: number): number
-	local scale = screenHeight / look.DesignHeight
+	local scale = screenHeight / look.DesignHeight * UiScale.get()
 	return (look.BottomMargin + look.SlotSize + look.BarGap + look.BarHeight) * scale + Theme.Ui.Padding
 end
 
@@ -105,9 +106,10 @@ function ItemSlots.build(playerGui: Instance)
 	local scale = Instance.new("UIScale")
 	scale.Parent = box
 	local function fit()
-		scale.Scale = screen.AbsoluteSize.Y / look.DesignHeight
+		scale.Scale = screen.AbsoluteSize.Y / look.DesignHeight * UiScale.get()
 	end
 	screen:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+	UiScale.onChanged(fit)
 
 	local across = 2 * look.SlotSize + look.SlotGap
 	local left = (look.BarWidth - across) / 2

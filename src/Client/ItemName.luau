@@ -12,6 +12,7 @@ local Card = require(script.Parent.Card)
 local ItemIcons = require(script.Parent.ItemIcons)
 local TopBar = require(script.Parent.TopBar)
 local Ui = require(script.Parent.Ui)
+local UiScale = require(script.Parent.UiScale)
 
 local ItemName = {}
 
@@ -33,7 +34,13 @@ function ItemName.build(playerGui: Instance)
 	local group = Instance.new("CanvasGroup")
 	group.AnchorPoint = Vector2.new(0.5, 0.5) -- so it pops from its middle
 	-- Under the banner, which sits under the top bar
-	group.Position = UDim2.new(0.5, 0, 0, TopBar.height() + ui.BannerHeight + 2 * ui.Padding + ui.ItemNameHeight / 2)
+	local function place()
+		local s = UiScale.get()
+		group.Position =
+			UDim2.new(0.5, 0, 0, (TopBar.height() + ui.BannerHeight + ui.ItemNameHeight / 2) * s + 2 * ui.Padding)
+	end
+	place()
+	UiScale.onChanged(place)
 	group.Size = UDim2.fromOffset(0, ui.ItemNameHeight)
 	group.AutomaticSize = Enum.AutomaticSize.X
 	group.BackgroundTransparency = 1

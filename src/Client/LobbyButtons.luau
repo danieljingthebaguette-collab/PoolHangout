@@ -1,7 +1,7 @@
 --!strict
 -- The lobby's row of buttons, bottom center of the screen while this player isn't at a table (where their ability
--- squares sit at one): Abilities (Z), which opens the Abilities panel, and Invite (X), which opens Roblox's
--- invite-friends prompt. Each has its key letter on a dark tag above it. A centered row, so Shop and Inventory can join
+-- squares sit at one): Abilities (Z), which opens the Abilities panel, Invite (X), which opens Roblox's
+-- invite-friends prompt, Shop (C), the mock shop, and Settings (V), the settings page. Each has its key letter on a dark tag above it. A centered row, so Shop and Inventory can join
 -- it after launch. Sized for a 1080-pixel-high screen and scaled to the real one.
 
 local ContextActionService = game:GetService("ContextActionService")
@@ -11,7 +11,10 @@ local SocialService = game:GetService("SocialService")
 
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local AbilitiesPanel = require(script.Parent.AbilitiesPanel)
+local SettingsPanel = require(script.Parent.SettingsPanel)
+local ShopPanel = require(script.Parent.ShopPanel)
 local Ui = require(script.Parent.Ui)
+local UiScale = require(script.Parent.UiScale)
 
 local LobbyButtons = {}
 
@@ -35,6 +38,8 @@ end
 local BUTTONS = {
 	{ text = "Abilities", key = Enum.KeyCode.Z, press = AbilitiesPanel.toggle },
 	{ text = "Invite", key = Enum.KeyCode.X, press = invite },
+	{ text = "Shop", key = Enum.KeyCode.C, press = ShopPanel.toggle },
+	{ text = "Settings", key = Enum.KeyCode.V, press = SettingsPanel.toggle },
 }
 
 local function button(parent: Frame, order: number, text: string, key: Enum.KeyCode, press: () -> ())
@@ -82,9 +87,10 @@ function LobbyButtons.build(playerGui: Instance)
 	local scale = Instance.new("UIScale")
 	scale.Parent = row
 	local function fit()
-		scale.Scale = screen.AbsoluteSize.Y / look.DesignHeight
+		scale.Scale = screen.AbsoluteSize.Y / look.DesignHeight * UiScale.get()
 	end
 	screen:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+	UiScale.onChanged(fit)
 	for i, entry in BUTTONS do
 		button(row, i, entry.text, entry.key, entry.press)
 	end
