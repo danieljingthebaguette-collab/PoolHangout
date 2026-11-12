@@ -52,7 +52,9 @@ local Config = {
 		-- If the server never starts a shot this screen already started, put the balls back after this long
 		PredictTimeoutSeconds = 2,
 		TimeoutsToRemove = 2, -- timeouts in a row that remove a player
-		ServerStepsPerFrame = 480, -- physics steps the server runs per frame: far ahead of the replay, about 1 ms of work
+		-- Physics steps the server runs per frame per table: 7.5× faster than the replay at 60 FPS, in slices small
+		-- enough that 6 tables breaking at once fit in a frame (time it with tools/BenchPhysics.luau)
+		ServerStepsPerFrame = 120,
 		ResolveBufferSeconds = 0.25, -- extra wait after a shot's replay ends before the result is sent
 		RequestCooldown = 0.5, -- the server ignores a player's shot requests closer together than this
 	},
