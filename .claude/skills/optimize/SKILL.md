@@ -123,15 +123,10 @@ return {
 - **What compiles:** functions only, not the top level of a script.
 - **What it costs:** server startup time and memory, and there's a total limit, so never put it everywhere.
 - **Measure** with and without it (Script Profiler or the Lune bench), and type-annotate the arguments.
-- **In Pool!** the only candidate is the server's copy of `Shared/Physics/Simulate.luau`. But:
-  - **Shared module:** PCs and phones run the same module as bytecode, and Android runs it natively.
-  - **Project rule:** ARCHITECTURE's Physics section and `.claude/rules/core-logic.md` forbid `--!native` in the physics, because the server and every screen must get exactly the same shot.
-  - **To try it anyway:**
-    1. Measure the server's cost (Lune bench and the MicroProfiler).
-    2. Ask Daniel to allow an experiment.
-    3. Put `@native` on `Simulate.step` only.
-    4. Prove the results are bit-identical: play hundreds of seeded shots and breaks on a Studio server natively and in Lune, and compare every ball's final `x`, `y` and `pocket` exactly.
-    5. Any difference at all means it doesn't ship.
+- **In Pool!** `Shared/Physics/Simulate.luau` is `--!native` since 2026-11-12: a fixed set of 40 breaks and 40 shots took 1,641 ms interpreted and 844 ms native on a Studio server, with bit-identical results.
+  - **Shared module:** PCs and iPhones run it as bytecode, servers and Android natively, so every result must match exactly. It only uses exactly-rounded math in its hot loop (`.claude/rules/core-logic.md`).
+  - **After any change to it:** `lune run tools/NativeCheck` prints a fingerprint of every ball's final place over that set; run the same body on a Studio server (Server `execute_luau`) and the fingerprints must match. Any difference means native comes off until it's found.
+  - **Checking it's native:** the Script Profiler shows `<native>` beside its functions, and `debug.dumpcodesize()` from the Command Bar (Server view) lists its code size.
 - **Where it won't help:** client UI, the camera and the HUD (today only servers and Android clients run native code; PC and iPhone don't), and code that's mostly Roblox API calls.
 
 **Style** (Roblox Lua Style Guide, wherever it doesn't conflict with CLAUDE.md or StyLua)

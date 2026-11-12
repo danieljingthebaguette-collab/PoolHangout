@@ -1,4 +1,5 @@
 --!strict
+--!native
 -- Ball physics in table space (see ARCHITECTURE.md). The server and every client must get exactly the
 -- same shot from the same inputs, so keep it deterministic: fixed time step, balls in id order, and no
 -- randomness, clock reads or trig.
