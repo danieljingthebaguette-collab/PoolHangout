@@ -1,8 +1,8 @@
 --!strict
--- The Abilities button, bottom center while this player isn't at a table (exactly when the Leave button doesn't show),
--- and the cream card it opens in the middle of the screen: how you earn and use abilities, in plain words, then every
--- ability in Config.Items.List order with its icon, name and line. Players see "Abilities"; the code says items. Its
--- close button, Esc (Roblox's menu opening) and joining a table close it.
+-- The Abilities panel, a cream card in the middle of the screen that the lobby's Abilities button (LobbyButtons) opens:
+-- how you earn and use abilities, in plain words, then every ability in Config.Items.List order with its icon, name and
+-- line. Players see "Abilities"; the code says items. Its close button, Esc (Roblox's menu opening) and joining a table
+-- close it.
 
 local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,12 +17,11 @@ local Ui = require(script.Parent.Ui)
 
 local AbilitiesPanel = {}
 
-local EARN = "The bar under your avatar fills as you play: each turn, and when balls drop. When it's full you get an "
-	.. "ability, and you can hold 2."
-local USE = "On your turn, press 1 or 2 before you shoot."
+local EARN = "At a table, the bar under your two ability squares fills as you play: each turn, and when balls drop. "
+	.. "When it's full you get an ability, and you can hold 2."
+local USE = "On your turn, press 1 or 2, or click its square, before you shoot."
 
--- The button and the panel, once they're built
-local button: TextButton? = nil
+-- The panel, once it's built
 local panel: Frame? = nil
 
 -- Text that wraps to the width it's given and grows down to fit
@@ -91,12 +90,15 @@ local function close()
 	end
 end
 
--- Shows the button only while this player isn't at a table, and closes the panel when they join one. LeaveButton calls
--- it whenever that changes.
-function AbilitiesPanel.setAtTable(atTable: boolean)
-	if button then
-		button.Visible = not atTable
+-- Opens the panel, or closes it if it's open
+function AbilitiesPanel.toggle()
+	if panel then
+		panel.Visible = not panel.Visible
 	end
+end
+
+-- Joining a table closes the panel. Hud calls it whenever that changes, from LeaveButton.
+function AbilitiesPanel.setAtTable(atTable: boolean)
 	if atTable then
 		close()
 	end
@@ -108,12 +110,6 @@ function AbilitiesPanel.build(playerGui: Instance)
 	gui.Name = "Abilities"
 	gui.ResetOnSpawn = false
 	gui.DisplayOrder = 5 -- the open panel covers the rest of the HUD
-
-	local open = Ui.accentButton("Abilities", Theme.Colors.Button, gui)
-	open.AnchorPoint = Vector2.new(0.5, 1)
-	open.Position = UDim2.new(0.5, 0, 1, -ui.Padding)
-	open.Size = UDim2.fromOffset(ui.AbilitiesButtonWidth, ui.ButtonHeight)
-	open.Visible = false
 
 	-- The card, as tall as what's in it. Active, so a click on it never reaches the table.
 	local card = Instance.new("Frame")
@@ -161,11 +157,8 @@ function AbilitiesPanel.build(playerGui: Instance)
 	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(fit)
 	fit()
 	gui.Parent = playerGui
-	button, panel = open, card
+	panel = card
 
-	open.Activated:Connect(function()
-		card.Visible = not card.Visible
-	end)
 	shut.Activated:Connect(close)
 	-- Esc opens Roblox's menu, which the game can't bind, so close as it opens; and on an Escape press if one arrives
 	GuiService.MenuOpened:Connect(close)

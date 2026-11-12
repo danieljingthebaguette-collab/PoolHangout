@@ -7,9 +7,9 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 ## Status
 
 - **Current step:** Phase 3, Items
-- **In progress:** getting ready for my friends playtest. Every Claude task in Phase 3 is built, plus descriptions so nobody needs the items explained: an Abilities button and panel before you join a table, your abilities as rows at the bottom (key, icon, name, line, the reason a target isn't allowed, and clickable like their keys), and the line under the big name at the top when anyone uses one. When my turn passes the camera stays in the top-down view, eased farther out. Players see "Abilities", never "items". The test panel, Give buttons and Coach stay owner-only on a published server. Left in Phase 3 is mine: the store page's name and description, the music and sound picks, the age check, publishing, then the friends playtest. After it: Phase 4, with the item balance pass and the tutorial's items step waiting for what my friends find. Phase 2's 2-player and 4-player checks are in the Phase 3 and Phase 4 friend playtests
-- **Dates:** launch moved to Friday, Dec 18 when the plan was reordered. The phase dates are Claude's proposal for that launch
-- **Last session:** 2026-11-08. Phase 2 marked done, the pulse skipped on an open table, the art director's review of my recorded clips, my store page and sound picks moved into Phase 3 (icon and thumbnails to Phase 6), then Phase 3 started
+- **In progress:** this week (Nov 11–15), before Phase 4: optimized code, mechanics that work perfectly and a style closer to Illegal Soccer, in my order: the ability squares and lobby buttons, helpers, the health fixes from the Nov 11 report, audits of Crazy 8 Ball and Illegal Soccer, then the features and style pass I pick from them, a mechanics check and my friends playtest. Every Claude task in Phase 3 is built. Players see "Abilities", never "items". The test panel, Give buttons and Coach stay owner-only on a published server. Left in Phase 3 is mine: the store page's name and description, the music and sound picks, the age check, publishing, then the friends playtest. After it: Phase 4, with the item balance pass and the tutorial's items step waiting for what my friends find. Phase 2's 2-player and 4-player checks are in the Phase 3 and Phase 4 friend playtests
+- **Dates:** launch moved to Friday, Dec 18 when the plan was reordered. Phase 4 starts Monday, Nov 16. The phase dates are Claude's proposal for that launch
+- **Last session:** 2026-11-11. The status report, the optimize skill (`.claude/skills/optimize/`), then this week's plan
 - **Next up:** the Phase 3 tasks in order. My Phase 3 jobs: the store page's name and description, the music and sound picks, then the age check before the friends playtest
 - **Known issues:**
   - Touch and the new HUD layout haven't been tried on a real phone yet, only in the emulator; it's covered by the Mobile phase
@@ -22,7 +22,6 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
   - The Output warning about rbxassetid://203785492 ("Pop Close Sound") comes from a Studio plugin or Roblox, not the place: ignore it
   - The GUI needs tweaking. Leave it as it is until I say we'll get to it
   - Coach's avatar on the top bar is an empty dark square, since a bot has no avatar picture
-  - Studio's screenshot tool has been timing out since 2026-11-07, so the art director hasn't seen the shot pose, the turn-start pulse, the new pocket pop or the near-black Back to lobby yet
   - Pressing E on a table with a game on does nothing; its prompt only shows the count
   - Our break sinks about 1.8 balls (`tools/BreakStats.luau`), against 0.7 in the 3 full-power 8 Ball Duels breaks recorded so far. Since the 2026-11-04 tuning it spreads the rack and brings the cue ball back like theirs; more recorded breaks would show whether the count really differs
   - Coach ignores items: it never uses one, and it still plays pots on frozen balls and doesn't allow for oil. It does avoid blocked pockets. Fine for testing; the tutorial's item step scripts its own
@@ -91,7 +90,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 **Passed 2026-11-08** in solo tests against Coach; the multiplayer checks moved to Phases 3 and 4 (above).
 
-## Phase 3, Nov 16–29: Items (current)
+## Phase 3, Nov 8–15: Items (current)
 
 **Goal:** players earn the 5 items during a game and use them, and games stay fair.
 
@@ -106,7 +105,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 **Done when:** every rule and item test passes, and 2 friends finish 3 full games on PC, items included, without me explaining anything.
 
-## Phase 4, Nov 30–Dec 6: the lodge, every table, the tutorial, and polish
+## Phase 4, Nov 16–Dec 6: the lodge, every table, the tutorial, and polish
 
 **Goal:** it looks, sounds and feels warm and punchy, every table runs itself even when people leave, and people want to stay.
 

@@ -5,3 +5,5 @@
 sourcemap.json
 .luau-lsp/
 references/*/clips/
+references/**/*.png
+references/**/*.jpg

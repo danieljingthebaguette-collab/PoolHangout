@@ -1,277 +1,254 @@
 --!strict
--- Your abilities, bottom center of the top-down view while you play: your item bar, filling toward your next one, and
--- under it a row for each slot, slot 1 on top, each like a control hint: its key, "1" or "2", in a dark key box, its
--- icon on a dark box, then a cream label with its name and what it does. An empty slot shows only its key and an empty
--- dark square. The row you're picking a target for gets a gold outline, the rows dim while you can't use one, and a
--- refused one's label turns coral and says why. Clicking a row does what its key does (onPress). ShotController
--- decides what the rows show, Hud the bar.
+-- Your 2 ability squares, bottom center of the screen whenever you're at a table, in either view: side by side, each
+-- with its key, 1 or 2, on a tab on its bottom edge, just an outline when empty and the ability's icon on a dark tile
+-- when held. Your ability bar sits under them in segments, filling toward your next ability, with a "+4" for each
+-- fill. While you pick a target that square is outlined in gold, the squares dim while you can't use one, and a coral
+-- note above them says why a target was refused. Clicking a square does what its key does (onPress). Sized for a
+-- 1080-pixel-high screen and scaled to the real one. Hud fills the squares and bar from ItemsChanged; ShotController
+-- sets picking, usable and the refusal.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
-local Items = require(ReplicatedStorage.Shared.Items)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local ItemIcons = require(script.Parent.ItemIcons)
 local Ui = require(script.Parent.Ui)
 
 local ItemSlots = {}
 
-type Row = {
-	frame: TextButton,
-	glow: UIStroke,
-	key: TextLabel,
-	icon: Frame,
-	veil: Frame,
-	label: Frame,
-	name: TextLabel,
-	line: TextLabel,
-}
+type Square = { button: TextButton, outline: UIStroke, icon: Frame, veil: Frame }
 
--- The rows' column and each slot's row, once they're built, and what they show, so a call that changes nothing
--- touches nothing
-local column: Frame? = nil
-local rows: { Row } = {}
-local shown: string? = nil
--- Your item bar above the rows: its track, its gold fill and the glow it gets when full
-local bar: { track: Frame, fill: Frame, glow: UIStroke }? = nil
--- What a click on a row does, given its slot: the same as pressing its key
+-- Everything, once it's built
+local gui: ScreenGui? = nil
+local squares: { Square } = {}
+local segments: { Frame } = {}
+local barGlow: UIStroke? = nil
+local barFrame: Frame? = nil
+local refusalLabel: TextLabel? = nil
+-- What a click on a square does, given its slot: the same as pressing its key
 local pressed: ((slot: number) -> ())? = nil
+-- What each square holds, and the state ShotController last set, so nothing is redrawn when nothing changed
+local held: { string | false } = {}
+local shownState: string? = nil
 
--- Lays out `parent`'s children side by side, `gap` apart, centered up and down
-local function sideBySide(parent: Instance, gap: number)
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.VerticalAlignment = Enum.VerticalAlignment.Center
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Padding = UDim.new(0, gap)
-	layout.Parent = parent
+local look = Theme.Abilities
+
+-- How tall the squares and bar stand above the screen's bottom edge, in real pixels, for the top-down view to keep
+-- clear
+function ItemSlots.reserve(screenHeight: number): number
+	local scale = screenHeight / look.DesignHeight
+	return (look.BottomMargin + look.SlotSize + look.BarGap + look.BarHeight) * scale + Theme.Ui.Padding
 end
 
--- Text as wide as it needs, as tall as its row
-local function text(parent: Instance, order: number, size: number): TextLabel
-	local label = Ui.label("", parent)
-	label.LayoutOrder = order
-	label.Size = UDim2.fromScale(0, 1)
-	label.AutomaticSize = Enum.AutomaticSize.X
-	label.TextSize = size
-	return label
-end
-
-local function row(parent: Frame, i: number): Row
-	local ui = Theme.Ui
-	-- A button, so a click on the row does what its key does and never starts a shot
-	local frame = Instance.new("TextButton")
-	frame.Text = ""
-	frame.AutoButtonColor = false
-	frame.LayoutOrder = i
-	frame.Size = UDim2.fromOffset(0, ui.HintHeight)
-	frame.AutomaticSize = Enum.AutomaticSize.X
-	frame.BackgroundTransparency = 1
-	frame.Activated:Connect(function()
+local function square(parent: Frame, slot: number, x: number): Square
+	local button = Instance.new("TextButton")
+	button.Text = ""
+	button.AutoButtonColor = false
+	button.Position = UDim2.fromOffset(x, 0)
+	button.Size = UDim2.fromOffset(look.SlotSize, look.SlotSize)
+	button.BackgroundColor3 = Theme.Colors.Dark
+	button.BackgroundTransparency = 1
+	button.Parent = parent
+	Ui.roundCorners(button, UDim.new(0, look.SlotCorner))
+	button.Activated:Connect(function()
 		if pressed then
-			pressed(i)
+			pressed(slot)
 		end
 	end)
-	frame.Visible = false
-	Ui.roundCorners(frame)
-	frame.Parent = parent
-	sideBySide(frame, ui.Padding / 2)
-	local glow = Instance.new("UIStroke")
-	glow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	glow.Color = Theme.Colors.ItemPicking
-	glow.Thickness = ui.TurnGlow
-	glow.Enabled = false
-	glow.Parent = frame
-	-- The key, like a control hint's key box
-	local key = Ui.label(tostring(i), frame)
-	key.LayoutOrder = 1
-	key.Size = UDim2.fromOffset(ui.HintHeight, ui.HintHeight)
-	key.BackgroundTransparency = 0
-	key.BackgroundColor3 = Theme.Colors.Dark
-	key.TextColor3 = Theme.Colors.DarkText
-	Ui.roundCorners(key)
-	-- The icon on a dark box, since the icons are drawn for dark slots, with a dark veil to dim it
-	local iconBox = Instance.new("Frame")
-	iconBox.LayoutOrder = 2
-	iconBox.Size = UDim2.fromOffset(ui.HintHeight, ui.HintHeight)
-	iconBox.BackgroundColor3 = Theme.Colors.Dark
-	iconBox.BorderSizePixel = 0
-	Ui.roundCorners(iconBox)
-	iconBox.Parent = frame
+	local outline = Instance.new("UIStroke")
+	outline.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	outline.Color = Theme.Colors.Panel
+	outline.Thickness = look.SlotOutline
+	outline.Transparency = look.SlotOutlineTransparency
+	outline.Parent = button
 	local icon = Instance.new("Frame")
-	icon.Position = UDim2.fromOffset(ui.ItemRowIconInset, ui.ItemRowIconInset)
-	icon.Size = UDim2.new(1, -2 * ui.ItemRowIconInset, 1, -2 * ui.ItemRowIconInset)
+	icon.Position = UDim2.fromOffset(look.IconInset, look.IconInset)
+	icon.Size = UDim2.new(1, -2 * look.IconInset, 1, -2 * look.IconInset)
 	icon.BackgroundTransparency = 1
-	icon.Parent = iconBox
+	icon.Parent = button
 	local veil = Instance.new("Frame")
 	veil.Size = UDim2.fromScale(1, 1)
 	veil.BackgroundColor3 = Theme.Colors.Dark
-	veil.BackgroundTransparency = ui.ItemDimVeil
+	veil.BackgroundTransparency = look.DimTransparency
 	veil.BorderSizePixel = 0
-	veil.ZIndex = 2 -- over the icon
+	veil.ZIndex = 2
 	veil.Visible = false
-	Ui.roundCorners(veil)
-	veil.Parent = iconBox
-	-- The name and what it does, on a label box like a control hint's
-	local label = Instance.new("Frame")
-	label.LayoutOrder = 3
-	label.Size = UDim2.fromOffset(0, ui.HintHeight)
-	label.AutomaticSize = Enum.AutomaticSize.X
-	label.BorderSizePixel = 0
-	Ui.roundCorners(label)
-	label.Parent = frame
-	sideBySide(label, ui.Padding)
-	local padding = Instance.new("UIPadding")
-	padding.PaddingLeft = UDim.new(0, ui.Padding)
-	padding.PaddingRight = padding.PaddingLeft
-	padding.Parent = label
-	return {
-		frame = frame,
-		glow = glow,
-		key = key,
-		icon = icon,
-		veil = veil,
-		label = label,
-		name = text(label, 1, Theme.TextSize),
-		line = text(label, 2, ui.ItemLineTextSize),
-	}
+	Ui.roundCorners(veil, UDim.new(0, look.SlotCorner))
+	veil.Parent = button
+	-- The key on a cream tab, half over the square's bottom edge
+	local tab = Ui.label(tostring(slot), button)
+	tab.AnchorPoint = Vector2.new(0.5, 0.5)
+	tab.Position = UDim2.fromScale(0.5, 1)
+	tab.Size = UDim2.fromOffset(look.TabWidth, look.TabHeight)
+	tab.TextSize = look.TabTextSize
+	tab.BackgroundTransparency = 0
+	tab.BackgroundColor3 = Theme.Colors.Panel
+	tab.ZIndex = 3
+	Ui.roundCorners(tab)
+	return { button = button, outline = outline, icon = icon, veil = veil }
 end
 
--- Builds the rows bottom center of `gui`, hidden. `gui` ignores the top bar's inset. Both rows together are as tall as
--- two control hints, inside Hints.bottomBand().
-function ItemSlots.build(gui: ScreenGui)
-	local ui = Theme.Ui
-	local frame = Instance.new("Frame")
-	-- A fixed width, room for the longest line, so the key boxes and the bar stay put as abilities come and go
-	frame.AnchorPoint = Vector2.new(0.5, 1)
-	frame.Position = UDim2.new(0.5, 0, 1, -ui.Padding) -- level with the hints' bottoms
-	frame.Size = UDim2.fromOffset(ui.ItemRowsWidth, 0)
-	frame.AutomaticSize = Enum.AutomaticSize.Y
-	frame.BackgroundTransparency = 1
-	frame.Visible = false
-	frame.Parent = gui
-	local layout = Instance.new("UIListLayout")
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Left -- so the key boxes line up
-	layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Padding = UDim.new(0, ui.Padding / 2)
-	layout.Parent = frame
-	-- Your item bar, above the rows, as wide as they are
-	local track = Instance.new("Frame")
-	track.LayoutOrder = 0
-	track.Size = UDim2.new(1, 0, 0, ui.ItemBarHeight)
-	track.BackgroundColor3 = Theme.Colors.Dark
-	track.BorderSizePixel = 0
-	track.Parent = frame
-	local fill = Instance.new("Frame")
-	fill.Size = UDim2.fromScale(0, 1)
-	fill.BackgroundColor3 = Theme.Colors.Fill
-	fill.BorderSizePixel = 0
-	fill.Parent = track
+-- Builds the squares, the bar and the refusal note on their own screen, hidden until you're at a table
+function ItemSlots.build(playerGui: Instance)
+	local screen = Instance.new("ScreenGui")
+	screen.Name = "AbilitySlots"
+	screen.ResetOnSpawn = false
+	screen.IgnoreGuiInset = true -- measured from the screen's real bottom, like the top-down view's reserves
+	screen.Enabled = false
+	local box = Instance.new("Frame")
+	box.AnchorPoint = Vector2.new(0.5, 1)
+	box.Position = UDim2.new(0.5, 0, 1, -look.BottomMargin)
+	box.Size = UDim2.fromOffset(look.BarWidth, look.SlotSize + look.BarGap + look.BarHeight)
+	box.BackgroundTransparency = 1
+	box.Parent = screen
+	local scale = Instance.new("UIScale")
+	scale.Parent = box
+	local function fit()
+		scale.Scale = screen.AbsoluteSize.Y / look.DesignHeight
+	end
+	screen:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+
+	local across = 2 * look.SlotSize + look.SlotGap
+	local left = (look.BarWidth - across) / 2
+	squares = {}
+	for slot = 1, Config.Items.Slots do
+		squares[slot] = square(box, slot, left + (slot - 1) * (look.SlotSize + look.SlotGap))
+	end
+
+	-- The bar, in segments of Config.Items.BarPoints / BarSegments points each
+	local bar = Instance.new("Frame")
+	bar.Position = UDim2.fromOffset(0, look.SlotSize + look.BarGap)
+	bar.Size = UDim2.fromOffset(look.BarWidth, look.BarHeight)
+	bar.BackgroundTransparency = 1
+	bar.Parent = box
+	local count = look.BarSegments
+	local width = (look.BarWidth - (count - 1) * look.BarSegmentGap) / count
+	segments = {}
+	for k = 1, count do
+		local track = Instance.new("Frame")
+		track.Position = UDim2.fromOffset((k - 1) * (width + look.BarSegmentGap), 0)
+		track.Size = UDim2.fromOffset(width, look.BarHeight)
+		track.BackgroundColor3 = Theme.Colors.Dark
+		track.BorderSizePixel = 0
+		track.ClipsDescendants = true
+		Ui.roundCorners(track)
+		track.Parent = bar
+		local fill = Instance.new("Frame")
+		fill.Size = UDim2.fromScale(0, 1)
+		fill.BackgroundColor3 = Theme.Colors.Fill
+		fill.BorderSizePixel = 0
+		fill.Parent = track
+		segments[k] = fill
+	end
 	-- Full with both slots full: it glows until a slot frees and its ability arrives
 	local glow = Instance.new("UIStroke")
 	glow.Color = Theme.Colors.TurnGlow
-	glow.Thickness = ui.TurnGlow
+	glow.Thickness = Theme.Ui.TurnGlow
 	glow.Enabled = false
-	glow.Parent = track
-	bar = { track = track, fill = fill, glow = glow }
-	rows = {}
-	for i = 1, Config.Items.Slots do
-		rows[i] = row(frame, i)
+	glow.Parent = bar
+	barGlow, barFrame = glow, bar
+
+	-- Why a target was refused, just above the squares
+	local note = Ui.label("", box)
+	note.AnchorPoint = Vector2.new(0.5, 1)
+	note.Position = UDim2.new(0.5, 0, 0, -look.RefusalGap)
+	note.Size = UDim2.fromOffset(0, look.RefusalHeight)
+	note.AutomaticSize = Enum.AutomaticSize.X
+	note.TextSize = look.RefusalTextSize
+	note.BackgroundTransparency = 0
+	note.BackgroundColor3 = Theme.Colors.ItemRefusal
+	note.Visible = false
+	Ui.roundCorners(note)
+	local padding = Instance.new("UIPadding")
+	padding.PaddingLeft = UDim.new(0, Theme.Ui.Padding)
+	padding.PaddingRight = padding.PaddingLeft
+	padding.Parent = note
+	refusalLabel = note
+
+	screen.Parent = playerGui
+	fit()
+	gui = screen
+	held, shownState = {}, nil
+end
+
+-- Shows the squares and bar while this player is at a table, joined or playing, in either view
+function ItemSlots.setAtTable(atTable: boolean)
+	if gui then
+		gui.Enabled = atTable
 	end
-	column = frame
-	shown = nil
 end
 
--- A "+4" that rises from your bar and fades, so you learn what fills it
-local function pop(track: Frame, points: number)
-	local ui = Theme.Ui
-	local label = Ui.label(`+{points}`, track)
-	label.AnchorPoint = Vector2.new(0.5, 1)
-	label.Position = UDim2.fromScale(0.5, 0)
-	label.Size = UDim2.new(1, 0, 0, ui.ItemPopTextSize)
-	label.TextSize = ui.ItemPopTextSize
-	label.TextColor3 = Theme.Colors.Fill
-	label.ZIndex = 2
-	local edge = Instance.new("UIStroke")
-	edge.Color = Theme.Colors.Text
-	edge.Parent = label
-	local info = TweenInfo.new(ui.ItemPopSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	TweenService:Create(label, info, { Position = UDim2.new(0.5, 0, 0, -ui.ItemPopRise), TextTransparency = 1 }):Play()
-	TweenService:Create(edge, info, { Transparency = 1 }):Play()
-	task.delay(ui.ItemPopSeconds, label.Destroy, label)
-end
-
--- Shows your item bar's points, with a pop for each fill just earned, or hides it with nil while you're not playing
-function ItemSlots.showBar(points: number?, pops: { number }?)
+-- A "+4" that rises from the bar's end and fades, so you learn what fills it
+local function pop(points: number)
+	local bar = barFrame
 	if not bar then
 		return
 	end
-	bar.track.Visible = points ~= nil
-	if points then
-		local share = math.clamp(points / Config.Items.BarPoints, 0, 1)
-		bar.fill.Size = UDim2.fromScale(share, 1)
-		bar.glow.Enabled = share >= 1
-		for _, earned in (pops or {}) :: { number } do
-			pop(bar.track, earned)
-		end
+	local label = Ui.label(`+{points}`, bar)
+	label.AnchorPoint = Vector2.new(0, 0.5)
+	label.Position = UDim2.new(1, Theme.Ui.Padding / 2, 0.5, 0)
+	label.Size = UDim2.fromOffset(0, Theme.Ui.ItemPopTextSize)
+	label.AutomaticSize = Enum.AutomaticSize.X
+	label.TextSize = Theme.Ui.ItemPopTextSize
+	label.TextColor3 = Theme.Colors.Fill
+	local edge = Instance.new("UIStroke")
+	edge.Color = Theme.Colors.Text
+	edge.Parent = label
+	local info = TweenInfo.new(Theme.Ui.ItemPopSeconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local rise = UDim2.new(1, Theme.Ui.Padding / 2, 0.5, -Theme.Ui.ItemPopRise)
+	TweenService:Create(label, info, { Position = rise, TextTransparency = 1 }):Play()
+	TweenService:Create(edge, info, { Transparency = 1 }):Play()
+	task.delay(Theme.Ui.ItemPopSeconds, label.Destroy, label)
+end
+
+-- Fills the squares and the bar from ItemsChanged: your slots (each an ability's name, or false when empty), your
+-- bar's points and the pops just earned. Nil empties them, as before a game.
+function ItemSlots.showItems(slots: { string | false }?, points: number?, pops: { number }?)
+	for slot, sq in squares do
+		local item = if slots and slots[slot] then slots[slot] :: string else nil
+		held[slot] = item or false
+		ItemIcons.draw(item or "", sq.icon)
+		-- Held, a dark tile with its icon; empty, just the outline
+		sq.button.BackgroundTransparency = if item then 0 else 1
+	end
+	local perSegment = Config.Items.BarPoints / #segments
+	for k, fill in segments do
+		fill.Size = UDim2.fromScale(math.clamp(((points or 0) - (k - 1) * perSegment) / perSegment, 0, 1), 1)
+	end
+	if barGlow then
+		barGlow.Enabled = (points or 0) >= Config.Items.BarPoints
+	end
+	for _, earned in (pops or {}) :: { number } do
+		pop(earned)
+	end
+	shownState = nil
+end
+
+-- From ShotController every frame in the top-down view: `picking` (1 or 2) outlines that square in gold, `usable`
+-- false dims the squares, and `refusal` shows why a slot's target was refused above them. Only touches what changed.
+function ItemSlots.setState(picking: number?, usable: boolean, refusal: { slot: number, text: string }?)
+	local state = `{picking} {usable} {refusal and refusal.text}`
+	if state == shownState then
+		return
+	end
+	shownState = state
+	for slot, sq in squares do
+		local isPicking = picking == slot
+		sq.outline.Color = if isPicking then Theme.Colors.ItemPicking else Theme.Colors.Panel
+		sq.outline.Thickness = if isPicking then look.PickingOutline else look.SlotOutline
+		sq.outline.Transparency = if isPicking then 0 else look.SlotOutlineTransparency
+		sq.veil.Visible = not usable and held[slot] ~= false
+	end
+	if refusalLabel then
+		refusalLabel.Visible = refusal ~= nil
+		refusalLabel.Text = if refusal then refusal.text else ""
 	end
 end
 
--- What clicking a row does, given its slot, or nothing with nil. ShotController sets it to the same as the keys.
+-- What clicking a square does, given its slot, or nothing with nil. ShotController sets it to the same as the keys.
 function ItemSlots.onPress(action: ((slot: number) -> ())?)
 	pressed = action
-end
-
--- Shows your items: each slot's item, or false for an empty slot. `picking` is the slot whose target you're choosing,
--- `usable` false dims the rows, and `refusal` says why a slot's item can't be used, in place of what it does. Nil slots
--- hide them. Called every frame, so it only changes what's different.
-function ItemSlots.show(
-	items: { string | false }?,
-	picking: number?,
-	usable: boolean,
-	refusal: { slot: number, text: string }?
-)
-	local state = if items
-		then `{items[1]} {items[2]} {picking} {usable} {refusal and refusal.slot} {refusal and refusal.text}`
-		else nil
-	if not column or state == shown then
-		return
-	end
-	shown = state
-	column.Visible = items ~= nil
-	if not items then
-		return
-	end
-	local ui = Theme.Ui
-	for i, r in rows do
-		local item = if items[i] then items[i] :: string else nil
-		-- Every slot has its row: an empty one shows only its key and an empty dark square
-		r.frame.Visible = true
-		r.label.Visible = item ~= nil
-		ItemIcons.draw(item or "", r.icon)
-		if not item then
-			r.glow.Enabled = false
-			r.veil.Visible = false
-			r.key.TextTransparency = if usable then 0 else ui.ItemDimText
-		else
-			local refused = refusal ~= nil and refusal.slot == i
-			-- A refusal is a warning, so it stays readable while the rest dim
-			local dim = not usable and not refused
-			local fade = if dim then ui.ItemDimText else 0
-			r.name.Text = Items.NAMES[item] or item
-			r.line.Text = if refusal and refused then refusal.text else Items.LINES[item] or ""
-			r.line.TextColor3 = if refused then Theme.Colors.Text else Theme.Colors.ItemLine
-			r.label.BackgroundColor3 = if refused then Theme.Colors.ItemRefusal else Theme.Colors.Panel
-			r.label.BackgroundTransparency = if refused then 0 elseif dim then ui.ItemDimBox else ui.HudTransparency
-			r.glow.Enabled = picking == i
-			r.veil.Visible = dim
-			r.key.TextTransparency = fade
-			r.name.TextTransparency = fade
-			r.line.TextTransparency = fade
-		end
-	end
 end
 
 return ItemSlots

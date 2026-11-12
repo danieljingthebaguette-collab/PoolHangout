@@ -3,8 +3,9 @@
 -- ShotClock (between the cards), Banner (fouls and the winner, under the top bar), LeaveButton (top right while you're at a table), PowerMeter (left),
 -- Tray (right, where sunk balls collect), Hints (the control hints, bottom right) and SettingsPanel (the gear
 -- bottom-left, with the sound volume), and beside the gear "TEST MODE" while the physics test mode has the table.
--- It also starts TurnArrow, the "Turn" card over each shooter's head in the normal view, and AbilitiesPanel, the
--- Abilities button bottom center while you're not at a table. The top bar, clock and tray follow one table at a time
+-- It also starts TurnArrow, the "Turn" card over each shooter's head in the normal view, and at the bottom center of
+-- the screen either your ability squares and bar (ItemSlots, while you're at a table) or the lobby's buttons
+-- (LobbyButtons, while you're not), with the Abilities panel the lobby's button opens. The top bar, clock and tray follow one table at a time
 -- (ActiveTable); setTable switches them.
 
 local Players = game:GetService("Players")
@@ -21,6 +22,7 @@ local EndScreen = require(script.Parent.EndScreen)
 local Hints = require(script.Parent.Hints)
 local ItemName = require(script.Parent.ItemName)
 local ItemSlots = require(script.Parent.ItemSlots)
+local LobbyButtons = require(script.Parent.LobbyButtons)
 local LeaveButton = require(script.Parent.LeaveButton)
 local PowerMeter = require(script.Parent.PowerMeter)
 local SettingsPanel = require(script.Parent.SettingsPanel)
@@ -81,15 +83,10 @@ function Hud.setPower(share: number?)
 	PowerMeter.set(share)
 end
 
--- Shows your abilities' rows at the bottom center, or hides them with nil: `picking` is the slot waiting for a target,
--- `usable` false dims them, and `refusal` says why a slot's ability can't be used
-function Hud.setSlots(
-	slots: { Items.Item | false }?,
-	picking: number?,
-	usable: boolean,
-	refusal: { slot: number, text: string }?
-)
-	ItemSlots.show(slots, picking, usable, refusal)
+-- Marks your ability squares: `picking` is the slot waiting for a target, `usable` false dims them, and `refusal` says
+-- why a slot's target was refused. What they hold comes from ItemsChanged.
+function Hud.setSlots(picking: number?, usable: boolean, refusal: { slot: number, text: string }?)
+	ItemSlots.setState(picking, usable, refusal)
 end
 
 -- What clicking an ability's row does, given its slot: the same as its key. Nil clears it.
@@ -138,7 +135,7 @@ function Hud.setTable(tableModel: Model)
 	current = tableModel
 	lastShooter = nil
 	mySeat = nil
-	ItemSlots.showBar(nil)
+	ItemSlots.showItems(nil, nil, nil)
 	TopBar.show(nil, nil, nil, nil)
 	TopBar.showItems(nil, nil)
 	ShotClock.show(nil)
@@ -171,7 +168,6 @@ function Hud.start(tableModel: Model)
 	TopBar.show(nil, nil, nil, nil)
 	ShotClock.build(gui)
 	Hints.build(gui)
-	ItemSlots.build(gui)
 	testModeLabel(gui)
 	gui.Parent = playerGui
 	table.insert(guis, gui)
@@ -188,7 +184,14 @@ function Hud.start(tableModel: Model)
 
 	PowerMeter.build(playerGui)
 	AbilitiesPanel.build(playerGui)
-	LeaveButton.build(playerGui, AbilitiesPanel.setAtTable)
+	ItemSlots.build(playerGui)
+	LobbyButtons.build(playerGui)
+	-- At a table your ability squares show; in the lobby, its buttons in the same spot
+	LeaveButton.build(playerGui, function(atTable: boolean)
+		AbilitiesPanel.setAtTable(atTable)
+		ItemSlots.setAtTable(atTable)
+		LobbyButtons.setAtTable(atTable)
+	end)
 	TurnArrow.start()
 	EndScreen.start(playerGui)
 	Banner.start(playerGui, function(model: Model): boolean
@@ -260,7 +263,7 @@ function Hud.start(tableModel: Model)
 	Remotes.ItemsChanged.OnClientEvent:Connect(function(model: Model?, bars: { Items.Bar }?, pops: { Items.Pop }?)
 		if model == current then
 			TopBar.showItems(bars, pops)
-			-- Your own bar is at the bottom, over your ability rows, with its pops
+			-- Your own squares and bar are at the bottom of the screen, with your pops
 			local mine = if bars and mySeat then bars[mySeat] else nil
 			local earned = {}
 			for _, popped in (pops or {}) :: { Items.Pop } do
@@ -268,7 +271,7 @@ function Hud.start(tableModel: Model)
 					table.insert(earned, popped.points)
 				end
 			end
-			ItemSlots.showBar(if mine then mine.points else nil, earned)
+			ItemSlots.showItems(if mine then mine.slots else nil, if mine then mine.points else nil, earned)
 		end
 	end)
 

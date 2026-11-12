@@ -58,7 +58,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
   3. **Ball in hand:** Coach scratches on purpose; they place the cue ball and shoot.
   4. **Groups:** their first legal pot gives them solids or stripes, shown on their card.
   5. **Calling the 8:** with only their last ball and the 8 left, they call a pocket and sink the 8 there.
-  6. **Items:** Coach gives them an item to try *(default: Power Shot)*, and their card shows the item bar filling.
+  6. **Items:** Coach gives them an item to try *(default: Power Shot)*, and the bar under their ability squares fills.
   - Coach takes short, easy turns between steps, slow enough to watch. A miss just tries the step again.
 - **Skip:** a Skip button top right, any time.
 - **After:** at the end, or on Skip, they're put straight into the lodge, at its spawn, and their room goes away. Finishing or skipping is saved, so each player sees it once *(saving needs my OK when it's built)*. Returning players start in the lodge.
@@ -106,8 +106,8 @@ Laid out like 8 Ball Duels, in the look `docs/STYLE.md` describes: cream cards, 
   - a settings button bottom-left with a sound volume slider. The volume lasts for the session and isn't saved *(default)*. It shows only in the top-down view, so it never covers the phones' thumbstick.
   - a gold ring pulses once around each of your balls, growing and fading over 2 seconds, when your turn starts, while the balls keep their own colors, so you can see which are yours: your group's, or the 8 once your group is cleared. No rings show on an open table, where no ball is yours yet
   - under each other player's avatar on their card, their 2 item slots as small squares and their item bar under them, with a "+4" rising from it each time it fills and a glow while it's full with both slots taken. Your own card shows neither: yours are at the bottom
-  - your abilities at the bottom center whenever you're playing: your item bar, filling toward your next ability with its "+4" pops and its full glow, and under it a row for each of your 2 slots: its key, its icon drawn in code, its name and its one line (see Items). An empty slot shows just its key and an empty dark square, with no text. The row waiting for a target is outlined in gold, the rows dim while you can't use one, and when a target isn't allowed the row turns coral and says why, like "Can't freeze the 8". Clicking a row does the same as its key. The rows fit in the bottom band's height, so the table never shrinks for them. A plain look like the control hints until the GUI pass
-- **Anywhere, while you're not at a table:** an "Abilities" button at the bottom center. It opens one panel listing all 5 abilities, each with its icon, name and one line (see Items), under a short part on how you earn them (the bar under your avatar fills as you play) and use them (press 1 or 2 on your turn). Its close button and Esc close it, and so does joining a table. A plain look in `docs/STYLE.md`'s colors until the GUI pass
+  - your abilities at the bottom center whenever you're at a table, in either view, laid out like Illegal Soccer's item slots: 2 large squares side by side, about 100 px each on a 1080-pixel-high screen and scaling with it, each with its key (1 or 2) on a small tab on its bottom edge. An empty square is just an outline; a held ability's icon, drawn in code, fills its square. Directly under the squares, your item bar, a little wider than both together, in 4 segments of 3 points each, with its "+4" pops and a glow while it's full with both slots taken. The square waiting for a target is outlined in gold, the squares dim while you can't use one, and when a target isn't allowed a coral note just above the squares says why, like "Can't freeze the 8". Clicking a square does the same as its key. The table shrinks a little to keep clear of them. A plain look until the GUI pass
+- **Anywhere, while you're not at a table:** a row of buttons at the bottom center, where your ability squares sit at a table, each with its key letter on a tag above it, laid out like Illegal Soccer's lobby buttons: **Abilities (Z)** and **Invite (X)**. Abilities opens one panel listing all 5 abilities, each with its icon, name and one line (see Items), under a short part on how you earn them (the bar under your ability squares fills as you play) and use them (press 1 or 2, or click a square, on your turn). Its close button, Esc and Z close it, and so does joining a table. Invite opens Roblox's invite-friends prompt. A plain look in `docs/STYLE.md`'s colors until the GUI pass
 
 ## 8-ball rules
 
@@ -149,16 +149,16 @@ Each player has one item bar. At 12 points it gives an item, and leftover points
 - Each item is random from the 5, each equally likely. Nobody starts with one.
 - Each player holds up to 2 items, in slots 1 and 2. A new item goes in the first empty slot. If the bar fills while both slots are full, it stops at full and glows, and the item arrives as soon as you use one. Points past full are lost.
 - `Config.Items.SinkItemsWaitForTurnEnd` (off by default): when it's on, an item that your own sink fills arrives when your turn ends, not right away.
-- Every player's card shows their 2 slots with the item bar under them, for everyone to see. Each fill shows a small pop on the bar, like "+4", so players learn what fills it. The exact look waits for the GUI pass.
+- Every other player's card shows their 2 slots with the item bar under them, and yours are at the bottom of your screen, so everyone sees everyone's. Each fill shows a small pop on the bar, like "+4", so players learn what fills it. The exact look waits for the GUI pass.
 - In 2v2, each player has their own slots and bar, and balls sunk count for the shooter.
 
 ### Using items
 
-- On your own turn, before a shot, press 1 or 2, or click the ability's row (phones: tap it). One item per shot. Like shooting, it works only in the top-down view.
-- Power Shot and Blast Ball take effect at once. Freeze, Oil Slick and Pocket Block then ask for a target: click or tap a ball, a spot on the felt or a pocket, and their row lights up while they wait. Pressing the same key or clicking the row again backs out without using it. If the target isn't allowed, the row says why, like "Can't freeze the 8", and you can pick another. Items can't be used mid-pull.
+- On your own turn, before a shot, press 1 or 2, or click its square (phones: tap it). One item per shot. Like shooting, it works only in the top-down view.
+- Power Shot and Blast Ball take effect at once. Freeze, Oil Slick and Pocket Block then ask for a target: click or tap a ball, a spot on the felt or a pocket, and their square lights up while they wait. Pressing the same key or clicking the square again backs out without using it. If the target isn't allowed, a note above the squares says why, like "Can't freeze the 8", and you can pick another. Items can't be used mid-pull.
 - An item is spent the moment you use it, even if you then foul or the clock runs out. The shot clock keeps running while you pick a target.
 - Everyone at the table, players and watchers, sees the item's name big at the top center, under the clock and the banner, in Luckiest Guy, with its one-line description under it, for about 3 seconds, long enough to read. Its effect stays visible on the table while it lasts. Every player's held items show on their card, for everyone to see.
-- **What players read,** one short line per item, written for 10-year-olds, on its row, in the Abilities panel and under its big name:
+- **What players read,** one short line per item, written for 10-year-olds, in the Abilities panel and under its big name:
   - Power Shot: "Hit harder: up to 150% power for the rest of your turn"
   - Blast Ball: "The first ball you hit blasts the balls around it away"
   - Freeze: "Pick a ball: it can't move, and balls bounce off it, until after their next turn"

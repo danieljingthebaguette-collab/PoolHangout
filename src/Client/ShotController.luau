@@ -255,9 +255,14 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		return if bar then bar.slots else nil
 	end
 
-	-- Whether this player may use an item now: their turn, the balls still, no pull under way and none used this shot
+	-- Whether this player may use an item now: their turn, in the top-down view, the balls still, no pull under way and
+	-- none used this shot
 	local function canUseItem(): boolean
-		return turn ~= nil and turn.mine and canShoot() and not (pulling or strike or usedThisShot)
+		return turn ~= nil
+			and turn.mine
+			and view.isOn()
+			and canShoot()
+			and not (pulling or strike or usedThisShot)
 	end
 
 	-- The cue has reached the ball: the shot goes, here at once and to the server
@@ -522,12 +527,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		)
 		lockButton.Text = if held then "Unlock" else "Lock"
 		-- Your slots show while you play here, dimmed when you can't use an item
-		Hud.setSlots(
-			if turn and turn.seated then mySlots() else nil,
-			if picking then picking.slot else nil,
-			canUseItem(),
-			refusal
-		)
+		Hud.setSlots(if picking then picking.slot else nil, canUseItem(), refusal)
 		indicator.hide()
 		if hidden then
 			Stance.stop()
@@ -657,6 +657,8 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		ContextActionService:UnbindAction(LOCK_ACTION)
 		ContextActionService:UnbindAction(ITEM_ACTION)
 		picking, refusal = nil, nil
+		-- Outside the view abilities can't be used, so the squares dim
+		Hud.setSlots(nil, false, nil)
 		Stance.stop()
 		-- A shot you've let go of still goes
 		if strike then

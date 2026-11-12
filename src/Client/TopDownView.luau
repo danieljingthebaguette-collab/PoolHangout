@@ -13,6 +13,7 @@ local UserInputService = game:GetService("UserInputService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local Hints = require(script.Parent.Hints)
+local ItemSlots = require(script.Parent.ItemSlots)
 local TopBar = require(script.Parent.TopBar)
 
 local TopDownView = {}
@@ -63,7 +64,9 @@ function TopDownView.new(tableModel: Model, felt: BasePart): View
 		local camera = workspace.CurrentCamera
 		local viewport = camera.ViewportSize
 		local freeWidth = 1 - (reserve.left + reserve.right) / viewport.X
-		local freeHeight = 1 - (reserve.top + reserve.bottom) / viewport.Y
+		-- The bottom keeps clear for the control hints and your ability squares and bar, which scale with the screen
+		local bottom = math.max(reserve.bottom, ItemSlots.reserve(viewport.Y))
+		local freeHeight = 1 - (reserve.top + bottom) / viewport.Y
 		local tanHalfHeight = math.tan(math.rad(Config.Camera.TopDownFieldOfView / 2))
 		local tanHalfWidth = tanHalfHeight * viewport.X / viewport.Y
 		-- High enough that the whole table fits between the reserves, with its length across the screen
@@ -75,7 +78,7 @@ function TopDownView.new(tableModel: Model, felt: BasePart): View
 		-- Slide the view so the table sits in the middle of the space the reserves leave. The screen's up is the
 		-- felt's LookVector.
 		local shiftX = (reserve.left - reserve.right) / viewport.X * height * tanHalfWidth
-		local shiftY = (reserve.top - reserve.bottom) / viewport.Y * height * tanHalfHeight
+		local shiftY = (reserve.top - bottom) / viewport.Y * height * tanHalfHeight
 		-- The screen's right and up: along the felt's length, and its far long side
 		local right, up = felt.CFrame.RightVector, felt.CFrame.LookVector
 		if flipped then

@@ -49,9 +49,9 @@ local Theme = {
 		BallMark = Color3.fromRGB(245, 242, 230), -- the white on the placeholder balls: stripes and number dots
 		CueBallMark = Color3.fromRGB(200, 35, 35),
 		BallShadow = Color3.fromRGB(10, 20, 40),
-		ItemPicking = ACCENT, -- the outline round your ability's row while you pick its target
+		ItemPicking = ACCENT, -- the outline round your ability's square while you pick its target
 		ItemLine = Color3.fromRGB(98, 82, 70), -- an ability's line, on its row and in the Abilities panel: softer ink
-		ItemRefusal = Color3.fromRGB(255, 138, 118), -- coral, an ability's row while it says why its target isn't allowed
+		ItemRefusal = Color3.fromRGB(255, 138, 118), -- coral, the note above your squares saying why a target isn't allowed
 	},
 
 	Ui = {
@@ -115,19 +115,8 @@ local Theme = {
 		ItemPopTextSize = 16, -- the "+4" that rises from a bar when it fills...
 		ItemPopRise = 16, -- ...this many pixels...
 		ItemPopSeconds = 0.8, -- ...as it fades out
-		-- Your abilities, bottom center of the top-down view (ItemSlots): a row for each, like a control hint. Two rows fit
-		-- the bottom band (Hints.bottomBand()). Placeholder looks until the GUI pass.
-		-- Your bar and rows' fixed width, room for the longest line (Freeze's) at 1920 wide, so nothing shifts as slots
-		-- fill. The bar above the rows is ItemBarHeight tall; it and the rows fill the band.
-		ItemRowsWidth = 560,
-		ItemRowIconInset = 3, -- the icon's margin inside its dark box, as tall as a hint
-		ItemLineTextSize = 16, -- the ability's one-line description, beside its name at TextSize
-		ItemDimText = 0.55, -- while you can't use an ability: the rows' text this see-through...
-		ItemDimBox = 0.5, -- ...their label boxes this see-through...
-		ItemDimVeil = 0.4, -- ...and a dark veil this see-through over each icon
-		-- The Abilities button, bottom center while you're not at a table, and the panel it opens in the middle of the
-		-- screen, listing every ability. Placeholder looks until the GUI pass.
-		AbilitiesButtonWidth = 120,
+		-- The Abilities panel the lobby's Abilities button opens in the middle of the screen, listing every ability.
+		-- Placeholder looks until the GUI pass.
 		AbilitiesPanelWidth = 680, -- room for the longest description on one line
 		AbilitiesCloseWidth = 80,
 		AbilitiesIconSize = 44, -- each ability's icon on its dark box...
@@ -163,6 +152,41 @@ local Theme = {
 		Lid = ACCENT, -- ...with a gold lid across it...
 		LidEdge = INK, -- ...edged in ink
 		Edge = 0.05, -- the edges, as a share of the icon's width
+	},
+
+	-- Bottom center of the screen, sized for a 1080-pixel-high screen and scaled to the real one (UIScale). At a table
+	-- (AbilitySlots): your 2 ability squares side by side, each with its key on a tab on its bottom edge, an outline
+	-- when empty and the ability's icon on a dark tile when held, your ability bar under them in segments, and above
+	-- them a coral note saying why a target was refused. In the lobby (LobbyButtons): a row of buttons in the same
+	-- spot, each with its key letter on a tag above it. Placeholder looks until the GUI pass.
+	Abilities = {
+		DesignHeight = 1080, -- the screen height these sizes are for
+		BottomMargin = 12, -- from the screen's bottom edge
+		SlotSize = 100,
+		SlotGap = 12,
+		SlotCorner = 6,
+		SlotOutline = 2, -- an empty square is just this outline, in cream...
+		SlotOutlineTransparency = 0.15,
+		PickingOutline = 4, -- ...gold and this thick round the square picking a target
+		IconInset = 14, -- the icon's margin inside its square
+		DimTransparency = 0.45, -- a dark veil over the squares while you can't use one
+		TabWidth = 30, -- the key tab on each square's bottom edge, half over it
+		TabHeight = 24,
+		TabTextSize = 18,
+		BarGap = 18, -- between the squares and the bar under them, room for the tabs
+		BarWidth = 240, -- a little wider than both squares together
+		BarHeight = 14,
+		BarSegments = 4, -- Config.Items.BarPoints split evenly: 3 points each
+		BarSegmentGap = 4,
+		RefusalGap = 8, -- the coral note's gap above the squares
+		RefusalHeight = 30,
+		RefusalTextSize = 18,
+		ButtonWidth = 200, -- the lobby's buttons
+		ButtonHeight = 56,
+		ButtonGap = 16,
+		ButtonTextSize = 24,
+		KeyTagSize = 28, -- the key letter's dark tag above each lobby button, half over its top edge
+		KeyTagTextSize = 18,
 	},
 
 	-- The placeholder balls' markings, so you can see them roll, in ball radii. Solids, the 8 and the cue ball
