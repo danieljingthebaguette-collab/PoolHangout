@@ -171,10 +171,6 @@ function Items.afterPots(state: State, seat: number, pots: number, roll: () -> n
 	return pops
 end
 
-local function isFinite(value: number): boolean
-	return value == value and math.abs(value) ~= math.huge
-end
-
 -- A whole number from `low` to `high`, or nil
 local function wholeIn(value: unknown, low: number, high: number): number?
 	if type(value) == "number" and value == math.floor(value) and value >= low and value <= high then
@@ -239,7 +235,7 @@ local function checkTarget(
 		if
 			type(x) ~= "number"
 			or type(y) ~= "number"
-			or not (isFinite(x) and isFinite(y))
+			or not (TableFlow.isFinite(x) and TableFlow.isFinite(y))
 			or math.abs(x) > tableParams.Length / 2
 			or math.abs(y) > tableParams.Width / 2
 		then

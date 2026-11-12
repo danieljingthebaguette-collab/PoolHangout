@@ -32,9 +32,11 @@ local TableFlow = {}
 TableFlow.SEAT_NAMES = { "A1", "B1", "A2", "B2" }
 local SEATS: { [string]: number } = { ["1v1"] = 2, ["2v2"] = 4 }
 
-local function isFinite(value: number): boolean
+-- Whether a number from a client is a real number: not NaN and not infinite
+function TableFlow.isFinite(value: number): boolean
 	return value == value and math.abs(value) ~= math.huge
 end
+local isFinite = TableFlow.isFinite
 
 -- How many seats a table has, from its Mode. A table with no Mode, or one we don't know, is 1v1.
 function TableFlow.seatCount(mode: unknown): number

@@ -14,6 +14,7 @@ local Geometry = require(ReplicatedStorage.Shared.Physics.Geometry)
 local PhysicsTestAccess = require(ReplicatedStorage.Shared.PhysicsTestAccess)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Simulate = require(ReplicatedStorage.Shared.Physics.Simulate)
+local TableFlow = require(ReplicatedStorage.Shared.Rules.TableFlow)
 local Balls = require(script.Parent.Balls)
 local TableBuilder = require(script.Parent.TableBuilder)
 local TableService = require(script.Parent.TableService)
@@ -22,10 +23,6 @@ local PhysicsTest = {}
 
 -- Sliders that change the table's shape, so Table1 is rebuilt to match
 local REBUILDS = { CornerPocketMouth = true, SidePocketMouth = true }
-
-local function isFinite(value: number): boolean
-	return value == value and math.abs(value) ~= math.huge
-end
 
 function PhysicsTest.start()
 	local tableModel = workspace:WaitForChild("Tables"):WaitForChild("Table1") :: Model
@@ -144,7 +141,7 @@ function PhysicsTest.start()
 				return
 			end
 			local length = math.sqrt(dirX * dirX + dirY * dirY)
-			if not (isFinite(length) and length > 0 and power >= 0 and power <= 1) then
+			if not (TableFlow.isFinite(length) and length > 0 and power >= 0 and power <= 1) then
 				return
 			end
 

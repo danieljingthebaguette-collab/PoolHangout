@@ -3,6 +3,7 @@
 -- while Config.Debug.PhysicsTestLive is on. The server checks it on every test request, so another player's
 -- client can't use the test remotes even if it fires them. Also builds the physics params the sliders set.
 
+local GroupService = game:GetService("GroupService")
 local RunService = game:GetService("RunService")
 
 local Config = require(script.Parent.Config)
@@ -11,7 +12,10 @@ local Simulate = require(script.Parent.Physics.Simulate)
 
 local PhysicsTestAccess = {}
 
--- May yield on a group-owned place, which asks Roblox for the player's rank the first time
+-- A group-owned place's owner, asked from Roblox once
+local groupOwner: number? = nil
+
+-- May yield on a group-owned place, which asks Roblox for the group's owner the first time
 function PhysicsTestAccess.canTest(player: Player): boolean
 	if not Config.Debug.PhysicsTest then
 		return false
@@ -25,9 +29,12 @@ function PhysicsTestAccess.canTest(player: Player): boolean
 	if game.CreatorType == Enum.CreatorType.User then
 		return player.UserId == game.CreatorId
 	end
-	-- 255 is a group's owner
-	local ok, rank = pcall(player.GetRankInGroup, player, game.CreatorId)
-	return ok and rank == 255
+	if not groupOwner then
+		local ok, info = pcall(GroupService.GetGroupInfoAsync, GroupService, game.CreatorId)
+		local owner = ok and type(info) == "table" and info.Owner
+		groupOwner = if type(owner) == "table" and type(owner.Id) == "number" then owner.Id else nil
+	end
+	return player.UserId == groupOwner
 end
 
 -- A fresh copy of one of Config's groups with the sliders' values in it. A slider whose value hasn't reached this
