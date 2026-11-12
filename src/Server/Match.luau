@@ -191,10 +191,40 @@ end
 
 local shoot: (Match, Seat.Seat, ...unknown) -> ()
 
--- Sends the shooter's live aim to every screen but their own, for anyone in the top-down view to draw
+-- How far `player`'s character is from a table's felt, or infinity with no character
+local function distanceTo(player: Player, tableModel: Instance): number
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	local felt = tableModel:FindFirstChild("Felt")
+	if not (root and root:IsA("BasePart") and felt and felt:IsA("BasePart")) then
+		return math.huge
+	end
+	return (root.Position - felt.Position).Magnitude
+end
+
+-- Whether `player`'s screen follows this table, so it can show the live aim (ActiveTable's rule, seen from the
+-- server): they play here, they joined here, or no other table is clearly nearer to them
+local function follows(match: Match, player: Player): boolean
+	if table.find(match.seats, player) then
+		return true
+	end
+	local joined = player:GetAttribute("JoinedTable")
+	if joined ~= nil then
+		return joined == match.tableModel.Name
+	end
+	local within = distanceTo(player, match.tableModel) - Config.Join.ActiveTableMargin
+	for _, other in (match.tableModel.Parent :: Instance):GetChildren() do
+		if other ~= match.tableModel and other:IsA("Model") and distanceTo(player, other) < within then
+			return false
+		end
+	end
+	return true
+end
+
+-- Sends the shooter's live aim to the screens following this table, but not the shooter's own, for anyone there in
+-- the top-down view to draw
 function Match.sendAim(match: Match, state: TableFlow.AimState)
-	for _, other: Seat.Seat in Players:GetPlayers() do
-		if other ~= match.shooter and other:IsA("Player") then
+	for _, other in Players:GetPlayers() do
+		if other ~= match.shooter and follows(match, other) then
 			Remotes.AimRelay:FireClient(other, match.tableModel, state)
 		end
 	end
