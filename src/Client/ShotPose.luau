@@ -19,37 +19,47 @@ local Theme = require(ReplicatedStorage.Shared.Theme)
 
 local ShotPose = {}
 
--- A posed character: how far into the pose it is, 0 to 1, and each joint's resting C0 to blend from
-type Posed = { blend: number, rest: { [Motor6D]: CFrame } }
+-- A posed joint: its offset at the full pose, the animation's own pose to add it to, and the Transform last written
+-- here, to tell whether the animation has written a newer one since
+type Joint = { offset: CFrame, base: CFrame, written: CFrame? }
+-- A posed character: how far into the pose it is, 0 to 1, and its joints
+type Posed = { blend: number, joints: { [Motor6D]: Joint } }
+-- A shooter's parts and decals, each with whether it's on an accessory, found once rather than every frame. Adding or
+-- removing anything in the character finds them again.
+type Look = { items: { { item: Instance, accessory: boolean } }, changed: { RBXScriptConnection } }
 
 -- Each table's shooter, and whether their shot is rolling
 local shooters: { [Model]: { seat: Seat.Seat, rolling: boolean } } = {}
 local posed: { [Model]: Posed } = {}
--- Characters drawn see-through now, on top of their table
+-- Characters drawn see-through now, on top of their table, and the set being built for the next frame
 local faded: { [Model]: boolean } = {}
+local fading: { [Model]: boolean } = {}
 -- Shooters' characters casting no shadow now, with each part's own CastShadow to give back after
 local unshadowed: { [Model]: { [BasePart]: boolean } } = {}
+local looks: { [Model]: Look } = {}
+-- Reused every frame, so nothing new is made per frame
+local wanted: { [Model]: boolean } = {}
+local shooting: { [Model]: boolean } = {}
 
+-- No offset at all, where each joint's pose blends from
+local NONE = CFrame.new()
 -- Each R6 joint's offset at the full pose, from Theme.Pose
-local function offsets(): { [string]: CFrame }
-	local pose = Theme.Pose
-	local lean = math.rad(pose.Lean)
-	return {
-		-- The root joint tips the whole body forward from the hips; the hips tip the legs back so they stay upright
-		RootJoint = CFrame.Angles(lean, 0, 0),
-		["Right Hip"] = CFrame.Angles(0, 0, lean),
-		["Left Hip"] = CFrame.Angles(0, 0, -lean),
-		["Right Shoulder"] = CFrame.Angles(0, 0, math.rad(pose.BackArm)),
-		["Left Shoulder"] = CFrame.Angles(0, 0, -math.rad(pose.FrontArm)),
-		Neck = CFrame.Angles(-math.rad(pose.Head), 0, 0),
-	}
-end
+local OFFSETS: { [string]: CFrame } = {
+	-- The root joint tips the whole body forward from the hips; the hips tip the legs back so they stay upright
+	RootJoint = CFrame.Angles(math.rad(Theme.Pose.Lean), 0, 0),
+	["Right Hip"] = CFrame.Angles(0, 0, math.rad(Theme.Pose.Lean)),
+	["Left Hip"] = CFrame.Angles(0, 0, -math.rad(Theme.Pose.Lean)),
+	["Right Shoulder"] = CFrame.Angles(0, 0, math.rad(Theme.Pose.BackArm)),
+	["Left Shoulder"] = CFrame.Angles(0, 0, -math.rad(Theme.Pose.FrontArm)),
+	Neck = CFrame.Angles(-math.rad(Theme.Pose.Head), 0, 0),
+}
 
-local function joints(character: Model): { [Motor6D]: string }
-	local found: { [Motor6D]: string } = {}
+local function joints(character: Model): { [Motor6D]: Joint }
+	local found: { [Motor6D]: Joint } = {}
 	for _, joint in character:GetDescendants() do
-		if joint:IsA("Motor6D") and offsets()[joint.Name] then
-			found[joint] = joint.Name
+		local offset = OFFSETS[joint.Name]
+		if offset and joint:IsA("Motor6D") then
+			found[joint] = { offset = offset, base = joint.Transform, written = nil }
 		end
 	end
 	return found
@@ -63,8 +73,11 @@ local function still(character: Model): boolean
 		and (root.Anchored or root.AssemblyLinearVelocity.Magnitude < Theme.Pose.StillSpeed)
 end
 
+-- The pose goes on each joint's Transform, on top of the animation's own pose, since rewriting C0 makes Roblox rebuild
+-- the character's body every frame. Animations write their Transforms before PreSimulation, where this runs; a joint
+-- no animation moves, like Coach's, still holds what was written here, so its base stays as it was.
 local function step(dt: number)
-	local wanted: { [Model]: boolean } = {}
+	table.clear(wanted)
 	for _, shooter in shooters do
 		local character = Seat.character(shooter.seat)
 		if character and character.Parent and not shooter.rolling and still(character) then
@@ -73,24 +86,23 @@ local function step(dt: number)
 	end
 	for character in wanted do
 		if not posed[character] then
-			local rest = {}
-			for joint in joints(character) do
-				rest[joint] = joint.C0
-			end
-			posed[character] = { blend = 0, rest = rest }
+			posed[character] = { blend = 0, joints = joints(character) }
 		end
 	end
-	local full = offsets()
-	local none = CFrame.new()
+	local change = dt / Theme.Pose.EaseSeconds
 	for character, pose in posed do
 		local target = if wanted[character] then 1 else 0
-		local change = dt / Theme.Pose.EaseSeconds
 		pose.blend = if target > pose.blend then math.min(pose.blend + change, 1) else math.max(pose.blend - change, 0)
 		-- Smooth in and out
 		local eased = pose.blend * pose.blend * (3 - 2 * pose.blend)
-		for joint, rest in pose.rest do
+		for joint, state in pose.joints do
 			if joint.Parent then
-				joint.C0 = rest * none:Lerp(full[joint.Name], eased)
+				local now = joint.Transform
+				if now ~= state.written then
+					state.base = now
+				end
+				joint.Transform = NONE:Lerp(state.offset, eased) * state.base
+				state.written = joint.Transform
 			end
 		end
 		if pose.blend == 0 and target == 0 then
@@ -99,24 +111,60 @@ local function step(dt: number)
 	end
 end
 
+local function forgetLook(character: Model)
+	local look = looks[character]
+	if look then
+		for _, connection in look.changed do
+			connection:Disconnect()
+		end
+		looks[character] = nil
+	end
+end
+
+-- This character's parts and decals, found once and kept until something is added to it or removed from it
+local function lookOf(character: Model): Look
+	local look = looks[character]
+	if look then
+		return look
+	end
+	local items: { { item: Instance, accessory: boolean } } = {}
+	for _, item in character:GetDescendants() do
+		if item:IsA("BasePart") or item:IsA("Decal") then
+			table.insert(
+				items,
+				{ item = item :: Instance, accessory = item:FindFirstAncestorOfClass("Accessory") ~= nil }
+			)
+		end
+	end
+	local function changed()
+		forgetLook(character)
+	end
+	local made: Look = {
+		items = items,
+		changed = { character.DescendantAdded:Connect(changed), character.DescendantRemoving:Connect(changed) },
+	}
+	looks[character] = made
+	return made
+end
+
 -- See-through by `amount`, with accessories hidden while it's more than 0
 local function setSeeThrough(character: Model, amount: number)
-	for _, item in character:GetDescendants() do
+	for _, entry in lookOf(character).items do
 		-- Both have it, but the type checker can't write to a mix of two classes
-		if item:IsA("BasePart") or item:IsA("Decal") then
-			local accessory = amount > 0 and item:FindFirstAncestorOfClass("Accessory") ~= nil
-			(item :: any).LocalTransparencyModifier = if accessory then Theme.Pose.OnTableAccessories else amount
-		end
+		(entry.item :: any).LocalTransparencyModifier = if amount > 0 and entry.accessory
+			then Theme.Pose.OnTableAccessories
+			else amount
 	end
 end
 
 -- These characters cast no shadow, parts added since included; every other character gets its parts' own back. A
 -- character that's gone is just forgotten.
-local function dropShadows(shooting: { [Model]: boolean })
+local function dropShadows()
 	for character in shooting do
 		local saved = unshadowed[character] or {}
 		unshadowed[character] = saved
-		for _, part in character:GetDescendants() do
+		for _, entry in lookOf(character).items do
+			local part = entry.item
 			if part:IsA("BasePart") and saved[part] == nil then
 				saved[part] = part.CastShadow
 				part.CastShadow = false
@@ -138,8 +186,8 @@ end
 local function fade()
 	local halfX = Config.Table.Length / 2 + Config.Stance.TableEdge
 	local halfY = Config.Table.Width / 2 + Config.Stance.TableEdge
-	local wanted: { [Model]: boolean } = {}
-	local shooting: { [Model]: boolean } = {}
+	table.clear(fading)
+	table.clear(shooting)
 	for tableModel, shooter in shooters do
 		local character = Seat.character(shooter.seat)
 		if character and character.Parent then
@@ -150,18 +198,24 @@ local function fade()
 		if character and root and root:IsA("BasePart") and felt and felt:IsA("BasePart") then
 			local x, y = TableSpace.toTable(felt, root.Position)
 			if ShotStance.overTable(x, y, halfX, halfY) then
-				wanted[character] = true
+				fading[character] = true
 				setSeeThrough(character, Theme.Pose.OnTableSeeThrough)
 			end
 		end
 	end
 	for character in faded do
-		if not wanted[character] and character.Parent then
+		if not fading[character] and character.Parent then
 			setSeeThrough(character, 0)
 		end
 	end
-	faded = wanted
-	dropShadows(shooting)
+	faded, fading = fading, faded
+	dropShadows()
+	-- A character neither shooting nor see-through needs no parts list
+	for character in looks do
+		if not (shooting[character] or faded[character]) then
+			forgetLook(character)
+		end
+	end
 end
 
 function ShotPose.start()
