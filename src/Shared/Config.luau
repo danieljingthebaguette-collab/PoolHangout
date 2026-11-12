@@ -57,6 +57,7 @@ local Config = {
 		ServerStepsPerFrame = 120,
 		ResolveBufferSeconds = 0.25, -- extra wait after a shot's replay ends before the result is sent
 		RequestCooldown = 0.5, -- the server ignores a player's shot requests closer together than this
+		NiceShotLength = 0.5, -- "Nice shot!" for a pot off a rail, or one that crossed this share of the table's length
 	},
 
 	Aim = {

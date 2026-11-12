@@ -78,6 +78,22 @@ local Theme = {
 		TopBarGap = 120, -- the space between the top bar's two cards, kept for the shot clock
 		ClockWidth = 96, -- the shot clock's dark box in that gap, as tall as the cards
 		ClockWarningTextSize = 34, -- the shot clock's seconds in its last stretch, bigger than LargeTextSize
+		ClockPulseSeconds = 5, -- in its last seconds a coral border pulses round it, once a second...
+		ClockPulseThickness = 4, -- ...this many pixels at the start of each second, thinning and fading
+		ClockTurnHeight = 24, -- whose turn it is, on a dark box under the clock ("Your turn")
+		ClockTurnTextSize = 16,
+		-- Callouts on the banner: "Who breaks?" flicks between the names, every WhoBreaksFlick seconds at first and
+		-- slowing by WhoBreaksSlowing each time, for WhoBreaksSeconds, then shows the breaker for BreakerSeconds
+		WhoBreaksSeconds = 1.2,
+		WhoBreaksFlick = 0.08,
+		WhoBreaksSlowing = 1.25,
+		BreakerSeconds = 1.5,
+		CalloutSeconds = 2.5, -- "You're Solids", "Call your pocket"
+		NiceShotTextSize = 30, -- "Nice shot!" over a pocket: gold with an ink edge...
+		NiceShotEdge = 2,
+		NiceShotWidth = 220,
+		NiceShotRise = 40, -- ...rising this many pixels...
+		NiceShotSeconds = 1.2, -- ...over this long, fading out over the second half
 		TurnArrowWidth = 64, -- the "Turn" card over the shooter's head, in pixels whatever the distance; the narrowest
 		-- it gets, since it widens to fit the shooter's name
 		TurnArrowHeight = 42, -- two lines: "Turn", then the shooter's name
@@ -101,6 +117,7 @@ local Theme = {
 		AimFaintTransparency = 0.6, -- the aim indicator while aiming or about to cancel; solid while locked
 		PocketRingThickness = 3, -- pixels, the ring round the pocket called for the 8
 		BlastRingThickness = 3, -- pixels, the ring showing Blast Ball's reach round the ball the cue ball will hit
+		PickRingThickness = 3, -- pixels, the ring showing what a click would pick while an item waits for its target
 		BannerWidth = 560, -- the banner under the top bar naming a foul or the winner
 		LeaveButtonWidth = 80, -- the Leave button top right, and the Yes and No under its question
 		AskWidth = 360, -- the card asking "Leave and lose this game?"

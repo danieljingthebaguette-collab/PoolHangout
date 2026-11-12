@@ -521,7 +521,8 @@ function shoot(
 	if outcome.groups[side] and not match.groups[side] then
 		log(match, `{player.Name} ({side}) takes {outcome.groups[side]}`)
 	end
-	local pots = Items.scoringPots(match.groups[side], shot.isBreak == true, outcome.foul ~= nil, Simulate.dropped(sim))
+	local groupBefore: EightBall.Group? = match.groups[side]
+	local pots = Items.scoringPots(groupBefore, shot.isBreak == true, outcome.foul ~= nil, Simulate.dropped(sim))
 	for _, pop in Items.afterPots(match.items, match.turnSeat, pots, roll) do
 		table.insert(match.pops, pop)
 	end
@@ -560,6 +561,21 @@ function shoot(
 	elseif outcome.foul then
 		local text = `Foul: {FOUL_TEXT[outcome.foul]}. {Seat.name(match.shooter)} has ball in hand.`
 		Remotes.Banner:FireAllClients(tableModel, text, Config.Timers.FoulBannerSeconds)
+	end
+	-- A pot of theirs off a rail or across the table: "Nice shot!" over its pocket
+	local nice = TableFlow.niceShot(
+		groupBefore,
+		shot.isBreak == true,
+		outcome.foul ~= nil,
+		Simulate.dropped(sim),
+		sim.events :: any,
+		before :: any,
+		layout.pockets :: any,
+		params.Table.Length,
+		Config.Shot.NiceShotLength
+	)
+	if nice then
+		Remotes.NiceShot:FireAllClients(tableModel, nice.pocket)
 	end
 	startTurn(match, fresh)
 end

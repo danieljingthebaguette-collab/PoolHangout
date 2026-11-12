@@ -47,6 +47,7 @@ local TableFlow = require(ReplicatedStorage.Shared.Rules.TableFlow)
 local TableSpace = require(ReplicatedStorage.Shared.TableSpace)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local AimIndicator = require(script.Parent.AimIndicator)
+local Banner = require(script.Parent.Banner)
 local Cue = require(script.Parent.Cue)
 local Hud = require(script.Parent.Hud)
 local Stance = require(script.Parent.Stance)
@@ -258,11 +259,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	-- Whether this player may use an item now: their turn, in the top-down view, the balls still, no pull under way and
 	-- none used this shot
 	local function canUseItem(): boolean
-		return turn ~= nil
-			and turn.mine
-			and view.isOn()
-			and canShoot()
-			and not (pulling or strike or usedThisShot)
+		return turn ~= nil and turn.mine and view.isOn() and canShoot() and not (pulling or strike or usedThisShot)
 	end
 
 	-- The cue has reached the ball: the shot goes, here at once and to the server
@@ -463,6 +460,34 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		cue.part.Transparency = 0
 	end
 
+	-- While an item waits for its target, what a click under the mouse would pick: an icy ring round the ball for
+	-- Freeze, the patch's outline for Oil Slick, and an outline over the pocket's lid for Pocket Block
+	local function showPickPreview(kind: string)
+		if not UserInputService.MouseEnabled then
+			return
+		end
+		local mouse = UserInputService:GetMouseLocation()
+		local x, y = pointerOnTable(workspace.CurrentCamera:ViewportPointToRay(mouse.X, mouse.Y))
+		local target = pickTarget(kind, x, y)
+		if kind == "spot" and type(target) == "table" then
+			indicator.showPickRing(target.x, target.y, Config.Items.OilRadius, Theme.ItemEffects.OilEdge)
+		elseif kind == "pocket" and type(target) == "number" then
+			local pocket = Geometry.build(PhysicsTestAccess.params().Table).pockets[target]
+			indicator.showPickRing(pocket.x, pocket.y, Config.Aim.PocketPickRadius, Theme.ItemEffects.Lid)
+		elseif type(target) == "number" then
+			for _, ball in shownBalls() do
+				if ball.id == target then
+					indicator.showPickRing(
+						ball.x,
+						ball.y,
+						Theme.ItemEffects.FrozenDiameter / 2,
+						Theme.ItemEffects.Frozen
+					)
+				end
+			end
+		end
+	end
+
 	local function render(dt: number)
 		if pulling and not stillHeld(pulling.input) then
 			cancelPull()
@@ -532,6 +557,12 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 		if hidden then
 			Stance.stop()
 			drawRelayed(dt)
+			return
+		end
+		-- Picking an item's target: no cue or aim line, just what a click would pick
+		if picking then
+			cue.part.Transparency = 1
+			showPickPreview(picking.kind)
 			return
 		end
 		local cueX, cueY = TableSpace.toTable(felt, cueBall.Position)
@@ -823,6 +854,17 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	-- A new character gets fresh controls, so it starts in the normal view, and on your own turn goes back to the
 	-- top-down view. Roblox only points the camera at a new character while the camera isn't Scriptable, so a respawn
 	-- in the view would leave it on the old one: point it here.
+	-- The F reminder: in the normal view, at or near this table while a game is on and it isn't your turn
+	lasting[#lasting + 1] = RunService.Heartbeat:Connect(function()
+		Hud.setWatchHint(
+			turn ~= nil
+				and not turn.over
+				and not turn.mine
+				and not view.isOn()
+				and (turn.seated or Banner.atTable(tableModel))
+		)
+	end)
+
 	lasting[#lasting + 1] = Players.LocalPlayer.CharacterAdded:Connect(function(character: Model)
 		leaveView(true)
 		local camera = workspace.CurrentCamera
@@ -846,6 +888,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 				cueBall.CFrame = relayed.from
 			end
 			Hud.onSlotPress(nil)
+			Hud.setWatchHint(false)
 			controlsGui:Destroy()
 			indicator.destroy()
 			cue.part:Destroy()

@@ -41,7 +41,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 - A "Join table" prompt floats above each table's centre: press E to join (phones: tap it). It shows how many have joined, like "1/2 joined". The first player takes side A, the next side B, and so on. A player who has joined sees "Waiting for players" there instead. The prompt only joins. To leave, press the Leave button at the top right, in either view: while waiting it takes you off the table, during the 3-second start it calls the start off, and during a game it asks first (see Leaving).
 - A sign floats over each table: "0/2 players" or "0/4 players", counting the players who have joined, so open tables show from across the arena.
 - 1v1 tables have 2 seats, one on each long side. 2v2 tables have 4, two on each long side. Your side is your team.
-- When every seat is taken, everyone at the table sees a 3-second "Starting..." banner, and the prompt reads "Starting…" and can't be used. Then each player is moved once to their seat's spot beside the table, facing it, their normal camera turns to look at the table from behind them, and the game starts. Players walk freely before, during and after a game.
+- When every seat is taken, everyone at the table sees a 3-second countdown on the banner, "Starting in 3", "2", "1", and the prompt reads "Starting…" and can't be used. Then each player is moved once to their seat's spot beside the table, facing it, their normal camera turns to look at the table from behind them, and the game starts. Players walk freely before, during and after a game.
 - If a player leaves during those 3 seconds, with the Leave button or by leaving the server, the start is called off, everyone at the table sees "Start called off: Player1 left.", and the others stay joined.
 - While a game is on, the prompt only shows how many have joined, like "2/2 joined", and can't be used.
 - A player joins one table at a time, and a player in a game can't join another table.
@@ -70,6 +70,7 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 - Balls are racked in a triangle at the foot spot: the 8 in the middle, a solid and a stripe in the back corners, the rest random *(default)*.
 - A random player breaks. The cue ball starts in the middle of the head line and can't be moved: there's no ball in hand on the break, and the server rejects any other spot. The break's full power is 2.5× a normal shot's, about 62.5 studs/s, like 8 Ball Duels.
 - In 2v2 the breaker's side is team A, and turns go A1 → B1 → A2 → B2 with the breaker as A1 *(default)*.
+- As the game starts, everyone at the table sees "Who breaks?" on the banner, flicking between the players' names and slowing down, then landing on the breaker: "Player2 breaks!" (from Crazy 8 Ball's coin flip). It doesn't hold up the break.
 
 ## Taking a shot
 
@@ -88,8 +89,10 @@ An intense, item-based pool game: 8-ball, 1v1 or 2v2, at tables in a big, warm w
 
 - **Items:** before each shot, the shooter can use one item (see Items).
 - **Top-down only:** you can only aim and shoot from the top-down view. The cue and the power meter only show there, and leaving the view in the middle of a pull cancels it with no shot.
-- **Shot clock:** 45 seconds per shot (I said 30–60). It covers placing and aiming and stops when the shot fires, hiding while the balls roll. The next shot gets a fresh 45. Running out is a foul, so the next shooter gets ball in hand, and everyone at the table sees "Time's up. Player2 has ball in hand." On the break there's no ball in hand: the next player breaks instead. 2 timeouts in a row remove the player, the same as leaving (Phase 4). The clock is a dark box in the middle of the top bar that always shows the seconds left, turning coral with bigger numbers for the last 10.
-- **Between turns:** players can press F to leave the top-down view and walk around, sit or grab a drink.
+- **Shot clock:** 45 seconds per shot (I said 30–60). It covers placing and aiming and stops when the shot fires, hiding while the balls roll. The next shot gets a fresh 45. Running out is a foul, so the next shooter gets ball in hand, and everyone at the table sees "Time's up. Player2 has ball in hand." On the break there's no ball in hand: the next player breaks instead. 2 timeouts in a row remove the player, the same as leaving (Phase 4). The clock is a dark box in the middle of the top bar that always shows the seconds left, turning coral with bigger numbers for the last 10, with a coral border pulsing round it once a second for the last 5. Under it, on a small dark box, whose turn it is: "Your turn", "Opponent's turn", "Teammate's turn" in 2v2, or "Player1's turn" for anyone watching.
+- **Between turns:** players can press F to leave the top-down view and walk around, sit or grab a drink. In the normal view, at or near a table with a game on while it isn't your turn, a hint bottom right reminds you: "Watch from above · F".
+- **Callouts:** players in the game see "You're Solids" or "You're Stripes" on the banner when their side gets its group, and "Call your pocket for the 8" when their turn on the 8 starts. A callout waits for a foul or result message to finish rather than hiding it.
+- **Nice shot:** when the shooter sinks one of their own balls off a rail, or one that crossed at least half the table's length to its pocket (`Config.Shot.NiceShotLength`), on a shot that isn't the break or a foul, everyone at the table sees "Nice shot!" rise from that pocket and fade, as the balls stop.
 - **No spin** in the base build. The top-right corner of the screen stays free for a spin control later.
 
 ## The screen
@@ -155,7 +158,7 @@ Each player has one item bar. At 12 points it gives an item, and leftover points
 ### Using items
 
 - On your own turn, before a shot, press 1 or 2, or click its square (phones: tap it). One item per shot. Like shooting, it works only in the top-down view.
-- Power Shot and Blast Ball take effect at once. Freeze, Oil Slick and Pocket Block then ask for a target: click or tap a ball, a spot on the felt or a pocket, and their square lights up while they wait. Pressing the same key or clicking the square again backs out without using it. If the target isn't allowed, a note above the squares says why, like "Can't freeze the 8", and you can pick another. Items can't be used mid-pull.
+- Power Shot and Blast Ball take effect at once. Freeze, Oil Slick and Pocket Block then ask for a target: click or tap a ball, a spot on the felt or a pocket, and their square lights up while they wait. While one waits, the cue and the aim line hide, and what a click would pick shows under the mouse: an icy ring round the ball for Freeze, the patch's outline for Oil Slick, and a gold ring over the pocket for Pocket Block. Pressing the same key or clicking the square again backs out without using it. If the target isn't allowed, a note above the squares says why, like "Can't freeze the 8", and you can pick another. Items can't be used mid-pull.
 - An item is spent the moment you use it, even if you then foul or the clock runs out. The shot clock keeps running while you pick a target.
 - Everyone at the table, players and watchers, sees the item's name big at the top center, under the clock and the banner, in Luckiest Guy, with its one-line description under it, for about 3 seconds, long enough to read. Its effect stays visible on the table while it lasts. Every player's held items show on their card, for everyone to see.
 - **What players read,** one short line per item, written for 10-year-olds, in the Abilities panel and under its big name:

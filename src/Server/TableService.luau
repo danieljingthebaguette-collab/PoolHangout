@@ -206,12 +206,19 @@ local function startMatch(tableModel: Model, players: { Seat.Seat })
 	updatePrompt(tableModel)
 end
 
--- Every seat is taken: "Starting..." for everyone at the table, then the players go to their seats and the game
+-- Every seat is taken: "Starting in 3", "2", "1" for everyone at the table, then the players go to their seats and the game
 -- starts. A player who leaves meanwhile calls it off (see unjoin), and the rest stay joined.
 local function startGame(tableModel: Model, token: {})
 	local lobby = lobbies[tableModel]
 	updatePrompt(tableModel)
-	Remotes.Banner:FireAllClients(tableModel, "Starting...", Config.Timers.CountdownSeconds)
+	-- "Starting in 3", "2", "1", one a second, while the countdown is still on
+	for left = Config.Timers.CountdownSeconds, 1, -1 do
+		task.delay(Config.Timers.CountdownSeconds - left, function()
+			if lobby.countdown == token then
+				Remotes.Banner:FireAllClients(tableModel, `Starting in {left}`, 1)
+			end
+		end)
+	end
 	task.delay(Config.Timers.CountdownSeconds, function()
 		-- A test shot still rolling finishes before the game racks
 		while Balls.isRolling(tableModel) and lobby.countdown == token do

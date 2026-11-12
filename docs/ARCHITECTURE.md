@@ -45,12 +45,13 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Client/AimIndicator.luau` | The aim indicator (the line, circle and dot, and the cue ball's and hit ball's lines), the faint ring with ball in hand, the called pocket's ring and, with Blast Ball on, the blast's reach round the ball the cue ball will hit, drawn on the screen |
 | `Client/Cue.luau` | The cue stick, a Part only the shooter's screen sees, and laying it along the aim |
 | `Client/Hud.luau` | Starts the HUD's parts below, shows them in the top-down view, and "TEST MODE"; your ability squares (`ItemSlots`: what they hold from `ItemsChanged`, picking, dimming and the refusal from `ShotController` every frame through `setSlots`, and clicks back to it through `onSlotPress`), an item's name shown big as it's used at your table (`ItemName`), and in the lobby its buttons (`LobbyButtons`) and the Abilities panel (`AbilitiesPanel`); `LeaveButton` tells all three whether you're at a table |
-| `Client/ShotClock.luau` | The shot clock between the top bar's cards, counting to the server's clock end time |
+| `Client/ShotClock.luau` | The shot clock between the top bar's cards, counting to the server's clock end time, with a coral border pulsing for the last few seconds and whose turn it is under it (from `Hud`) |
 | `Client/TurnArrow.luau` | The gold "Turn" card over each table's shooter in the normal view, with their name under "Turn" |
 | `Client/TopBar.luau` | Each side's card: avatars, names, the turn glow, and the group with its balls; under each avatar, the other players' 2 item slots with their icons (`ItemIcons`) and their item bar, glowing when full, with a "+4" rising each time it fills; your own card shows neither, since your bar and abilities are `ItemSlots` at the bottom. From `ItemsChanged` |
 | `Client/ItemSlots.luau` | Your 2 ability squares and your item bar under them, bottom center whenever you're at a table (`setAtTable`), on their own ScreenGui sized for a 1080-pixel-high screen with a `UIScale`: `showItems` fills the squares (icons from `ItemIcons`) and the bar's 4 segments, with its pops, from `Hud`'s `ItemsChanged`; `setState` marks the square picking a target, dims them while you can't use one and shows the refusal note above them, called every frame and touching only what changed. Each square is a button that does what its key does (`onPress`). `reserve` says how much of the screen's bottom they take, for `TopDownView` |
 | `Client/LobbyButtons.luau` | The lobby's row of buttons bottom center while you're not at a table (`setAtTable`): Abilities (Z, opens `AbilitiesPanel`) and Invite (X, Roblox's invite prompt through `SocialService`), each with its key on a tag above it, the keys bound with `ContextActionService` only while the row shows |
-| `Client/Banner.luau` | The banner under the top bar for the server's messages, for everyone at the table |
+| `Client/Banner.luau` | The banner under the top bar for the server's messages, for everyone at the table, and this screen's callouts (`show`, which waits for a message still up; `whoBreaks`), which `Hud` sends from each turn message: "Who breaks?", "You're Solids", "Call your pocket for the 8" |
+| `Client/NiceShot.luau` | "Nice shot!" rising from a pocket on the server's `NiceShot`, as a BillboardGui, so it shows in either view |
 | `Client/ItemIcons.luau` | Each item's icon drawn in code from rounded and turned frames, no images: `draw(item, parent)` fills any square from about 18 to 52 px. Colors in `Theme.ItemIcons` |
 | `Client/AbilitiesPanel.luau` | The cream card the lobby's Abilities button opens and closes (`toggle`): how you earn and use abilities in plain words, then every item in `Config.Items.List` order with its icon, name and line (`Items.NAMES`, `Items.LINES`). Its Close button, Esc (`GuiService.MenuOpened`) and joining a table close it. Players see "Abilities"; code says items |
 | `Client/ItemName.luau` | An item's name shown big as it's used, at the top center under the banner, on its own screen in both views: the name in the display font, its description under it and its icon, on a dark box. Pops in, fades out within `Theme.Ui.ItemNameSeconds` (about 3 s), and a newer one replaces it |
@@ -58,7 +59,7 @@ How the code fits together. Follow it. If something here is wrong or gets in the
 | `Client/EndScreen.luau` | The end screen: who won and why, each player's stats, Rematch and Back to lobby |
 | `Client/PowerMeter.luau` | The power meter and its %; past 100% with Power Shot, an orange fill rises again over the full gold one, up to `PowerShotMax` |
 | `Client/Tray.luau` | The sunk-ball tray |
-| `Client/Hints.luau` | The control hints, bottom right |
+| `Client/Hints.luau` | The control hints, bottom right, and the F reminder on its own screen in the normal view (`showWatch`, from `ShotController` every frame) |
 | `Client/SettingsPanel.luau` | The gear and its card with the sound volume |
 | `Client/Ui.luau` | Small shared builders: rounded corners, labels, accent buttons and ball icons |
 | `Client/ItemEffects.luau` | Item effects on every table, on every screen, from `ItemsChanged`: an icy ring and tint on each frozen ball, a dark glossy patch for each oil slick and a gold lid across each blocked pocket's mouth (`Geometry.lid`). Each message is the full set: new ones are built once, gone ones destroyed. Placeholder looks until Phase 4, in `Theme.ItemEffects` |
@@ -224,6 +225,7 @@ Workspace
 | `ItemRefused` | server → the shooter | The slot and why its target was turned down, in words for the player (from `Items.use`), shown on that slot's row |
 | `ShotStarted` | server → clients | Start balls, shot, item effects and physics params to replay |
 | `ShotResolved` | server → clients | Final balls |
+| `NiceShot` | server → clients | (table, pocket id): the shooter's pot off a rail or across the table (`TableFlow.niceShot`) |
 | `Banner` | server → clients | A message for everyone at the table and how many seconds to show it: a foul and who has ball in hand, or until the end screen, who won and why |
 | `GameOver` | server → clients | To each player still in a decided game: who won and why, the winning side, each seat's stats, whether a rematch is possible, and when the end screen closes |
 | `Rematch` | client → server, and server → clients | Rematch (true) or Back to lobby (false), once per game. Back to the game's players: every answer so far |

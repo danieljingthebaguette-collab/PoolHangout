@@ -278,4 +278,43 @@ function TableFlow.cueSpotAllowed(
 		and EightBall.canPlaceCue(balls, cueX, cueY, tableParams)
 end
 
+-- The ball that earns "Nice shot!", if any: the first of the shooter's scoring pots (their group's balls, or any but
+-- the 8 on an open table, never on the break or a foul) that went in off a rail, or crossed at least `longShare` of
+-- the table's length from where it stood to its pocket. Returns that drop, or nil.
+function TableFlow.niceShot(
+	group: EightBall.Group?,
+	isBreak: boolean,
+	foul: boolean,
+	dropped: { { id: number, pocket: number } },
+	events: { { kind: string, id: number } },
+	before: { { id: number, x: number, y: number } },
+	pockets: { { x: number, y: number } },
+	tableLength: number,
+	longShare: number
+): { id: number, pocket: number }?
+	if isBreak or foul then
+		return nil
+	end
+	for _, drop in dropped do
+		local ballGroup = EightBall.groupOf(drop.id)
+		if ballGroup and (group == nil or ballGroup == group) then
+			local banked = false
+			for _, event in events do
+				banked = banked or (event.kind == "rail" and event.id == drop.id)
+			end
+			local long = false
+			local pocket = pockets[drop.pocket]
+			for _, ball in before do
+				if ball.id == drop.id and pocket then
+					long = math.sqrt((ball.x - pocket.x) ^ 2 + (ball.y - pocket.y) ^ 2) >= longShare * tableLength
+				end
+			end
+			if banked or long then
+				return drop
+			end
+		end
+	end
+	return nil
+end
+
 return TableFlow

@@ -91,6 +91,9 @@ return {
 	ShotStarted = remote("ShotStarted"),
 	-- server → clients: (table model, final balls)
 	ShotResolved = remote("ShotResolved"),
+	-- server → clients: (table model, pocket id), the shooter's pot off a rail or across the table, for "Nice shot!"
+	-- over that pocket
+	NiceShot = remote("NiceShot"),
 
 	-- Physics test mode, Studio and the owner only (PhysicsTestAccess). client → server: ()
 	TestRack = remote("TestRack"),

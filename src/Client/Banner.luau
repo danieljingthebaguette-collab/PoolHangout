@@ -1,6 +1,7 @@
 --!strict
 -- The banner: a cream card at the top center, under the top bar, for a message from the server, like a foul and who
--- has ball in hand, or who won and why. It has its own screen, shown in either view, since "Starting..." comes before
+-- has ball in hand, or who won and why, and for this screen's own callouts (Banner.show): "You're Solids", "Call your
+-- pocket", and before the break "Who breaks?" landing on the breaker's name. It has its own screen, shown in either view, since "Starting..." comes before
 -- anyone's in the top-down view. It's for everyone at the table: watching from above, waiting to play, or standing near
 -- it.
 
@@ -20,6 +21,8 @@ local Banner = {}
 -- a newer one up
 local banner: { box: Frame, text: TextLabel }? = nil
 local bannersShown = 0
+-- A callout waiting for the message up now to go, shown next
+local pending: { message: string, seconds: number }? = nil
 
 -- The card, hidden until a message comes
 local function bannerCard(gui: ScreenGui)
@@ -55,7 +58,46 @@ local function showBanner(message: string, seconds: number)
 	task.delay(seconds, function()
 		if banner and bannersShown == shown then
 			banner.box.Visible = false
+			local nextUp = pending
+			pending = nil
+			if nextUp then
+				showBanner(nextUp.message, nextUp.seconds)
+			end
 		end
+	end)
+end
+
+-- A callout from this screen, shown for `seconds`: at once, or once the message up now has gone, so it never hides a
+-- foul or a result
+function Banner.show(message: string, seconds: number)
+	if banner and banner.box.Visible then
+		pending = { message = message, seconds = seconds }
+	else
+		showBanner(message, seconds)
+	end
+end
+
+-- "Who breaks?" flicking between the players' names, slowing down, then landing on the breaker's: "Player2 breaks!"
+function Banner.whoBreaks(names: { string }, breaker: string)
+	if not banner or #names == 0 then
+		return
+	end
+	local look = Theme.Ui
+	showBanner(`Who breaks? {names[1]}`, look.WhoBreaksSeconds + look.BreakerSeconds)
+	local shown = bannersShown
+	task.spawn(function()
+		local waited, gap, i = 0, look.WhoBreaksFlick, 1
+		while waited < look.WhoBreaksSeconds do
+			task.wait(gap)
+			if not banner or bannersShown ~= shown then
+				return
+			end
+			waited += gap
+			gap *= look.WhoBreaksSlowing
+			i = i % #names + 1
+			banner.text.Text = `Who breaks? {names[i]}`
+		end
+		banner.text.Text = `{breaker} breaks!`
 	end)
 end
 

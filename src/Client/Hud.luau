@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Items = require(ReplicatedStorage.Shared.Items)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Seat = require(ReplicatedStorage.Shared.Seat)
 local Theme = require(ReplicatedStorage.Shared.Theme)
 local AbilitiesPanel = require(script.Parent.AbilitiesPanel)
 local Banner = require(script.Parent.Banner)
@@ -24,6 +25,7 @@ local ItemName = require(script.Parent.ItemName)
 local ItemSlots = require(script.Parent.ItemSlots)
 local LobbyButtons = require(script.Parent.LobbyButtons)
 local LeaveButton = require(script.Parent.LeaveButton)
+local NiceShot = require(script.Parent.NiceShot)
 local PowerMeter = require(script.Parent.PowerMeter)
 local SettingsPanel = require(script.Parent.SettingsPanel)
 local ShotClock = require(script.Parent.ShotClock)
@@ -47,6 +49,44 @@ local removeTray: (() -> ())? = nil
 local lastShooter: Instance? = nil
 -- This player's seat at that table from the last turn message, for their own item bar at the bottom
 local mySeat: number? = nil
+-- What the last turn message said, for the callouts that mark a change: a game on, this player's group, on the 8
+local lastGameOn = false
+local lastGroup: string? = nil
+local lastOnEight = false
+
+local GROUP_NAMES: { [string]: string } = { solids = "Solids", stripes = "Stripes" }
+
+-- The banner's callouts for this player, from each turn message, marking what changed: before the break "Who
+-- breaks?" for everyone at the table, then for players in the game "You're Solids" when their side gets a group, and
+-- "Call your pocket" when their turn on the 8 starts
+local function callouts(
+	model: Model,
+	shooter: Instance?,
+	seats: { Instance }?,
+	seat: number?,
+	onEight: boolean,
+	groups: { [string]: string }?,
+	down: { number }?
+)
+	local gameOn = seats ~= nil and shooter ~= nil
+	local open = next(groups or {}) == nil
+	if gameOn and not lastGameOn and open and #(down or {}) == 0 and Banner.atTable(model) then
+		local names = {}
+		for _, other in seats :: { Instance } do
+			table.insert(names, Seat.name(other :: any))
+		end
+		Banner.whoBreaks(names, Seat.name(shooter :: any))
+	end
+	local group = if seat then (groups or {})[if seat % 2 == 1 then "A" else "B"] else nil
+	if group and not lastGroup and gameOn then
+		Banner.show(`You're {GROUP_NAMES[group] or group}`, Theme.Ui.CalloutSeconds)
+	end
+	local myEight = onEight and shooter == Players.LocalPlayer
+	if myEight and not lastOnEight then
+		Banner.show("Call your pocket for the 8", Theme.Ui.CalloutSeconds)
+	end
+	lastGameOn, lastGroup, lastOnEight = gameOn, group, myEight
+end
 
 -- The ball parts that are yours on this table: your group's, or the 8 once your group is cleared. None on an open
 -- table, where nothing is yours yet. Only the ones still on the table.
@@ -87,6 +127,11 @@ end
 -- why a slot's target was refused. What they hold comes from ItemsChanged.
 function Hud.setSlots(picking: number?, usable: boolean, refusal: { slot: number, text: string }?)
 	ItemSlots.setState(picking, usable, refusal)
+end
+
+-- Shows the F reminder, "Watch from above [F]", in the normal view, or hides it
+function Hud.setWatchHint(on: boolean)
+	Hints.showWatch(on)
 end
 
 -- What clicking an ability's row does, given its slot: the same as its key. Nil clears it.
@@ -135,6 +180,7 @@ function Hud.setTable(tableModel: Model)
 	current = tableModel
 	lastShooter = nil
 	mySeat = nil
+	lastGameOn, lastGroup, lastOnEight = false, nil, false
 	ItemSlots.showItems(nil, nil, nil)
 	TopBar.show(nil, nil, nil, nil)
 	TopBar.showItems(nil, nil)
@@ -183,6 +229,7 @@ function Hud.start(tableModel: Model)
 	table.insert(guis, settingsGui)
 
 	PowerMeter.build(playerGui)
+	Hints.buildWatch(playerGui)
 	AbilitiesPanel.build(playerGui)
 	ItemSlots.build(playerGui)
 	LobbyButtons.build(playerGui)
@@ -193,6 +240,7 @@ function Hud.start(tableModel: Model)
 		LobbyButtons.setAtTable(atTable)
 	end)
 	TurnArrow.start()
+	NiceShot.start()
 	EndScreen.start(playerGui)
 	Banner.start(playerGui, function(model: Model): boolean
 		return inView and model == current
@@ -241,9 +289,18 @@ function Hud.start(tableModel: Model)
 				return
 			end
 			TopBar.show(shooter, seats, groups, down)
-			ShotClock.show(if shooter then clockEndsAt else nil)
-			-- Your turn starting: your balls pulse once, so you can see which they are
 			local seat = seats and table.find(seats, player)
+			-- Whose turn it is, under the clock
+			local shooterSeat = if seats and shooter then table.find(seats, shooter) else nil
+			local whose = if not shooter
+				then nil
+				elseif shooter == player then "Your turn"
+				elseif seat and shooterSeat and seat % 2 == shooterSeat % 2 then "Teammate's turn"
+				elseif seat then "Opponent's turn"
+				else `{Seat.name(shooter)}'s turn`
+			ShotClock.show(if shooter then clockEndsAt else nil, whose)
+			callouts(model :: Model, shooter, seats :: any, seat, onEight == true, groups, down)
+			-- Your turn starting: your balls pulse once, so you can see which they are
 			mySeat = seat
 			if shooter == player and lastShooter ~= player and seat then
 				local side = if seat % 2 == 1 then "A" else "B"

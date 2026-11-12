@@ -374,4 +374,43 @@ return function(test, check)
 			)
 		end
 	)
+
+	-- "Nice shot!"
+
+	test("a pot off a rail or across half the table earns Nice shot!, a short straight one doesn't", function()
+		local pockets = layout.pockets
+		local corner = pockets[3] -- the right-hand corner on the first long side
+		local near = { id = 3, x = corner.x - 1, y = corner.y }
+		local far = { id = 4, x = corner.x - 0.6 * tableParams.Length, y = corner.y }
+		local length, share = tableParams.Length, Config.Shot.NiceShotLength
+		local function nice(dropped, events, before, group, isBreak, foul)
+			return TableFlow.niceShot(
+				group,
+				isBreak == true,
+				foul == true,
+				dropped,
+				events,
+				before,
+				pockets,
+				length,
+				share
+			)
+		end
+		check.equal(nice({ { id = 3, pocket = 3 } }, {}, { near }), nil, "a short straight pot")
+		check.equal(nice({ { id = 3, pocket = 3 } }, { { kind = "rail", id = 3 } }, { near }).id, 3, "a bank")
+		check.equal(nice({ { id = 4, pocket = 3 } }, {}, { far }).id, 4, "a long pot")
+		check.equal(nice({ { id = 4, pocket = 3 } }, {}, { far }, "stripes"), nil, "the other side's ball")
+		check.equal(nice({ { id = 4, pocket = 3 } }, {}, { far }, nil, true), nil, "on the break")
+		check.equal(nice({ { id = 4, pocket = 3 } }, {}, { far }, nil, false, true), nil, "on a foul")
+		check.equal(
+			nice({ { id = 8, pocket = 3 } }, { { kind = "rail", id = 8 } }, { { id = 8, x = 0, y = 0 } }),
+			nil,
+			"the 8"
+		)
+		check.equal(
+			nice({ { id = 3, pocket = 3 } }, { { kind = "rail", id = 4 } }, { near }),
+			nil,
+			"another ball's rail"
+		)
+	end)
 end

@@ -30,6 +30,9 @@ export type Indicator = {
 	draw: (cueX: number, cueY: number, aim: number, balls: { Preview.Ball }, effects: Simulate.Effects?) -> number?,
 	showPocketRing: (pocket: number) -> (),
 	showPlaceRing: (cueX: number, cueY: number) -> (),
+	-- While an item waits for its target: a ring of `across` ball radii round (x, y), in the item's color, showing
+	-- what a click would pick
+	showPickRing: (x: number, y: number, across: number, color: Color3) -> (),
 	destroy: () -> (),
 }
 
@@ -129,6 +132,16 @@ function AimIndicator.new(playerGui: Instance, felt: BasePart, ballParts: { [num
 	blastRingStroke.Color = Theme.Colors.BlastRing
 	blastRingStroke.Thickness = Theme.Ui.BlastRingThickness
 	blastRingStroke.Parent = blastRing
+	-- What a click would pick while an item waits for its target
+	local pickRing = Instance.new("Frame")
+	pickRing.AnchorPoint = Vector2.new(0.5, 0.5)
+	pickRing.BackgroundTransparency = 1
+	pickRing.Visible = false
+	pickRing.Parent = indicatorGui
+	Ui.roundCorners(pickRing, CIRCLE)
+	local pickRingStroke = Instance.new("UIStroke")
+	pickRingStroke.Thickness = Theme.Ui.PickRingThickness
+	pickRingStroke.Parent = pickRing
 	indicatorGui.Parent = playerGui
 
 	-- Where a table-space point at ball-center height is on the screen
@@ -141,6 +154,7 @@ function AimIndicator.new(playerGui: Instance, felt: BasePart, ballParts: { [num
 		placeRing.Visible = false
 		pocketRing.Visible = false
 		blastRing.Visible = false
+		pickRing.Visible = false
 		pathLine.Visible, cueLine.Visible, targetLine.Visible = false, false, false
 		ghost.Visible, ghostEdge.Visible, dot.Visible = false, false, false
 	end
@@ -251,12 +265,22 @@ function AimIndicator.new(playerGui: Instance, felt: BasePart, ballParts: { [num
 		placeRing.Visible = true
 	end
 
+	local function showPickRing(x: number, y: number, across: number, color: Color3)
+		local middle = toScreen(x, y)
+		local diameter = 2 * (toScreen(x + across * radius, y) - middle).Magnitude
+		pickRing.Position = UDim2.fromOffset(middle.X, middle.Y)
+		pickRing.Size = UDim2.fromOffset(diameter, diameter)
+		pickRingStroke.Color = color
+		pickRing.Visible = true
+	end
+
 	return {
 		hide = hide,
 		fade = fade,
 		draw = draw,
 		showPocketRing = showPocketRing,
 		showPlaceRing = showPlaceRing,
+		showPickRing = showPickRing,
 		destroy = function()
 			indicatorGui:Destroy()
 		end,

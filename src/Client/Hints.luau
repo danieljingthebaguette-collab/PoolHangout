@@ -1,6 +1,7 @@
 --!strict
 -- The control hints down the bottom right of the top-down view, each a label and its key, like "Lock aim [Space]".
--- ShotController picks which hints show.
+-- ShotController picks which hints show. Also the F reminder, "Watch from above [F]", in the same spot of the normal
+-- view while you're near a game and it isn't your turn.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -12,6 +13,10 @@ local Hints = {}
 -- The hints' column, once it's built, and the rows it shows
 local column: Frame? = nil
 local shown: { { string } }? = nil
+-- The F reminder's own screen, shown in the normal view
+local watchGui: ScreenGui? = nil
+-- Whether hints show at all (the "Control hints" setting)
+local hintsOn = true
 
 -- Screen height, in pixels, kept clear along the bottom for the gear (left) and the control hints (right)
 function Hints.bottomBand(): number
@@ -64,6 +69,39 @@ function Hints.set(rows: { { string } }?)
 	end
 	for i, row in (rows or {}) :: { { string } } do
 		hintRow(row[1], row[2], i).Parent = column
+	end
+end
+
+-- Builds the F reminder on its own screen, hidden
+function Hints.buildWatch(playerGui: Instance)
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "WatchHint"
+	gui.ResetOnSpawn = false
+	gui.Enabled = false
+	local row = hintRow("Watch from above", "F", 1)
+	row.AnchorPoint = Vector2.new(1, 1)
+	row.Position = UDim2.new(1, -Theme.Ui.Padding, 1, -Theme.Ui.Padding)
+	row.Parent = gui
+	gui.Parent = playerGui
+	watchGui = gui
+end
+
+-- Shows or hides the F reminder; ShotController asks every frame, so it only writes a change
+function Hints.showWatch(on: boolean)
+	local show = on and hintsOn
+	if watchGui and watchGui.Enabled ~= show then
+		watchGui.Enabled = show
+	end
+end
+
+-- The "Control hints" setting: off hides every hint, the F reminder included
+function Hints.setEnabled(on: boolean)
+	hintsOn = on
+	if column then
+		column.Visible = on
+	end
+	if watchGui and not on then
+		watchGui.Enabled = false
 	end
 end
 
