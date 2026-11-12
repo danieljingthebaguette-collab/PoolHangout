@@ -1,6 +1,6 @@
 # Style guide
 
-How Pool! looks: the full look rulebook. Every task that adds or changes something players see follows this file. Written 2026-10-16, when the art direction moved from a chill bar to an intense, item-based look in the spirit of the Roblox game Illegal Soccer; made the full rulebook 2026-11-03. Items marked **(approve)** are Claude's proposals that Daniel hasn't approved yet.
+How Pool! looks: the full look rulebook. Every task that adds or changes something players see follows this file. Written 2026-10-16, when the art direction moved from a chill bar to an intense, item-based look in the spirit of the Roblox game Illegal Soccer; made the full rulebook 2026-11-03. On 2026-11-12 Daniel decided the UI should match Illegal Soccer's tone, texture, shape and interactions almost one for one first, and more pool-like later: the measured spec is in `docs/audits/ILLEGAL_SOCCER.md`, its values are in `Theme.Kit`, and the step 7 style pass rebuilds every screen on them. Until a screen is rebuilt it keeps today's look, described in the UI table below. Items marked **(approve)** are Claude's proposals that Daniel hasn't approved yet.
 
 - **A guide, not a source.** Screenshots in `references/` show the style we're after: lodge rooms, real pool halls, and the feel of Illegal Soccer and 8 Ball Duels. Never copy their models, textures, images, UI art or effects. Everything in Pool! is made by us: in code, in Studio, or with Studio's AI tools from our own prompts, which never name another game.
 - **Spec vs style.** Where GAME_SPEC.md and this file disagree about how things look, this file wins. For how the game plays, GAME_SPEC.md wins.
@@ -12,15 +12,21 @@ Warm, golden and readable at a glance: chunky shapes and flat painted colors in 
 
 ## Palette
 
-Eight colors carry the whole game, plus icy blue for Freeze alone. Everything else is a lighter or darker tone of one of them, except the balls' own colors in `Theme.BallColors`.
+The UI's colors were sampled from Illegal Soccer's screens (`Theme.Kit.Colors`); the table and world colors are ours. Everything else is a lighter or darker tone of one of these, except the balls' own colors in `Theme.BallColors`. The step 7 style pass moves each screen from today's UI colors (`Theme.Colors`: cream `#F6EFE0`, ink `#241C16`, gold buttons, coral warnings) to these.
 
 | Color | Hex | Used for |
 | --- | --- | --- |
-| Cream | `#F6EFE0` | Cards and panels, text on dark boxes, the rails' diamonds |
-| Ink | `#241C16` | Text on cards and buttons, card brackets, outlines |
-| Near-black | `#201A16` | Dark boxes: key boxes, the % readout, the tray, the timer |
-| Sunny gold | `#FFC42E` | The main accent: buttons, the power meter's fill, the turn glow, the called pocket, the ring round each of your balls as your turn starts |
-| Coral | `#FF8A76` | Buttons that leave or undo, like Leave and Yes on "Leave and lose this game?", and warnings: the shot clock's last 10 seconds, and the note above your ability squares saying why a target isn't allowed |
+| Cream | `#FEFAEA` | Cards, labels, panels' bodies, tooltips; cream-white `#FFFEED` for key tabs and the close button |
+| Ink | `#15130F` | Text on cream, and its lines |
+| Dark box | `#171513` | Key boxes, the timer, panels' header bars, dark labels |
+| Warm grey | `#807B6F` | Second lines: what a setting does, an award's reason. Section bands inside panels are `#EBE7DB` |
+| Tan | `#C2927B` | Cards' corner brackets and the timer's digits |
+| Mint | `#38FFA5` | The main action (Play, Rematch), toggles that are on, sliders' fill, full bars, the tag on a big moment. A thin `#D4EED5` border round mint pieces |
+| Side red | `#ED105D` | Side A (a square by each name, the ring at their feet, their name tags underlined), warnings (the shot clock's last seconds, a refused target, Leave) and badges |
+| Side blue | `#3384FA` | Side B, the same way |
+| Gold | `#F8D734` | Only the turn (the shooter's card, the "Turn" card) and the called pocket |
+| Pastels | blue `#DBDEDB`→`#BDCDE0`, beige `#E7DDD1`→`#E1D0C1`, lilac `#E5D1DA`→`#D6AFDE` | Second-rank buttons, as soft top-to-bottom gradients with a cream border and the dot texture |
+| Rainbow | `#F35CE8`→`#F6B379`→`#99FF7A`→`#4FB8FF` | Only a full ability bar, scrolling |
 | Felt green | `#327A4C` | The playing surface, the strongest color in the room |
 | Cushion green | `#225834` | Cushions |
 | Painted wood | `#7A4628` | The table's rails and wood; its darker tone is the body and legs |
@@ -28,9 +34,10 @@ Eight colors carry the whole game, plus icy blue for Freeze alone. Everything el
 
 ## Fonts
 
-- **RobotoCondensed Bold** (`Theme.Font`) for all UI text: names, numbers, hints, banners.
-- **Luckiest Guy** (`Theme.DisplayFont`) only for big moments, never for small text or long lines. Approved for an item's name shown big; its other big moments, like the winner and "Starting...", wait for the GUI pass.
-- Two fonts at most. Both are in Roblox's built-in set, so nothing is uploaded.
+- **RobotoCondensed Bold** (`Theme.Font`) for all UI text: names, numbers, labels, banners, and big moments too. Bold (700) is the heaviest weight Roblox ships for it (it has Light, Regular and Bold), so big text is simply Bold, big: the score's numerals are 5.6% of the screen's height.
+- **RobotoCondensed Regular** for second lines in warm grey: what a setting does, an award's reason, "3 spots available".
+- **Luckiest Guy** (`Theme.DisplayFont`) is retired in step 7: today it still shows an item's name big; the style pass moves that to RobotoCondensed Bold.
+- One family, two weights. It's in Roblox's built-in set, so nothing is uploaded.
 
 ## Lighting
 
@@ -73,6 +80,21 @@ Normal Roblox avatars on the R6 rig only (set in the game's avatar settings), ot
 
 Every value lives in `src/Shared/Theme.luau`, and UI is built in code. `src/Client/Card.luau` draws the card look.
 
+**The UI kit (step 7).** One client module holds every piece, each with its hover, press and selected states and its sounds built in, every value from `Theme.Kit` (sizes in pixels on a 1080-pixel-high screen, scaled with `UIScale`). Measured from Illegal Soccer (`docs/audits/ILLEGAL_SOCCER.md`):
+- **Shape:** square corners everywhere, never rounded. Cards carry thin tan corner brackets (arms 13 px, lines 2 px, 9 px in from the edge) and a faint halftone dot grid (2 px dots every 5.5 px, tan at about 15%). No drop shadows; glows only for hover and big moments.
+- **Card:** cream with ink text. **Button:** mint for the one main action, pastel gradients for second-rank ones, dark with cream text for a quiet choice; each with a 2 px cream border and the dot texture; hover adds a soft cream glow (12 px) at once; press darkens it.
+- **Key tab:** a cream-white square with the key in ink, half over a button's top edge or about two-thirds inside a slot's bottom edge. On a dark label the key box is cream; on a cream label it's dark.
+- **Toggle:** a square knob on a light track: mint on the right when on, ink on the left when off. **Slider:** 10 square segments, mint up to the value and ink after.
+- **Tab row:** dark tabs in a header bar; the hovered tab lights up, the selected one gets a cream outline, and the content swaps at once.
+- **Panel:** a black header bar with the title in cream and a square cream close button at its right; a cream body with section bands and rows that each have a bold title and a grey second line. Opens and closes with a 0.1 s fade, no slide.
+- **Tooltip:** a cream card with a small pointer toward what it explains. **Badge:** a dark box with a red-pink square and white text ("! 21h"). **Ribbon:** a cream card with cut ribbon tails each side and a pointer down: a bold title over a one-line grey reason. **Timer box:** a dark box with tan corner brackets and tan digits.
+- **Controls column:** every control in one column at the right edge, stacked from the bottom: a cream label with a black key box (Lock aim `Space`, Shoot, Watch from above `F`, Abilities `1` `2`, Join `E`), its label going about 30% see-through when you can't use it, its key box inverting while the key is held. It replaces the two hints at the bottom right and is the F reminder.
+- **Sides:** red and blue mark the two sides: a square by each name, a ring at each player's feet, name tags underlined.
+- **Big moments:** a short mint tag over a cream card (a potted 8, the winner), in the goal banner's timing: a line wipes out, the card flashes in the side's color, its name types on. At the end, award ribbons over players' heads, each a bold title and a one-line reason (6 to 8 pool awards, like "Sniper: longest pot").
+- **Ability effects** chunky and saturated like their auras, and a full ability bar shimmers with a moving rainbow.
+
+The table below describes what's built today; the style pass rebuilds each piece on the kit and rewrites its row.
+
 | Piece | Look |
 | --- | --- |
 | Cards | Cream (246, 239, 224) with ink (36, 28, 22) text, thin dark corner brackets set just inside each corner, and a faint dot texture. Corners nearly square (4 px) |
@@ -112,6 +134,7 @@ Keep them short so the game stays readable, and keep particle counts low for pho
 | What | Rule |
 | --- | --- |
 | Feedback | Every input and hit answers within 100 ms: a sound, a click, a pressed button |
+| UI motion (from Illegal Soccer) | Panels fade in 0.1 s and out 0.13 s, where they sit; what a panel covers cross-fades with it; tabs swap at once; hover glows show at once. A big moment is a 0.7 s sequence: 0.1 s line, 0.15 s flash in the side's color, 0.1 s settle, then the name typing on at about 0.03 s a letter. A full ability bar's rainbow scrolls about once a second |
 | Hit stop | A 0.05–0.1 s hold on big moments only: the break, a winning 8, a blast. Default 0.06 s **(approve)**. It holds only the picture, never the physics, so every screen still shows the same shot |
 | Screen shake | 2–10 px, about 0.2 s, fading out: 2–4 px for hard hits and rail bounces, up to 10 px for the break and the blast **(approve)** |
 | Sparks and small pops | 0.2–0.3 s |
@@ -126,11 +149,11 @@ Keep them short so the game stays readable, and keep particle counts low for pho
 
 Things that make a game look generic or AI-made:
 - The default Roblox look: a grey baseplate, studs, the default sky, default fonts like Legacy, Arial or SourceSans, or unstyled Roblox buttons.
-- Glossy or gradient buttons, bevels, drop shadows on everything, or see-through "glass" panels.
+- Glossy buttons, bevels, strong gradients, drop shadows on everything, or see-through "glass" panels. The only gradients are the soft pastel ones on second-rank buttons; the only see-through UI is a control you can't use right now.
 - Neon glow and bloom on everything, lens flares, or sparkles and stars as decoration.
-- Purple-and-blue "gamer" gradients, or random rainbow colors from outside the palette.
+- Purple-and-blue "gamer" gradients, or random rainbow colors from outside the palette. The one rainbow is a full ability bar's shimmer.
 - Emoji or stock icons in the UI. Icons are drawn in code, in this style.
-- Text straight over the world without a card or dark box, more than two fonts, or mixed corner roundness.
+- Text straight over the world without a card, a dark box or a dark edge, more than one font family, or rounded corners.
 - Photoreal textures, shiny materials or realistic wood grain next to flat painted color.
 - Free models dropped in as they are, or props in perfect grids, in mirror symmetry, or all the same size.
 - AI-made meshes or textures left as generated: mushy detail, melted edges, or garbled text or logos. Clean them up or make them again.

@@ -189,6 +189,77 @@ local Theme = {
 		KeyTagTextSize = 18,
 	},
 
+	-- The UI kit's values, measured from Illegal Soccer on 2026-11-12 (docs/audits/ILLEGAL_SOCCER.md, docs/STYLE.md's
+	-- UI kit) for the step 7 style pass, which rebuilds every screen on them. Sizes are pixels on a 1080-pixel-high
+	-- screen, scaled with UIScale; times are seconds. Nothing reads them until a screen is rebuilt.
+	Kit = {
+		DesignHeight = 1080,
+		-- Second lines in warm grey: the same family as Theme.Font, regular weight
+		LineFont = Font.new(Font.fromEnum(Enum.Font.RobotoCondensed).Family, Enum.FontWeight.Regular),
+		Colors = {
+			Cream = Color3.fromRGB(254, 250, 234), -- cards, labels, panels' bodies, tooltips
+			CreamWhite = Color3.fromRGB(255, 254, 237), -- key tabs, the close button
+			Ink = Color3.fromRGB(21, 19, 15), -- text on cream
+			Dark = Color3.fromRGB(23, 21, 19), -- key boxes, the timer, header bars, dark labels
+			Grey = Color3.fromRGB(128, 123, 111), -- second lines
+			Band = Color3.fromRGB(235, 231, 219), -- section bands inside panels
+			Tan = Color3.fromRGB(194, 146, 123), -- corner brackets, the dot texture, the timer's digits
+			Mint = Color3.fromRGB(56, 255, 165), -- main action, toggles on, sliders, full bars, big-moment tags
+			MintBright = Color3.fromRGB(68, 255, 171), -- the one main button
+			MintEdge = Color3.fromRGB(212, 238, 213), -- the thin border round mint pieces
+			Red = Color3.fromRGB(237, 16, 93), -- side A, warnings, badges
+			Blue = Color3.fromRGB(51, 132, 250), -- side B
+			Gold = Color3.fromRGB(248, 215, 52), -- only the turn and the called pocket
+			WorldText = Color3.fromRGB(240, 238, 246), -- names over the world, with a dark edge
+			ToggleTrack = ColorSequence.new(Color3.fromRGB(226, 222, 210), Color3.fromRGB(210, 206, 195)),
+			-- Second-rank buttons, top to bottom
+			PastelBlue = ColorSequence.new(Color3.fromRGB(219, 222, 219), Color3.fromRGB(189, 205, 224)),
+			PastelBeige = ColorSequence.new(Color3.fromRGB(231, 221, 209), Color3.fromRGB(225, 208, 193)),
+			PastelLilac = ColorSequence.new(Color3.fromRGB(229, 209, 218), Color3.fromRGB(214, 175, 222)),
+			-- Only a full ability bar, scrolling sideways
+			Rainbow = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(243, 92, 232)),
+				ColorSequenceKeypoint.new(0.33, Color3.fromRGB(246, 179, 121)),
+				ColorSequenceKeypoint.new(0.66, Color3.fromRGB(153, 255, 122)),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(79, 184, 255)),
+			}),
+		},
+		Margin = 17, -- from the screen's edges
+		Border = 2, -- cream, round mint and pastel buttons and bar segments
+		Bracket = { Arm = 13, Line = 2, Inset = 9 }, -- cards' corner brackets
+		Dots = { Size = 2, Spacing = 5.5, Transparency = 0.85 }, -- the halftone grid, tan
+		DimTransparency = 0.7, -- a control label you can't use right now lets the world through
+		HoverGlow = 12,
+		ScoreCard = { Height = 82, Width = 223, NumeralSize = 60, SideSquare = 19 },
+		Timer = { Height = 40, Width = 103, Gap = 13, TextSize = 27 },
+		Controls = { Height = 42, Pitch = 52, KeyBox = 29, TextSize = 21, Padding = 10, KeyInset = 5, Divider = 19 },
+		MainButton = { Height = 83, Width = 234, TextSize = 45 },
+		Button = { Height = 58, Width = 202, Gap = 13, TextSize = 29, KeyTag = 26, KeyTagTextSize = 18 },
+		Tooltip = { Height = 28, TextSize = 19, Pointer = 9 },
+		Badge = { Height = 34, Square = 15 },
+		Slot = { Size = 85, Gap = 12, Tab = 28, Dash = 6, DashGap = 4 },
+		ThinBar = { Height = 7, Width = 86 }, -- the pale bar over the slots
+		Bar = { Height = 20, SegmentWidth = 84, Gap = 6, Below = 18 }, -- the ability bar's 4 segments
+		Panel = { Width = 507, Header = 60, TitleSize = 31, Close = 36, CloseMargin = 12, Padding = 26 },
+		Row = { Height = 61, TitleSize = 23, LineSize = 17, Band = 33, BandTextSize = 17 },
+		Toggle = { Width = 69, Height = 34, Knob = 27 },
+		Slider = { Width = 170, Height = 30, Segments = 10, Gap = 3 },
+		BigMoment = { Height = 96, Width = 378, NameSize = 60, TagHeight = 40, TagTextSize = 22 },
+		Ribbon = { Height = 82, Width = 275, TitleSize = 29, ReasonSize = 19, Tail = 30 },
+		DarkLabel = { Height = 39 },
+		InfoPill = { Height = 42, Transparency = 0.15 },
+		Times = {
+			PanelIn = 0.1,
+			PanelOut = 0.13,
+			CrossFade = 0.1,
+			BigLine = 0.1, -- a big moment: the line wiping out...
+			BigFlash = 0.15, -- ...the flash in the side's color...
+			BigSettle = 0.1, -- ...brackets settling...
+			BigLetter = 0.03, -- ...then the name typing on, per letter
+			RainbowCycle = 1,
+		},
+	},
+
 	-- The placeholder balls' markings, so you can see them roll, in ball radii. Solids, the 8 and the cue ball
 	-- get a dot on top and bottom, stripes a band of color around a white ball.
 	BallMarks = {
