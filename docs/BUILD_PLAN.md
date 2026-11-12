@@ -9,8 +9,13 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - **Current step:** Phase 3, Items
 - **In progress:** this week (Nov 11–15), before Phase 4: optimized code, mechanics that work perfectly and a style closer to Illegal Soccer, in my order: the ability squares and lobby buttons, helpers, the health fixes from the Nov 11 report, audits of Crazy 8 Ball and Illegal Soccer, then the features and style pass I pick from them, a mechanics check and my friends playtest. Every Claude task in Phase 3 is built. Players see "Abilities", never "items". The test panel, Give buttons and Coach stay owner-only on a published server. Left in Phase 3 is mine: the store page's name and description, the music and sound picks, the age check, publishing, then the friends playtest. After it: Phase 4, with the item balance pass and the tutorial's items step waiting for what my friends find. Phase 2's 2-player and 4-player checks are in the Phase 3 and Phase 4 friend playtests
 - **Dates:** launch moved to Friday, Dec 18 when the plan was reordered. Phase 4 starts Monday, Nov 16. The phase dates are Claude's proposal for that launch
-- **Last session:** 2026-11-11. The status report, the optimize skill (`.claude/skills/optimize/`), then this week's plan
-- **Next up:** the Phase 3 tasks in order. My Phase 3 jobs: the store page's name and description, the music and sound picks, then the age check before the friends playtest
+- **Last session:** 2026-11-12. This week's steps 1–6 and 8:
+  - **Steps 1–3:** the ability squares and lobby row; helpers (a physics timer, contact sheets, a code-review subagent); five health fixes with before and after numbers.
+  - **Steps 4–5:** both audits, with Illegal Soccer's measured spec in STYLE.md and `Theme.Kit`.
+  - **Step 6:** the audit callouts, the clock pulse, the F reminder, the target preview, settings with saving, a mock shop, the camera check.
+  - **Step 8:** the mechanics check (flow tests, full 1v1 and 2v2 games against Coach).
+  - **Also:** native physics, twice as fast.
+- **Next up:** step 7, the style pass on the UI kit, once interactions.mov is recorded. Then my Phase 3 jobs (store page, music and sounds, the age check, publishing the friends version) and the friends playtest
 - **Known issues:**
   - Touch and the new HUD layout haven't been tried on a real phone yet, only in the emulator; it's covered by the Mobile phase
   - The existing touch code isn't tested or extended until the Mobile phase, so it will fall behind the PC features built before then. Ball in hand is mouse-only: on a phone the cue ball can't be moved yet
@@ -26,6 +31,8 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
   - Our break sinks about 1.8 balls (`tools/BreakStats.luau`), against 0.7 in the 3 full-power 8 Ball Duels breaks recorded so far. Since the 2026-11-04 tuning it spreads the rack and brings the cue ball back like theirs; more recorded breaks would show whether the count really differs
   - Coach ignores items: it never uses one, and it still plays pots on frozen balls and doesn't allow for oil. It does avoid blocked pockets. Fine for testing; the tutorial's item step scripts its own
   - The item effects' looks (frozen ring, oil patch, lids), the item slots and the big name are placeholders: the effects get their final look in Phase 4's item-effects task, the UI in the GUI pass
+  - Settings only save in a published game, or in Studio with Game Settings → Security → Enable Studio Access to API Services on. Without it they apply for the session and the page says so
+  - The Screen shake setting has nothing to switch until screen shake is built in Phase 4
   - Not yet checked by me that a slider change reaches both the server and the shooter's screen (part 4 of my physics check). Claude's playtest confirmed it for the pocket sliders
 
 ## Rules that protect quality
