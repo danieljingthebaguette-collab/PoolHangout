@@ -109,7 +109,15 @@ function TopDownView.new(tableModel: Model, felt: BasePart): View
 	end
 	local function normal(state: Normal): (CFrame, number)
 		local at = focus()
-		return CFrame.lookAt(at - state.look * state.distance, at), state.fieldOfView
+		-- Never straight up or down: Roblox's camera can't take a look that's exactly vertical
+		local look = state.look
+		if math.abs(look.Y) > Config.Camera.MaxNormalPitch then
+			local flat = Vector3.new(look.X, 0, look.Z)
+			flat = if flat.Magnitude > 1e-3 then flat.Unit else Vector3.new(0, 0, -1)
+			local y = math.sign(look.Y) * Config.Camera.MaxNormalPitch
+			look = flat * math.sqrt(1 - y * y) + Vector3.new(0, y, 0)
+		end
+		return CFrame.lookAt(at - look * state.distance, at), state.fieldOfView
 	end
 
 	local function update(dt: number)
@@ -130,6 +138,11 @@ function TopDownView.new(tableModel: Model, felt: BasePart): View
 		elseif saved then
 			-- Stay framed, even when the window changes size
 			camera.CFrame, camera.FieldOfView = framing()
+		end
+		-- The view looks straight down, which Roblox's own camera can't handle, so it keeps the camera Scriptable
+		-- even if something else switched it back
+		if (easing or saved) and camera.CameraType ~= Enum.CameraType.Scriptable then
+			camera.CameraType = Enum.CameraType.Scriptable
 		end
 		if not (easing or saved) and connection then
 			connection:Disconnect()

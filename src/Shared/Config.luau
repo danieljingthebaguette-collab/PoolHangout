@@ -133,6 +133,7 @@ local Config = {
 	},
 
 	Camera = {
+		MaxNormalPitch = 0.97, -- leaving the top-down view, the normal camera never looks more nearly straight down than this
 		-- Degrees, top to bottom. Narrow and high above, so balls near the table's edges don't look stretched.
 		TopDownFieldOfView = 20,
 		TopDownMargin = 1.3, -- studs of room the top-down view shows around the playing surface: the rails plus a little
