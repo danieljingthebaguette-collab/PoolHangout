@@ -11,7 +11,7 @@ Pool!'s rules for changing code for speed, memory, network traffic or tidiness. 
 2. **Find the cause** with the tools in section 1, starting where section 3 points.
 3. **Change one module**, following section 4.
 4. **Measure again** in the same scenario. Keep the change only if the number moved the right way.
-5. **Check behaviour:** `lune run tests/run` passes unchanged, lint and the type check pass, and a playtest of the same scenario looks the same.
+5. **Check behaviour:** `lune run tests/run` passes unchanged, lint and the type check pass, and a playtest of the same scenario looks the same. For anything beyond a one-line change, have the `code-reviewer` subagent read it fresh before you commit.
 6. **Commit that module alone**, with the before and after numbers in the commit message, like `Break: worst server frame 13.0 → 3.4 ms (Lune, quiet Mac, median of 3)`.
 
 ## 1. Measure first
@@ -71,7 +71,7 @@ return {
 ```
 
 - **Lune, for the pure physics:**
-  - Time `Simulate.step(sim, Config.Shot.ServerStepsPerFrame)` slice by slice for a full-power break, from a temporary script in `tools/` that you delete afterwards.
+  - `lune run tools/BenchPhysics` times `Simulate.step(sim, Config.Shot.ServerStepsPerFrame)` slice by slice for a full-power break, over 5 runs, and checks the result matches stepping it all at once. `Steps=120` tries another slice size, `Runs=7` more runs.
   - Its worst slice is the server's worst frame at that table.
   - 6 tables can break in the same frames, so 6 × the worst slice must stay well under 16.67 ms.
 

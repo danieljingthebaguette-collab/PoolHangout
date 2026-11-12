@@ -32,7 +32,7 @@ Item-based 8-ball pool on Roblox, 1v1 and 2v2. Controls and physics match the fe
 - Refactor code the task didn't ask about.
 
 ## Where code lives
-Script Sync mirrors src/Server → ServerScriptService/Server, src/Client → StarterPlayer/StarterPlayerScripts/Client and src/Shared → ReplicatedStorage/Shared, both ways. tests/, docs/ and tools/ aren't synced; tools/ holds scripts Claude runs, in Studio through the MCP (BuildTable.luau) or in Lune (BreakStats.luau, and Sourcemap.luau for the type check).
+Script Sync mirrors src/Server → ServerScriptService/Server, src/Client → StarterPlayer/StarterPlayerScripts/Client and src/Shared → ReplicatedStorage/Shared, both ways. tests/, docs/ and tools/ aren't synced; tools/ holds scripts Claude runs, in Studio through the MCP (BuildTable.luau) or in Lune (BreakStats.luau, BenchPhysics.luau to time the physics, and Sourcemap.luau for the type check), plus ContactSheet.sh, which turns a video clip into contact sheets.
 - File names set the script type: Name.server.luau = Script, Name.local.luau = LocalScript, Name.luau = ModuleScript, a folder = Folder. No init.luau files.
 - Two entry scripts only: src/Server/Main.server.luau and src/Client/Main.local.luau. Everything else is a ModuleScript they start.
 - Every tuning number lives in src/Shared/Config.luau. UI is built in code. Every color, font, UI size and effect timing lives in src/Shared/Theme.luau, never hard-coded. Gameplay numbers stay in Config: table and ball sizes, the shot's feel, and every timer the server runs.
