@@ -115,7 +115,10 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] All 6 tables: `tools/BuildTable.luau` builds 3 for 1v1 and 3 for 2v2, with their seat markers, on the lodge's table spots (Claude)
 - [ ] Tutorial rooms: each new player gets a private room in the same server, out of sight, with one table and Coach, that nobody else can get into; several can run at once. Skip or finishing puts them straight into the lodge and removes the room, and finishing or skipping is saved (needs my OK on saving data). All testable in Studio (Claude)
 - [ ] Tutorial steps with Coach: aiming, power, ball in hand, groups, calling the 8 and items, each with a tip card and the table set up for it, and a Skip button (Claude)
-- [ ] "0/2" or "0/4" signs above each table, counting the players who have joined (Claude)
+- [ ] "0/2" or "0/4" signs above each table, counting the players who have joined, with the avatars of the players at it (Claude)
+- [ ] Floor markings at each table, painted like a court: its mode ("1v1", "2v2") and its state ("Open", "Playing", "Full") (Claude)
+- [ ] Floor arrows that lead a new player to the nearest open table: the tutorial's last step, then anyone who hasn't joined a table after 30 seconds *(default)* (Claude)
+- [ ] A cue in the hands of every seated player in 3D (Claude)
 - [ ] Leaving: the leaver's seat opens on the prompt as "Take seat", and the first player to press E takes over. After 15 seconds with nobody, the other player wins a 1v1, or the teammate plays on alone in 2v2. Disconnects count as leaving, and 2 timeouts in a row removes a player (Claude)
 - [ ] Final looks for the table, cue and the stylized balls with icons, in the `docs/STYLE.md` look, every size still from Config (Claude)
 - [ ] Item effects in the `docs/STYLE.md` look: flame trail, blast burst and ring, icy frozen balls, oil patch, pocket lids, screen shake on big hits, and the ring at players' feet (Claude)
@@ -123,7 +126,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 - [ ] Wire in the music and final sounds I picked in Phase 3 (Claude)
 - [ ] Item balance pass: the item bar's points, blast strength, oil, item odds, all in Config. Aim for about one item every 2 turns per player. Try raising `OpponentBallPoints` to 3 for a stronger comeback, and `SinkItemsWaitForTurnEnd` if item runs get out of hand (Me + Claude)
 - [ ] Analytics: joined → each tutorial step finished (or skipped) → first game started → first game finished → second game, so I can see where new players quit (Claude)
-- [ ] GUI pass, as I direct it, starting with the art director's end-screen fix: the headline in the display font and bigger, with smaller column headers, so the result reads first. Its item-UI notes from 2026-11-08 wait here too: a Pocket Block icon that doesn't read as a "no entry" sign, an Oil Slick icon that shows on a dark slot, the big item name off the felt (top center), the card strips inside the card's empty end, and an opaque empty slot. And from the 2026-11-08 Abilities review: the big name smaller and right under the top bar, fading when a pull starts; a thicker picking outline with an ink ring on bigger slot squares; the Abilities button in full gold with a gap above it, a narrower panel and a bigger title; and something on the card showing Power Shot is still on. And from the ability-rows review: each card's slots and bar on a dark tab joined to the card's bottom edge, with a taller bar; the rows a fixed width with shorter lines, centered; and Coach's blank avatar and empty squares, which read as broken images. And from the always-on rows review: other players' slots and bar inside their card rather than hanging below it, a taller bar in a dark box, lines of 40 characters or fewer, and maybe a thin cream outline on an empty slot (Claude)
+- [ ] GUI pass, as I direct it: this week's step 7 style pass does it on the UI kit (`docs/STYLE.md`), and also adds a big "FOUL!" headline over the foul's reason, a flash when the meter reaches full power, the user's avatar on the big ability name, and a crown on the winner with a running rematch score on the end screen. Starting with the art director's end-screen fix: the headline in the display font and bigger, with smaller column headers, so the result reads first. Its item-UI notes from 2026-11-08 wait here too: a Pocket Block icon that doesn't read as a "no entry" sign, an Oil Slick icon that shows on a dark slot, the big item name off the felt (top center), the card strips inside the card's empty end, and an opaque empty slot. And from the 2026-11-08 Abilities review: the big name smaller and right under the top bar, fading when a pull starts; a thicker picking outline with an ink ring on bigger slot squares; the Abilities button in full gold with a gap above it, a narrower panel and a bigger title; and something on the card showing Power Shot is still on. And from the ability-rows review: each card's slots and bar on a dark tab joined to the card's bottom edge, with a taller bar; the rows a fixed width with shorter lines, centered; and Coach's blank avatar and empty squares, which read as broken images. And from the always-on rows review: other players' slots and bar inside their card rather than hanging below it, a taller bar in a dark box, lines of 40 characters or fewer, and maybe a thin cream outline on an empty slot (Claude)
 - [ ] Playtest with 4 friends: 1v1 and 2v2, with people leaving mid-game on purpose and every item used. Include Phase 2's 4-player check: 2v2 on Table2, turns go A1 → B1 → A2 → B2, and when one player leaves their teammate plays on alone (Me)
 - [ ] Big playtest with as many friends as I can get, on PC (Me)
 
@@ -166,3 +169,13 @@ Small updates every week, starting with fixes from launch week, and in the first
 3. **Extras** like streaks, later
 
 Then new items and the rest of the Later list in GAME_SPEC.md.
+
+From the Illegal Soccer audit (`docs/audits/ILLEGAL_SOCCER.md`), for when progression and parties are planned:
+- Daily rewards: a 7-day calendar with coins each day and an item on day 7, confetti on claiming, and a small toast
+- A stats board in the lobby: career stats with round icons, and weekly and all-time leaderboards
+- Level and coins in the top-right corner: a level card with an XP bar over a coin card
+- Party slots: the lobby row shrinks to its icons and adds your avatar and "+" slots to invite into (with Parties)
+- Shop odds and guaranteed drops, and bundles with guarantees, only if I decide on paid rolls (see GAME_SPEC's "Raised but not decided")
+- Passes: perk tiles under colored category bars and one promo card
+- Inventory: tabs per kind, an equipped preview, and the owned grid with small tags
+- Redeem codes, keybinds in Settings, and an event popup with Notify me
