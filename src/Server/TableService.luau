@@ -78,10 +78,7 @@ end
 
 -- How many players a game on this table needs: one per seat, or one in Studio solo where Coach doesn't play
 local function needed(tableModel: Model): number
-	local solo = RunService:IsStudio()
-		and Config.Debug.SoloTables
-		and #Players:GetPlayers() == 1
-		and not coachTable()
+	local solo = RunService:IsStudio() and Config.Debug.SoloTables and #Players:GetPlayers() == 1 and not coachTable()
 	return TableFlow.needed(seatCount(tableModel), solo)
 end
 
@@ -330,9 +327,14 @@ function TableService.start()
 		end
 	end
 
-	-- A character respawned at a table keeps its name tag off. Roblox drops these connections with the player.
+	-- A character respawned at a table keeps its name tag off. Each player's connection is dropped when they leave:
+	-- Roblox only destroys a Player, and what's connected to it, with Workspace.PlayerCharacterDestroyBehavior on.
+	local respawns: { [Player]: RBXScriptConnection } = {}
 	local function watchCharacter(player: Player)
-		player.CharacterAdded:Connect(function(character: Model)
+		if respawns[player] then
+			return
+		end
+		respawns[player] = player.CharacterAdded:Connect(function(character: Model)
 			character:WaitForChild("Humanoid")
 			if inGame(player) or isWaiting(player) then
 				showNameTag(player, false)
@@ -345,6 +347,11 @@ function TableService.start()
 	end
 
 	Players.PlayerRemoving:Connect(function(player: Player)
+		local respawn = respawns[player]
+		if respawn then
+			respawn:Disconnect()
+			respawns[player] = nil
+		end
 		for tableModel, match in matches do
 			local seat = table.find(match.seats, player)
 			if seat and not match.left[seat] then
