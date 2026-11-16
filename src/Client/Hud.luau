@@ -132,7 +132,7 @@ function Hud.showTable(visible: boolean)
 	for _, gui in guis do
 		gui.Enabled = visible
 	end
-	-- Prompts float over the table, so in the top-down view "2/2 joined" would sit on the felt
+	-- Prompts float over the table, so in the top-down view "1/2 joined" would sit on the felt
 	ProximityPromptService.Enabled = not visible
 	TurnArrow.setHidden(visible)
 end

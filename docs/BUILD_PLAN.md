@@ -27,7 +27,6 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
   - The Output warning about rbxassetid://203785492 ("Pop Close Sound") comes from a Studio plugin or Roblox, not the place: ignore it
   - The GUI needs tweaking. Leave it as it is until I say we'll get to it
   - Coach's avatar on the top bar is an empty dark square, since a bot has no avatar picture
-  - Pressing E on a table with a game on does nothing; its prompt only shows the count
   - Our break sinks about 1.8 balls (`tools/BreakStats.luau`), against 0.7 in the 3 full-power 8 Ball Duels breaks recorded so far. Since the 2026-11-04 tuning it spreads the rack and brings the cue ball back like theirs; more recorded breaks would show whether the count really differs
   - Coach ignores items: it never uses one, and it still plays pots on frozen balls and doesn't allow for oil. It does avoid blocked pockets. Fine for testing; the tutorial's item step scripts its own
   - The item effects' looks (frozen ring, oil patch, lids), the item slots and the big name are placeholders: the effects get their final look in Phase 4's item-effects task, the UI in the GUI pass
