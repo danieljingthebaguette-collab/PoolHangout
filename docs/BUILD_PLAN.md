@@ -6,16 +6,14 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 ## Status
 
-- **Current step:** Phase 3, Items
-- **In progress:** this week (Nov 11–15), before Phase 4: optimized code, mechanics that work perfectly and a style closer to Illegal Soccer, in my order: the ability squares and lobby buttons, helpers, the health fixes from the Nov 11 report, audits of Crazy 8 Ball and Illegal Soccer, then the features and style pass I pick from them, a mechanics check and my friends playtest. Every Claude task in Phase 3 is built. Players see "Abilities", never "items". The test panel, Give buttons and Coach stay owner-only on a published server. Left in Phase 3 is mine: the store page's name and description, the music and sound picks, the age check, publishing, then the friends playtest. After it: Phase 4, with the item balance pass and the tutorial's items step waiting for what my friends find. Phase 2's 2-player and 4-player checks are in the Phase 3 and Phase 4 friend playtests
-- **Dates:** launch moved to Friday, Dec 18 when the plan was reordered. Phase 4 starts Monday, Nov 16. The phase dates are Claude's proposal for that launch
-- **Last session:** 2026-11-12. This week's steps 1–6 and 8:
-  - **Steps 1–3:** the ability squares and lobby row; helpers (a physics timer, contact sheets, a code-review subagent); five health fixes with before and after numbers.
-  - **Steps 4–5:** both audits, with Illegal Soccer's measured spec in STYLE.md and `Theme.Kit`.
-  - **Step 6:** the audit callouts, the clock pulse, the F reminder, the target preview, settings with saving, a mock shop, the camera check.
-  - **Step 8:** the mechanics check (flow tests, full 1v1 and 2v2 games against Coach).
-  - **Also:** native physics, twice as fast.
-- **Next up:** step 7, the style pass on the UI kit, once interactions.mov is recorded. Then my Phase 3 jobs (store page, music and sounds, the age check, publishing the friends version) and the friends playtest
+- **Current step:** the Fable pass, Part 2 (its section is below, after Phase 3)
+- **In progress:** the Fable pass, which replaces this week's step 7: polish Pool! as far as we can before the Fable window ends on Tuesday, Nov 17 at 2:59 AM Eastern. One part per session, and every step is one commit. Part 1, the audit and the plan, is done. Every Claude task in Phase 3 is built. Players see "Abilities", never "items". The test panel, Give buttons and Coach stay owner-only on a published server. Left in Phase 3 is mine: the store page's name and description, the music and sound picks, the age check, publishing, then the friends playtest. After the pass: the rest of Phase 4, with the item balance pass and the tutorial's items step waiting for what my friends find. Phase 2's 2-player and 4-player checks are in the Phase 3 and Phase 4 friend playtests
+- **Dates:** launch moved to Friday, Dec 18 when the plan was reordered. Phase 4 starts Monday, Nov 16; the Fable pass (Nov 14–17) does some of its tasks early. The phase dates are Claude's proposal for that launch
+- **Last session:** 2026-11-14 to 16. Part 1 of the Fable pass:
+  - **The audit:** four games against Coach through the Studio MCP, with 47 "before" screenshots in `references/before-fable/`. Not captured: my own pocket call on the 8 (Coach finished first, twice), and the "Join table" prompt, since Studio's capture leaves out Roblox's own UI.
+  - **The art director's top 10,** listed in the Fable pass section with the step that fixes each.
+  - **My decisions:** the balls get numbers; the room is the first cut of the lodge blockout; bodies on the table are hidden in the top-down view; steps 2c and 3b wait until after Part 4, and 2e goes first.
+- **Next up:** Part 2 in a new session: 2e, then 2a, 2b and 2d. Then 3a and Part 4. After the pass: my Phase 3 jobs (store page, music and sounds, the age check, publishing the friends version) and the friends playtest
 - **Known issues:**
   - Touch and the new HUD layout haven't been tried on a real phone yet, only in the emulator; it's covered by the Mobile phase
   - The existing touch code isn't tested or extended until the Mobile phase, so it will fall behind the PC features built before then. Ball in hand is mouse-only: on a phone the cue ball can't be moved yet
@@ -25,14 +23,16 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
   - In 2v2, two long names don't fit on one card and the second is cut to "…"; the avatars still show both
   - A card's ball icons change when the next turn starts, about a quarter second after the balls stop, not the moment a ball drops; the tray fills as they drop
   - The Output warning about rbxassetid://203785492 ("Pop Close Sound") comes from a Studio plugin or Roblox, not the place: ignore it
-  - The GUI needs tweaking. Leave it as it is until I say we'll get to it
+  - The GUI needs tweaking: the Fable pass's Parts 3, 4 and 6 redo it on the UI kit
   - Coach's avatar on the top bar is an empty dark square, since a bot has no avatar picture
   - Our break sinks about 1.8 balls (`tools/BreakStats.luau`), against 0.7 in the 3 full-power 8 Ball Duels breaks recorded so far. Since the 2026-11-04 tuning it spreads the rack and brings the cue ball back like theirs; more recorded breaks would show whether the count really differs
   - Coach ignores items: it never uses one, and it still plays pots on frozen balls and doesn't allow for oil. It does avoid blocked pockets. Fine for testing; the tutorial's item step scripts its own
-  - The item effects' looks (frozen ring, oil patch, lids), the item slots and the big name are placeholders: the effects get their final look in Phase 4's item-effects task, the UI in the GUI pass
+  - The item effects' looks (frozen ring, oil patch, lids), the item slots and the big name are placeholders: the effects get their final look in Phase 4's item-effects task, the UI in the Fable pass's steps 4b and 4c
   - Settings only save in a published game, or in Studio with Game Settings → Security → Enable Studio Access to API Services on. Without it they apply for the session and the page says so
   - The Screen shake setting has nothing to switch until screen shake is built in Phase 4
   - Not yet checked by me that a slider change reaches both the server and the shooter's screen (part 4 of my physics check). Claude's playtest confirmed it for the pocket sliders
+  - Seen once, on 2026-11-14: when my shot clock ran out in the middle of a pull, two aim lines (the white one after the hit and the yellow one) stayed on screen near a pocket while Coach aimed. Cause not found; the Fable pass's step 4d finds and fixes it
+  - The sunk-ball tray may not fit the 15th ball in a small window: the art director's count from a 1100 × 580 capture, not checked. Step 4a checks it when it redraws the tray
 
 ## Rules that protect quality
 
@@ -96,7 +96,7 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 **Passed 2026-11-08** in solo tests against Coach; the multiplayer checks moved to Phases 3 and 4 (above).
 
-## Phase 3, Nov 8–15: Items (current)
+## Phase 3, Nov 8–15: Items
 
 **Goal:** players earn the 5 items during a game and use them, and games stay fair.
 
@@ -111,28 +111,100 @@ This file started as a copy of my "Pool! Build Plan" doc and is now the working 
 
 **Done when:** every rule and item test passes, and 2 friends finish 3 full games on PC, items included, without me explaining anything.
 
+## Fable pass, Nov 14–17: the look, the HUD and the table systems (current)
+
+**Goal:** fix what a player notices most, as far as we get before the Fable window ends on Tuesday, Nov 17 at 2:59 AM Eastern. It replaces this week's step 7 and does some of Phase 4 early: the final looks, the GUI pass, the table signs, floor markings, floor arrows, the cue in players' hands, the lanterns, the ring at players' feet and the first cut of the lodge blockout.
+
+**How it runs:**
+- One part per session, in the order below. Every step is one commit: Claude plans it and waits for my OK, builds only that step and refactors nothing outside it, I playtest, and then it's committed. Other ideas go at the end of the report.
+- Steps stay small enough to commit before a usage limit hits. If a limit cuts a step off, Claude stops at a clean point and lists what's left.
+- References are for tone, size and timing only: never copy or trace their art, icons, models, layouts or code. Ask before uploading anything or inserting Creator Store models.
+- Visual work goes to the style-builder, and the art director reviews the after screenshots beside the closest reference frame: at most about 18 screenshots a review, shrunk, so it finishes inside a usage limit. Its top 3 fixes go in the report.
+- Every number lives in Config or Theme. Lint, the type check and all tests pass. Each step updates the doc that owns its change (STYLE.md, MODELS.md, GAME_SPEC, this file's Status).
+- Not in this pass: daily rewards, ranks, coins, crates, quests, streaks and real purchases.
+
+**The art director's top 10** on 2026-11-16, worst first, and the steps that fix each:
+1. The world is a baseplate under the default sky, with the stock spawn decal: 2d
+2. Bodies lie on the felt and show under the HUD in the top-down view: 2e
+3. The table is a flat green rectangle that melts into the floor, with black blocks for corners and no light: 2b, 2d
+4. The balls are beads, and a stripe seen end-on passes for the cue ball: 2a
+5. One yellow for everything, rounded corners everywhere, no side colors: 3a, 4a
+6. The aim line is the faintest thing on the felt: 4d
+7. The abilities UI is the thinnest thing on screen: 4c
+8. Big moments are flat, and the ability's name lands on the table in a second font: 4b
+9. The lobby has no main action and points nowhere: 6a, 7a, 7c
+10. The panels and the end screen are forms: 6b, 6c, 6d
+
+- [x] **Part 1, audit and plan:** four games against Coach through the Studio MCP, 47 "before" screenshots in `references/before-fable/` (our own screens, not style references; git ignores them like the other reference images), the art director's top 10, the ball look and this plan (Claude) **Done 2026-11-16.**
+
+**Part 2: table, balls and lights** (Phase 4's final-looks task, moved up)
+- [ ] **2e** Bodies in the top-down view: any part of a character inside the table's outer edge is hidden completely in the top-down view, where the cue shows who's shooting; the normal view keeps 40%. Step-off and seat spots stay off the corners and at least 2 studs outside the rail, and the cue passes the shooter's hand, not their head. Update GAME_SPEC (Claude)
+- [ ] **2a** Balls, with numbers: solids in full color; stripes cream with one band 70% of the ball's width, so a stripe seen end-on never passes for the cue ball; a thin ink edge; no white dots; a purple clearly lighter than the 8; a plain cream cue ball with a tan roll dot. Each ball's number sits on a cream disc with an ink ring, about half the ball wide, that always faces the camera while the paint rolls under it; the numeral hides when balls are too small to read it (under about 24 px). Sizes from Config; update STYLE.md and MODELS.md (Claude)
+- [ ] **2b** Table: rails in two or three painted plank tones with dark seams, wooden corner blocks no wider than 1.6 pocket mouths with only the hole black, the felt in the palette's green with a head line and a foot spot a little lighter, an apron and legs with more shape, a soft shadow underneath, and break sparks about 10 px across at 1080p. Every size still from Config. Rebuild with `tools/BuildTable.luau`, then Claude reminds me to save the place (Claude)
+- [ ] **2d** Lantern, light and the room: a lantern over each table that throws a warm pool of light, so the felt's center is the brightest thing on screen; it's hidden on your own screen in the top-down view. The room is the first cut of Phase 4's lodge blockout in `tools/BuildArena.luau`, so it grows into the lodge: dark plank walls, a roof, the floor out to the walls and the spawn pad repainted, sized for the 6 tables Phase 4 adds. Update STYLE.md's lighting table if the light changes, and Claude reminds me to save the place (Claude)
+
+**Part 3: the UI kit** (step 7a)
+- [ ] **3a** Contact sheets of `interactions-1.mov` and `interactions-2.mov` at 15 fps (`tools/ContactSheet.sh`), ILLEGAL_SOCCER.md section 4's "Not seen yet" filled in, and the values in `Theme.Kit`; if a moment isn't in the clips, build from the measured spec and list what's still unmeasured. One client module with the kit pieces the table HUD needs (card, buttons, key tab, badge, timer box, controls-column row, big-moment card, dark label), each with hover, press, selected and can't-use states, scaled by the UI scale setting, with the dot texture kept to a few objects per card (Claude)
+
+**Part 4: the table HUD on the kit** (step 7b), with a coin flip for who breaks
+- [ ] **4a** Top bar and timer: red and blue side squares, the tan timer, the clock pulse in side red, and the cards' ball icons and the tray drawn like the new balls. Check the tray fits 15 balls in a small window (Claude)
+- [ ] **4b** Big-moment cards in the goal timing: a big "FOUL!" over the reason, the result, and today's callouts. The ability's name in Roboto Condensed Bold on a compact card under the top bar, clear of the felt (at most about 420 × 72 px at 1080p), with the user's avatar. Reword the result line so it names who sank the 8, and update GAME_SPEC (Claude)
+- [ ] **4c** Ability squares and bar as STYLE.md describes: a bar about 16 px tall at 1080p, mint, with the rainbow when it's full; the refusal as a badge; other players' slots inside their card; the Oil Slick and Pocket Block icons redrawn (Claude)
+- [ ] **4d** One controls column on the right replacing the hints and the F reminder; a heavier aim line (about 3 px at 1080p, cream with an ink outline) drawn above the oil patch and the rings; the meter's colors and a flash at full power. Find and fix the two aim lines that stayed on screen after my clock ran out mid-pull (Claude)
+- [ ] **4e** "Who breaks?" as a coin flip on a big-moment card: our own coin drawn in code, each face in a side's color with its players' avatars, spinning about 1.5 s and landing on the breaker, then their name. The server still picks the breaker; the coin only shows it. And the ring at each player's feet (Claude)
+
+**Part 5: physics, small adjustments only** (after Prompt A's fix is committed)
+- [ ] **5** Measure breaks and rail shots in `references/8ball duels/clips` and my playtest clips, and compare them with `tools/BreakStats.luau`: today our break sinks about 1.8 balls against their 0.7. Propose up to 3 Config changes of 10% or less, each with before and after numbers, and change nothing until I pick. Then rerun the tests and NativeCheck and update its fingerprint (Claude)
+
+**Part 6: lobby, panels and end screen** (steps 7c and 7d)
+- [ ] **6a** Lobby row: pastel buttons with cream key tabs (Abilities Z, Invite X, Shop C, Settings V), hidden under an open panel and the end screen (Claude)
+- [ ] **6b** The Abilities and Settings panels on the kit; needs 3b (Claude)
+- [ ] **6c** The Shop panel on the kit, with a small code-drawn preview on each tile; needs 3b (Claude)
+- [ ] **6d** End screen: a crown on the winner, a rematch score that counts up, and 6 to 8 award ribbons from a tested Rules module (Claude)
+
+**Part 7: systems from my Crazy 8 Ball recordings** (the audit's "phase 4" picks)
+- [ ] **7a** Signs above each table: "0/2" or "0/4", counting the players who have joined, with their avatars. And our own "Join table" prompt on the kit, in place of Roblox's stock one (Claude)
+- [ ] **7b** Floor markings at each table, painted like a court: its mode ("1v1", "2v2") and its state ("Open", "Playing", "Full") (Claude)
+- [ ] **7c** Floor chevrons that lead to the nearest open table, for anyone who hasn't joined a table after 30 seconds *(default)*. The tutorial's last step uses them once Phase 4 builds it (Claude)
+- [ ] **7d** A cue in the hands of every seated player in 3D (Claude)
+
+**Skipped for now,** since nothing in Part 4 needs them; do them after it:
+- [ ] **2c** Cue: tapered and two-tone, with a cream ferrule and a dark tip, every size still from Config (Claude)
+- [ ] **3b** The kit's panel pieces (panel, tab row, toggle, slider, tooltip, ribbon) and an owner-only kit sheet; Part 6's panels need them (Claude)
+
+**Open questions from the art director,** each for its step's plan:
+- 4a: keep the timer box in place while balls roll, with its digits hidden (a head shows through the gap today), and show the timer, the turn label and the F row in both views?
+- 4c: empty ability squares as opaque dark tiles with a cream border, where STYLE.md says a thin outline?
+- 4d: the meter's fill in mint, with one orange only for Power Shot's extra 50%?
+- 7a: is "Join table" the lobby's one mint action?
+- Phase 4's item effects: a cream pocket lid with an ink edge instead of gold, since gold means the called pocket?
+
+**Earlier art-director notes,** from the GUI pass task this replaces, that these steps also cover:
+- 4b: the big name fades when a pull starts.
+- 4c: an opaque empty slot, a thicker picking outline with an ink ring, the bar in a dark box, something on the card showing Power Shot is still on, and Coach's blank avatar and empty squares, which read as broken images.
+- 6b: a narrower Abilities panel with a bigger title, and lines of 40 characters or fewer.
+- 6d: the result headline bigger, with smaller column headers, so the result reads first.
+
+**Done when:** I've OK'd the playtest of every step we reach. Whatever the window doesn't reach stays here as Phase 4 work.
+
 ## Phase 4, Nov 16–Dec 6: the lodge, every table, the tutorial, and polish
 
 **Goal:** it looks, sounds and feels warm and punchy, every table runs itself even when people leave, and people want to stay.
 
-- [ ] Lodge blockout: `tools/BuildArena.luau` builds the room, the floor, the table spots, the lobby spawn and the counter in plain parts (Claude builds it, I adjust)
-- [ ] The lodge in the `docs/STYLE.md` look: timber beams, a plank floor, lanterns over each table, seating, and a counter serving sodas, milkshakes and coffee (Claude)
+Moved up into the Fable pass, above: the final looks for the table, cue and balls, the GUI pass, the table signs, the floor markings, the floor arrows, the cue in players' hands, the lanterns and the ring at players' feet.
+
+- [ ] Lodge blockout: `tools/BuildArena.luau` builds the room, the floor, the table spots, the lobby spawn and the counter in plain parts. The Fable pass's step 2d builds its first cut: the room, the floor and the spawn pad (Claude builds it, I adjust)
+- [ ] The lodge in the `docs/STYLE.md` look: timber beams, a plank floor, seating, and a counter serving sodas, milkshakes and coffee (Claude)
 - [ ] Plants and other organic props: Claude writes prompts for Studio's AI model and texture tools, I run them, and the arena builder places the results. The first thing cut if Phase 4 runs tight (Me + Claude)
 - [ ] All 6 tables: `tools/BuildTable.luau` builds 3 for 1v1 and 3 for 2v2, with their seat markers, on the lodge's table spots (Claude)
 - [ ] Tutorial rooms: each new player gets a private room in the same server, out of sight, with one table and Coach, that nobody else can get into; several can run at once. Skip or finishing puts them straight into the lodge and removes the room, and finishing or skipping is saved (needs my OK on saving data). All testable in Studio (Claude)
-- [ ] Tutorial steps with Coach: aiming, power, ball in hand, groups, calling the 8 and items, each with a tip card and the table set up for it, and a Skip button (Claude)
-- [ ] "0/2" or "0/4" signs above each table, counting the players who have joined, with the avatars of the players at it (Claude)
-- [ ] Floor markings at each table, painted like a court: its mode ("1v1", "2v2") and its state ("Open", "Playing", "Full") (Claude)
-- [ ] Floor arrows that lead a new player to the nearest open table: the tutorial's last step, then anyone who hasn't joined a table after 30 seconds *(default)* (Claude)
-- [ ] A cue in the hands of every seated player in 3D (Claude)
+- [ ] Tutorial steps with Coach: aiming, power, ball in hand, groups, calling the 8 and items, each with a tip card and the table set up for it, and a Skip button. Its last step follows the floor arrows to the nearest open table (Claude)
 - [ ] Leaving: the leaver's seat opens on the prompt as "Take seat", and the first player to press E takes over. After 15 seconds with nobody, the other player wins a 1v1, or the teammate plays on alone in 2v2. Disconnects count as leaving, and 2 timeouts in a row removes a player (Claude)
-- [ ] Final looks for the table, cue and the stylized balls with icons, in the `docs/STYLE.md` look, every size still from Config (Claude)
-- [ ] Item effects in the `docs/STYLE.md` look: flame trail, blast burst and ring, icy frozen balls, oil patch, pocket lids, screen shake on big hits, and the ring at players' feet (Claude)
+- [ ] Item effects in the `docs/STYLE.md` look: flame trail, blast burst and ring, icy frozen balls, oil patch, pocket lids and screen shake on big hits. From the art director on 2026-11-16: the lid is a small wedge that doesn't cover the pocket and reads as an arrow, the oil patch reads as a burn hole, and ball in hand, the target preview and the frozen ball all use the same thin pale ring (Claude)
 - [ ] Server size 24 and voice chat turned on (Me)
 - [ ] Wire in the music and final sounds I picked in Phase 3 (Claude)
 - [ ] Item balance pass: the item bar's points, blast strength, oil, item odds, all in Config. Aim for about one item every 2 turns per player. Try raising `OpponentBallPoints` to 3 for a stronger comeback, and `SinkItemsWaitForTurnEnd` if item runs get out of hand (Me + Claude)
 - [ ] Analytics: joined → each tutorial step finished (or skipped) → first game started → first game finished → second game, so I can see where new players quit (Claude)
-- [ ] GUI pass, as I direct it: this week's step 7 style pass does it on the UI kit (`docs/STYLE.md`), and also adds a big "FOUL!" headline over the foul's reason, a flash when the meter reaches full power, the user's avatar on the big ability name, and a crown on the winner with a running rematch score on the end screen. Starting with the art director's end-screen fix: the headline in the display font and bigger, with smaller column headers, so the result reads first. Its item-UI notes from 2026-11-08 wait here too: a Pocket Block icon that doesn't read as a "no entry" sign, an Oil Slick icon that shows on a dark slot, the big item name off the felt (top center), the card strips inside the card's empty end, and an opaque empty slot. And from the 2026-11-08 Abilities review: the big name smaller and right under the top bar, fading when a pull starts; a thicker picking outline with an ink ring on bigger slot squares; the Abilities button in full gold with a gap above it, a narrower panel and a bigger title; and something on the card showing Power Shot is still on. And from the ability-rows review: each card's slots and bar on a dark tab joined to the card's bottom edge, with a taller bar; the rows a fixed width with shorter lines, centered; and Coach's blank avatar and empty squares, which read as broken images. And from the always-on rows review: other players' slots and bar inside their card rather than hanging below it, a taller bar in a dark box, lines of 40 characters or fewer, and maybe a thin cream outline on an empty slot (Claude)
 - [ ] Playtest with 4 friends: 1v1 and 2v2, with people leaving mid-game on purpose and every item used. Include Phase 2's 4-player check: 2v2 on Table2, turns go A1 → B1 → A2 → B2, and when one player leaves their teammate plays on alone (Me)
 - [ ] Big playtest with as many friends as I can get, on PC (Me)
 
