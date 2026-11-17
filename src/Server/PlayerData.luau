@@ -88,7 +88,7 @@ local function save(player: Player, entry: Entry)
 	end
 end
 
--- The player's settings page changed: kept once a second at most, cleaned of anything out of range
+-- The player's settings page changed: kept twice a second at most, cleaned of anything out of range
 local function takeSettings(player: Player, raw: unknown)
 	local entry = entries[player]
 	local now = os.clock()

@@ -215,7 +215,7 @@ local Config = {
 		Tries = 3, -- a load or save tries this many times...
 		RetrySeconds = 2, -- ...this far apart
 		AutosaveSeconds = 120, -- changed records are saved this often, and when the player leaves
-		SaveCooldown = 1, -- the server takes a player's settings at most this often
+		SaveCooldown = 0.5, -- the server takes a player's settings at most this often
 	},
 
 	Debug = {

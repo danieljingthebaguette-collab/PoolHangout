@@ -139,8 +139,12 @@ function Balls.shoot(
 ): Simulate.Sim
 	rolling[tableModel] = true
 	local start = resting[tableModel]
-	local sim = Simulate.start(start, shot, params, effects)
-	Remotes.ShotStarted:FireAllClients(tableModel, start, shot, params, effects or {})
+	-- The cue ball's speed is worked out once, here, and goes with the shot, so every screen starts it at exactly
+	-- this speed
+	local sent = table.clone(shot)
+	sent.speed = Simulate.speed(shot, params)
+	local sim = Simulate.start(start, sent, params, effects)
+	Remotes.ShotStarted:FireAllClients(tableModel, start, sent, params, effects or {})
 	local startedAt = workspace:GetServerTimeNow()
 	while not Simulate.step(sim, Config.Shot.ServerStepsPerFrame) do
 		task.wait()

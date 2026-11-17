@@ -92,8 +92,8 @@ return {
 	-- for each bar's "+4", and the effects on the table now (Simulate.Effects: lists of frozen ball ids, blocked pocket
 	-- ids and oil spots { x, y } in table space, and blast). No bars: no game is on, so no bars, slots or effects show.
 	ItemsChanged = remote("ItemsChanged"),
-	-- server → clients: (table model, starting balls, shot, physics params, effects) to replay, effects being what items
-	-- change about the shot (Simulate.Effects)
+	-- server → clients: (table model, starting balls, shot, physics params, effects) to replay, the shot carrying the cue
+	-- ball's starting speed the server worked out, and effects being what items change about the shot (Simulate.Effects)
 	ShotStarted = remote("ShotStarted"),
 	-- server → clients: (table model, final balls)
 	ShotResolved = remote("ShotResolved"),

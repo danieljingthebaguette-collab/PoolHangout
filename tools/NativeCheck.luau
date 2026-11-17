@@ -1,9 +1,11 @@
 --!strict
--- A fingerprint of every ball's final place over a fixed set of 40 breaks and 40 shots, and how long the physics took.
+-- A fingerprint of every ball's final place over a fixed set of 40 breaks, 40 shots and 40 item shots, and how long the
+-- physics took.
 -- Simulate.luau runs native on servers and Android but as bytecode everywhere else, so results must match exactly:
 -- after changing the physics, run this in Lune (lune run tools/NativeCheck), then the same body on a Studio server
 -- with a Server execute_luau (requiring the modules from ReplicatedStorage.Shared), and compare the fingerprints.
--- 2026-11-12: 1716332278 over 295,933 steps; 1,641 ms interpreted and 844 ms native on a Studio server.
+-- 2026-11-17, with the item shots: 1579840315 over 435,701 steps in both; 1,824 ms in Lune and 1,233 ms native on a
+-- Studio server. (2026-11-12, breaks and shots only: 1716332278 over 295,933 steps.)
 local Config = require("../src/Shared/Config")
 local Geometry = require("../src/Shared/Physics/Geometry")
 local Simulate = require("../src/Shared/Physics/Simulate")
@@ -24,16 +26,13 @@ end
 local function scattered()
 	local balls = {}
 	for id = 0, 15 do
-		table.insert(
-			balls,
-			{
-				id = id,
-				x = (rnd() - 0.5) * (Config.Table.Length - 2),
-				y = (rnd() - 0.5) * (Config.Table.Width - 2),
-				vx = 0,
-				vy = 0,
-			}
-		)
+		table.insert(balls, {
+			id = id,
+			x = (rnd() - 0.5) * (Config.Table.Length - 2),
+			y = (rnd() - 0.5) * (Config.Table.Width - 2),
+			vx = 0,
+			vy = 0,
+		})
 	end
 	return balls
 end
@@ -64,6 +63,33 @@ for k = 1, 40 do
 	local t = os.clock()
 	local sim =
 		Simulate.run(balls, { dirX = math.cos(angle), dirY = math.sin(angle), power = 0.2 + rnd() * 0.8 }, params)
+	simMs += (os.clock() - t) * 1000
+	record(sim)
+end
+-- Item shots, 8 of each, aimed so the item comes into play: Power Shot at 150%, Blast Ball at a ball, the cue ball at a
+-- frozen ball, an oil patch under the cue ball, and the cue ball at a blocked pocket
+for k = 0, 39 do
+	local balls = scattered()
+	local cue, target = balls[1], balls[2 + k % 15]
+	local kind = k % 5
+	local x, y, power, effects = target.x, target.y, 0.2 + rnd() * 0.8, {}
+	if kind == 0 then
+		power = Config.Items.PowerShotMax
+	elseif kind == 1 then
+		effects = { blast = true }
+	elseif kind == 2 then
+		effects = { frozen = { target.id } }
+	elseif kind == 3 then
+		effects = { oil = { { x = cue.x, y = cue.y } } }
+	else
+		local pocket = 1 + k % 6
+		x, y = layout.pockets[pocket].x, layout.pockets[pocket].y
+		effects = { blocked = { pocket } }
+	end
+	local dx, dyy = x - cue.x, y - cue.y
+	local len = math.sqrt(dx * dx + dyy * dyy)
+	local t = os.clock()
+	local sim = Simulate.run(balls, { dirX = dx / len, dirY = dyy / len, power = power }, params, effects)
 	simMs += (os.clock() - t) * 1000
 	record(sim)
 end

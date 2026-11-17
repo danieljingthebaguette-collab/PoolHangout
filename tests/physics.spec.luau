@@ -458,6 +458,14 @@ return function(test, check)
 		end
 	end)
 
+	test("a shot carrying the server's speed starts at exactly that speed, whatever its power", function()
+		local shot = { dirX = 0.6, dirY = 0.8, power = 0.37, speed = 7.123456789 }
+		local sim = Simulate.start({ ball(0, 0, 0) }, shot)
+		check.equal(sim.balls[1].vx, 0.6 * 7.123456789, "vx")
+		check.equal(sim.balls[1].vy, 0.8 * 7.123456789, "vy")
+		check.equal(Simulate.speed({ dirX = 1, dirY = 0, power = 1.5 }), 1.5 * PHYSICS.FullPowerSpeed, "Power Shot")
+	end)
+
 	test("a pull's speed matches 8 Ball Duels', measured as shares of full speed", function()
 		-- From recordings: the meter's % and the cue ball's speed over the first frames
 		local measured = { { 0.1, 0.219 }, { 0.3, 0.281 }, { 0.5, 0.408 }, { 0.6, 0.495 }, { 0.75, 0.652 }, { 1, 1 } }

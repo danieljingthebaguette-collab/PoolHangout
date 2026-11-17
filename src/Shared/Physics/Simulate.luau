@@ -11,8 +11,9 @@ export type Ball = { id: number, x: number, y: number, vx: number, vy: number, p
 
 -- A unit direction rather than an angle, because math.sin and math.cos can round differently on
 -- different devices. Power is 0–1, or up to Config.Items.PowerShotMax with Power Shot. The break gets BreakPower
--- times a normal shot's full power.
-export type Shot = { dirX: number, dirY: number, power: number, isBreak: boolean? }
+-- times a normal shot's full power. `speed`, the cue ball's starting speed, is worked out once by the server
+-- (Simulate.speed) and sent with the shot, since pull ^ PowerCurve can round differently on different devices.
+export type Shot = { dirX: number, dirY: number, power: number, isBreak: boolean?, speed: number? }
 
 -- What items change about a shot (Items.effects builds it). Empty is a normal shot. `blast`: at the cue ball's first
 -- hit, the other balls near the hit ball are pushed away from it (Config.Items.BlastReach and BlastPush). `frozen`:
@@ -54,6 +55,18 @@ export type Sim = {
 
 local Simulate = {}
 
+-- The cue ball's starting speed. Even the softest shot leaves at SoftestShot of full speed; the rest of the speed rises
+-- with pull ^ PowerCurve. Past full power, with Power Shot, speed rises in step with the power, so 1.25 is 1.25 times
+-- full speed.
+function Simulate.speed(shot: Shot, params: Params?): number
+	local p: Params = params or Config
+	local fullSpeed = p.Physics.FullPowerSpeed * (if shot.isBreak then p.Physics.BreakPower else 1)
+	local soft = p.Physics.SoftestShot
+	return if shot.power > 1
+		then shot.power * fullSpeed
+		else (soft + (1 - soft) * shot.power ^ p.Physics.PowerCurve) * fullSpeed
+end
+
 -- Works on copies, so the caller's starting balls stay as they were to send to clients.
 function Simulate.start(balls: { Ball }, shot: Shot, params: Params?, effects: Effects?): Sim
 	local p: Params = params or Config
@@ -64,13 +77,7 @@ function Simulate.start(balls: { Ball }, shot: Shot, params: Params?, effects: E
 	table.sort(copies, function(a: Ball, b: Ball): boolean
 		return a.id < b.id
 	end)
-	-- Even the softest shot leaves at SoftestShot of full speed; the rest of the speed rises with pull ^ PowerCurve. Past
-	-- full power, with Power Shot, speed rises in step with the power, so 1.25 is 1.25 times full speed.
-	local fullSpeed = p.Physics.FullPowerSpeed * (if shot.isBreak then p.Physics.BreakPower else 1)
-	local soft = p.Physics.SoftestShot
-	local speed = if shot.power > 1
-		then shot.power * fullSpeed
-		else (soft + (1 - soft) * shot.power ^ p.Physics.PowerCurve) * fullSpeed
+	local speed = shot.speed or Simulate.speed(shot, p)
 	for _, ball in copies do
 		if ball.id == 0 then
 			ball.vx, ball.vy = shot.dirX * speed, shot.dirY * speed
@@ -136,7 +143,8 @@ function Simulate.step(sim: Sim, count: number): boolean
 	local halfLength, halfWidth = tableParams.Length / 2, tableParams.Width / 2
 	local hitShare = (1 + physics.BallBounce) / 2
 	local slowdown = physics.RollingSlowdown
-	local oilReachSq = (Config.Items.OilRadius * radius) ^ 2
+	local oilReach = Config.Items.OilRadius * radius
+	local oilReachSq = oilReach * oilReach
 	local maxTravel = physics.MaxStepTravel * radius
 	local lastStep = physics.TimeCap / dt
 	-- No rail or pocket reaches farther than this onto the felt
@@ -305,7 +313,8 @@ function Simulate.step(sim: Sim, count: number): boolean
 				-- one patch or several, it slows at OilSlowdown of that.
 				local slow = (slowdown + physics.SpeedDrag * speed) * h
 				for _, patch in oil do
-					if (ball.x - patch.x) ^ 2 + (ball.y - patch.y) ^ 2 < oilReachSq then
+					local ox, oy = ball.x - patch.x, ball.y - patch.y
+					if ox * ox + oy * oy < oilReachSq then
 						slow *= Config.Items.OilSlowdown
 						break
 					end

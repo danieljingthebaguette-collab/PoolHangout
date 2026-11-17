@@ -123,7 +123,7 @@ Starting values for Config (tune by feel):
 1. `Match` starts a turn: it sets the shooter, `clockEndsAt` from `workspace:GetServerTimeNow()`, the ball-in-hand area and whether a pocket must be called, adds `TurnPoints` to the seat's bar when a new turn starts, then fires `TurnStarted` to everyone, and `ItemsChanged` with every seat's bar and slots and the points just earned.
 2. The shooter's `ShotController` runs the camera, placement, aim, pocket call, any item use and power meter locally, then fires `RequestShot` with the aim direction, power (0–1, or up to `PowerShotMax` while the shooter's Power Shot is on), cue ball placement and called pocket. An item goes first, through `UseItem` (see Items).
 3. The server validates the request (see `.claude/rules/server.md`) and normalizes the direction.
-4. It fires `ShotStarted` with the exact start balls, the shot, the item effects and the physics params it used, so every client simulates with the server's numbers even while test mode changes them live. Then it simulates the shot in slices of a couple of milliseconds per frame, so even a break never stalls the server. It finishes long before the replay does.
+4. It works out the cue ball's starting speed once (`Simulate.speed`; `pull ^ PowerCurve` can round differently on different devices) and fires `ShotStarted` with the exact start balls, the shot with that speed, the item effects and the physics params it used, so every client simulates with the server's numbers even while test mode changes them live. Then it simulates the shot in slices of a couple of milliseconds per frame, so even a break never stalls the server. It finishes long before the replay does.
 5. Each client steps the same simulation as it plays the shot back in real time, so every client sees the same shot and no frame does much work.
 6. Once the server's simulation is done and the shot's duration plus a short buffer has passed, the server runs `EightBall.resolveShot`, moves the ball parts to their final positions and fires `ShotResolved` with the final balls, after adding the sink points to the bars (sent with the next turn's `ItemsChanged`). Clients snap to those positions, which also corrects any drift.
 7. Then the next turn, or the end of the game.
@@ -222,7 +222,7 @@ Workspace
 | `AimUpdate` | client → server, unreliable | The shooter's live aim, at most `Config.Aim.RelayRate` (10) a second and only on change: angle, pull, locked or pulling, placing, the placed cue ball and the called pocket. The server checks it with `TableFlow.readAim`, drops ones closer than `RelayMinGap` and passes it on |
 | `LeaveTable` | client → server | The Leave button |
 | `PlayerDataLoaded` | server → client | (settings, saving): the saved settings, and whether changes will be saved |
-| `SaveSettings` | client → server | (settings): the settings page after a change; cleaned and taken once a second at most |
+| `SaveSettings` | client → server | (settings): the settings page after a change; cleaned and taken twice a second at most |
 | `ClientReady` | client → server | Once the player's scripts listen. The server answers with `TurnStarted` for every game on, and the test mode's ball in hand, which a player who just joined would have missed |
 | `SayPhrase` | client → server | A quick phrase, by index (Later list) |
 | `UseItem` | client → server | Slot, and a target: a ball id, a point `{ x, y }` on the felt or a pocket id. At most one per `Config.Items.UseCooldown` |
@@ -231,7 +231,7 @@ Workspace
 | `ItemsChanged` | server → clients | Each seat's item bar in turn order: its points and its slots (an item name, or false when empty), the `{ seat, points }` pops earned since the last message, and the effects on the table (`Items.effects`: frozen ball ids, blocked pocket ids, oil spots). Sent after each `TurnStarted` and whenever slots change; none when the game ends, which clears them |
 | `ItemUsed` | server → clients | The seat, the item and its checked target, for the big name and the effect |
 | `ItemRefused` | server → the shooter | The slot and why its target was turned down, in words for the player (from `Items.use`), shown on that slot's row |
-| `ShotStarted` | server → clients | Start balls, shot, item effects and physics params to replay |
+| `ShotStarted` | server → clients | Start balls, shot (with the cue ball's starting speed the server worked out), item effects and physics params to replay |
 | `ShotResolved` | server → clients | Final balls |
 | `NiceShot` | server → clients | (table, pocket id): the shooter's pot off a rail or across the table (`TableFlow.niceShot`) |
 | `Banner` | server → clients | A message for everyone at the table and how many seconds to show it: a foul and who has ball in hand, or until the end screen, who won and why |
