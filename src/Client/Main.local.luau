@@ -33,6 +33,7 @@ local tableModel = ActiveTable.get()
 -- What shows only in the top-down view
 local function onView(inView: boolean)
 	Hud.showTable(inView)
+	ShotPose.setTopDown(inView)
 	if canTest then
 		PhysicsTestPanel.show(inView and testsHere(tableModel))
 	end

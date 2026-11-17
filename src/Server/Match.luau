@@ -307,11 +307,15 @@ local function botTurn(match: Match, clock: {})
 	local coach = Config.Coach
 	local aim = math.atan2(shot.dirY, shot.dirX)
 	if bot:IsA("Model") then
-		-- It goes to stand behind the cue ball, where it'll place it with ball in hand
+		-- It goes to stand behind the cue ball, where it'll place it with ball in hand, like a player: a little to the
+		-- left of the shot's line, facing along it, and clear of the table's edge when it isn't on top
 		local cue = ShotPicker.cueBall(Balls.get(match.tableModel))
 		local cueX, cueY = shot.cueX or cue.x, shot.cueY or cue.y
-		local spot = ShotStance.spot(cueX, cueY, aim, Config.Stance.Distance)
-		glideCoach(match, bot, spot.x, spot.y, cueX, cueY)
+		local stance = Config.Stance
+		local spot, face = ShotStance.spot(cueX, cueY, aim, stance.Distance, stance.Side)
+		local halfX, halfY = Config.Table.Length / 2 + stance.TableEdge, Config.Table.Width / 2 + stance.TableEdge
+		local at = ShotStance.clear(spot.x, spot.y, halfX, halfY, stance.Clear)
+		glideCoach(match, bot, at.x, at.y, face.x, face.y)
 	end
 	local fromAim = aim + math.rad(coach.AimSwing) * (if random:NextNumber() < 0.5 then -1 else 1)
 	task.spawn(function()

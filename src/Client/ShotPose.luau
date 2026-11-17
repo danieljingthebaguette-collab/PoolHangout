@@ -4,7 +4,9 @@
 -- the felt. It eases in, and out again while their shot rolls or when the turn passes. Built from joint offsets in code,
 -- with no animation asset; each screen poses the shooters it sees, players and Coach alike. A shooter casts no shadow,
 -- on or beside the table, and one standing on top of it is drawn see-through on every screen, with their accessories
--- (hair, hats, wings) hidden, so the balls under them stay easy to see.
+-- (hair, hats, wings) hidden, so the balls under them stay easy to see. On a screen in the top-down view, any
+-- character's parts over a table are hidden completely, with the face and accessories on them: the cue shows who's
+-- shooting.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,16 +26,27 @@ local ShotPose = {}
 type Joint = { offset: CFrame, base: CFrame, written: CFrame? }
 -- A posed character: how far into the pose it is, 0 to 1, and its joints
 type Posed = { blend: number, joints: { [Motor6D]: Joint } }
--- A shooter's parts and decals, each with whether it's on an accessory, found once rather than every frame. Adding or
--- removing anything in the character finds them again.
-type Look = { items: { { item: Instance, accessory: boolean } }, changed: { RBXScriptConnection } }
+-- A character's parts and decals, each with whether it's on an accessory and the body part it rides on, found once
+-- rather than every frame. Adding or removing anything in the character finds them again.
+type Look = { items: { { item: Instance, accessory: boolean, body: BasePart? } }, changed: { RBXScriptConnection } }
+
+-- How far a table reaches from its centre, in table space: its felt and rails
+local HALF_X = Config.Table.Length / 2 + Config.Stance.TableEdge
+local HALF_Y = Config.Table.Width / 2 + Config.Stance.TableEdge
 
 -- Each table's shooter, and whether their shot is rolling
 local shooters: { [Model]: { seat: Seat.Seat, rolling: boolean } } = {}
 local posed: { [Model]: Posed } = {}
--- Characters drawn see-through now, on top of their table, and the set being built for the next frame
+-- Characters drawn other than normal now (see-through, or with parts hidden), and the set being built for the next frame
 local faded: { [Model]: boolean } = {}
 local fading: { [Model]: boolean } = {}
+-- Every character in the world, players' and Coach's: the models straight in Workspace
+local characters: { [Model]: boolean } = {}
+-- Whether this screen is in the top-down view, where any character's parts over a table are hidden
+local topDown = false
+-- This frame's characters to draw and how see-through, and the tables' felts while in the top-down view
+local drawn: { [Model]: number } = {}
+local felts: { BasePart } = {}
 -- Shooters' characters casting no shadow now, with each part's own CastShadow to give back after
 local unshadowed: { [Model]: { [BasePart]: boolean } } = {}
 local looks: { [Model]: Look } = {}
@@ -121,19 +134,37 @@ local function forgetLook(character: Model)
 	end
 end
 
+-- The body part an item rides on: a part itself, a decal (like the face) its part, and an accessory's part the body
+-- part it's attached to, so the face and a cap go when the head does
+local function bodyOf(item: Instance): BasePart?
+	local part = if item:IsA("Decal") then item.Parent else item
+	if not (part and part:IsA("BasePart")) then
+		return nil
+	end
+	local weld = if part:FindFirstAncestorOfClass("Accessory") then part:FindFirstChild("AccessoryWeld") else nil
+	if weld and weld:IsA("JointInstance") then
+		local other = if weld.Part0 == part then weld.Part1 else weld.Part0
+		if other then
+			return other
+		end
+	end
+	return part
+end
+
 -- This character's parts and decals, found once and kept until something is added to it or removed from it
 local function lookOf(character: Model): Look
 	local look = looks[character]
 	if look then
 		return look
 	end
-	local items: { { item: Instance, accessory: boolean } } = {}
+	local items: { { item: Instance, accessory: boolean, body: BasePart? } } = {}
 	for _, item in character:GetDescendants() do
 		if item:IsA("BasePart") or item:IsA("Decal") then
-			table.insert(
-				items,
-				{ item = item :: Instance, accessory = item:FindFirstAncestorOfClass("Accessory") ~= nil }
-			)
+			table.insert(items, {
+				item = item :: Instance,
+				accessory = item:FindFirstAncestorOfClass("Accessory") ~= nil,
+				body = bodyOf(item),
+			})
 		end
 	end
 	local function changed()
@@ -147,14 +178,35 @@ local function lookOf(character: Model): Look
 	return made
 end
 
--- See-through by `amount`, with accessories hidden while it's more than 0
-local function setSeeThrough(character: Model, amount: number)
-	for _, entry in lookOf(character).items do
-		-- Both have it, but the type checker can't write to a mix of two classes
-		(entry.item :: any).LocalTransparencyModifier = if amount > 0 and entry.accessory
-			then Theme.Pose.OnTableAccessories
-			else amount
+-- Whether a point is over any table's felt or rails, from the felts gathered this frame
+local function overATable(position: Vector3): boolean
+	for _, felt in felts do
+		local x, y = TableSpace.toTable(felt, position)
+		if ShotStance.overTable(x, y, HALF_X, HALF_Y) then
+			return true
+		end
 	end
+	return false
+end
+
+-- Draws a character on this screen: see-through by `amount`, with its accessories hidden while that's more than 0, and
+-- with `hide`, every part over a table hidden completely, with the decals and accessories on it. One standing on a table
+-- goes completely, so no arm is left hanging past the rail. Returns whether anything on it is drawn other than normal.
+local function setLook(character: Model, amount: number, hide: boolean): boolean
+	local changed = amount > 0
+	local root = character:FindFirstChild("HumanoidRootPart")
+	local whole = hide and root ~= nil and root:IsA("BasePart") and overATable(root.Position)
+	for _, entry in lookOf(character).items do
+		local value = if amount > 0 and entry.accessory then Theme.Pose.OnTableAccessories else amount
+		local body = entry.body
+		if hide and (whole or (body and overATable(body.Position))) then
+			value = Theme.Pose.TopDownHidden
+			changed = true
+		end
+		-- Both have it, but the type checker can't write to a mix of two classes
+		(entry.item :: any).LocalTransparencyModifier = value
+	end
+	return changed
 end
 
 -- These characters cast no shadow, parts added since included; every other character gets its parts' own back. A
@@ -181,13 +233,14 @@ local function dropShadows()
 	end
 end
 
--- Shooters cast no shadow, and those standing on top of their table are see-through; anyone who stepped off, or
--- stopped shooting, gets back what they had
+-- Shooters cast no shadow, and those standing on top of their table are see-through. In the top-down view, every
+-- character near a table has its parts over it hidden. Anyone who stepped off, stopped shooting or left the table gets
+-- back what they had.
 local function fade()
-	local halfX = Config.Table.Length / 2 + Config.Stance.TableEdge
-	local halfY = Config.Table.Width / 2 + Config.Stance.TableEdge
 	table.clear(fading)
 	table.clear(shooting)
+	table.clear(drawn)
+	table.clear(felts)
 	for tableModel, shooter in shooters do
 		local character = Seat.character(shooter.seat)
 		if character and character.Parent then
@@ -197,25 +250,58 @@ local function fade()
 		local felt = tableModel:FindFirstChild("Felt")
 		if character and root and root:IsA("BasePart") and felt and felt:IsA("BasePart") then
 			local x, y = TableSpace.toTable(felt, root.Position)
-			if ShotStance.overTable(x, y, halfX, halfY) then
-				fading[character] = true
-				setSeeThrough(character, Theme.Pose.OnTableSeeThrough)
+			if ShotStance.overTable(x, y, HALF_X, HALF_Y) then
+				drawn[character] = Theme.Pose.OnTableSeeThrough
 			end
 		end
 	end
+	if topDown then
+		local tables = workspace:FindFirstChild("Tables")
+		if tables then
+			for _, tableModel in tables:GetChildren() do
+				local felt = tableModel:FindFirstChild("Felt")
+				if felt and felt:IsA("BasePart") then
+					table.insert(felts, felt)
+				end
+			end
+		end
+		-- Only characters near a table can reach over it, so only they need their parts checked
+		local reach = Theme.Pose.TopDownReach
+		for character in characters do
+			local root = character:FindFirstChild("HumanoidRootPart")
+			if not drawn[character] and root and root:IsA("BasePart") then
+				for _, felt in felts do
+					local x, y = TableSpace.toTable(felt, root.Position)
+					if ShotStance.overTable(x, y, HALF_X + reach, HALF_Y + reach) then
+						drawn[character] = 0
+						break
+					end
+				end
+			end
+		end
+	end
+	for character, amount in drawn do
+		if setLook(character, amount, topDown) then
+			fading[character] = true
+		end
+	end
 	for character in faded do
-		if not fading[character] and character.Parent then
-			setSeeThrough(character, 0)
+		if not drawn[character] and character.Parent then
+			setLook(character, 0, false)
 		end
 	end
 	faded, fading = fading, faded
 	dropShadows()
-	-- A character neither shooting nor see-through needs no parts list
+	-- A character not shooting, drawn or checked this frame needs no parts list
 	for character in looks do
-		if not (shooting[character] or faded[character]) then
+		if not (shooting[character] or faded[character] or drawn[character]) then
 			forgetLook(character)
 		end
 	end
+end
+
+function ShotPose.setTopDown(on: boolean)
+	topDown = on
 end
 
 function ShotPose.start()
@@ -238,6 +324,20 @@ function ShotPose.start()
 	RunService.PreSimulation:Connect(step)
 	-- Just after the camera each frame, since Roblox's camera sets your own character's see-through too
 	RunService:BindToRenderStep("ShotPoseFade", Enum.RenderPriority.Camera.Value + 1, fade)
+	local function watch(child: Instance)
+		if child:IsA("Model") then
+			characters[child] = true
+		end
+	end
+	for _, child in workspace:GetChildren() do
+		watch(child)
+	end
+	workspace.ChildAdded:Connect(watch)
+	workspace.ChildRemoved:Connect(function(child: Instance)
+		if child:IsA("Model") then
+			characters[child] = nil
+		end
+	end)
 	Players.PlayerRemoving:Connect(function(player: Player)
 		for model, shooter in shooters do
 			if shooter.seat == player then

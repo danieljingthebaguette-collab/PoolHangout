@@ -1,9 +1,10 @@
 --!strict
--- On your turn, while you aim in the top-down view, your character glides to stand a few studs straight behind the cue
--- ball, always facing it, on top of the table when that spot is over it (ShotStance). Players watching in 3D see who's
--- shooting and where, and ShotPose bends the character into the pose once it stands still. When your turn or the view
--- ends, a character on the table steps off it, so it's never in the next shooter's way. The character is yours, so
--- moving it here shows on every screen.
+-- On your turn, while you aim in the top-down view, your character glides to stand a few studs behind the cue ball and
+-- a little to the left of the shot's line, facing along it, on top of the table when that spot is over it and clear of
+-- its edge when it isn't (ShotStance). Players watching in 3D see who's shooting and where, and ShotPose bends the
+-- character into the pose once it stands still. When your turn or the view ends, a character on or close to the table
+-- steps clear of it, so it's never in the next shooter's way. The character is yours, so moving it here shows on every
+-- screen.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -77,15 +78,19 @@ local function run()
 	end
 end
 
--- Keeps the character headed for the spot behind the cue ball at (cueX, cueY) for this aim, facing the ball. Call every
--- frame while it's your turn in the view.
+-- Keeps the character headed for its spot behind the cue ball at (cueX, cueY) for this aim, facing along the shot. Call
+-- every frame while it's your turn in the view.
 function Stance.update(felt: BasePart, cueX: number, cueY: number, aim: number)
-	local spot = ShotStance.spot(cueX, cueY, aim, Config.Stance.Distance)
-	goal = { felt = felt, x = spot.x, y = spot.y, faceX = cueX, faceY = cueY }
+	local stance = Config.Stance
+	local spot, face = ShotStance.spot(cueX, cueY, aim, stance.Distance, stance.Side)
+	local halfX, halfY = tableHalf()
+	local at = ShotStance.clear(spot.x, spot.y, halfX, halfY, stance.Clear)
+	goal = { felt = felt, x = at.x, y = at.y, faceX = face.x, faceY = face.y }
 	run()
 end
 
--- Your turn or the view ended: a character on the table steps straight off its nearest edge, and one off it stays put
+-- Your turn or the view ended: a character on the table, or too close to it, steps straight out to Config.Stance.Clear
+-- from its edge, and one already clear stays put
 function Stance.stop()
 	local target = goal
 	if not (target and target.faceX) then
@@ -99,7 +104,7 @@ function Stance.stop()
 	end
 	local x, y = TableSpace.toTable(target.felt, root.Position)
 	local halfX, halfY = tableHalf()
-	local off = ShotStance.offTable(x, y, halfX, halfY, Config.Stance.StepOffClear)
+	local off = ShotStance.offTable(x, y, halfX, halfY, Config.Stance.Clear)
 	goal = { felt = target.felt, x = off.x, y = off.y, faceX = nil, faceY = nil }
 end
 
