@@ -455,10 +455,9 @@ local Theme = {
 		StillSpeed = 1, -- studs/s: slower than this counts as standing still
 		OnTableSeeThrough = 0.6, -- a shooter standing on top of the table is this see-through (40% opaque)...
 		OnTableAccessories = 1, -- ...with their accessories (hair, hats, wings) this see-through: hidden
-		-- In the top-down view, any character's parts over a table are this see-through on that screen, hidden, with the
-		-- face and accessories on them, so nothing covers the balls...
+		-- In the top-down view, that screen's own character, and anyone else standing on a table, is this see-through,
+		-- hidden whole with the face and accessories, so nothing covers the balls
 		TopDownHidden = 1,
-		TopDownReach = 4, -- ...checked for characters whose root is within this many studs of a table: as far as they reach
 	},
 }
 
