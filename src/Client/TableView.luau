@@ -2,7 +2,8 @@
 -- Replays each shot on a table's ball parts by stepping the same simulation the server ran, in real time,
 -- then snaps them to the server's final positions. Balls spin as they roll, sink into pockets, and click,
 -- thud and drop with sound and a small effect (Effects). The shooter's screen starts the shot itself the moment the cue strikes (predict),
--- then switches to the server's copy when it arrives. Only this screen draws the soft shadows under the balls.
+-- then switches to the server's copy when it arrives. Each screen draws its own soft shadows under the balls, and an
+-- ink edge on each ball's outline, always facing the camera.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -50,6 +51,9 @@ local shadowsShown = false
 -- Which way the shadows fall in table space: down and right on screen, so it turns with the top-down view
 local shadowTurn = 1
 local shadowUpdates: { [BasePart]: () -> () } = {}
+-- Each ball's ink edge, by ball part
+type Edge = { part: Part, gui: SurfaceGui }
+local edges: { [BasePart]: Edge } = {}
 
 -- The table's felt and ball parts, or nil while the table hasn't streamed in
 local function findView(tableModel: Model?): View?
@@ -267,8 +271,70 @@ function TableView.predict(tableModel: Model, shot: Simulate.Shot, params: Simul
 	play(tableModel, replay)
 end
 
--- A soft shadow on the felt under a ball part, following it wherever it's moved: by a replay here or by the server
-local function addShadow(felt: BasePart, ball: BasePart, folder: Folder)
+-- A ball's ink edge on this screen: a ring on its outline. It's a flat see-through part, moved with the ball the
+-- same way its shadow is and turned to the camera every frame. (A BillboardGui lags a frame behind a moving ball.)
+local function addEdge(ball: BasePart, folder: Folder): Edge
+	local marks = Theme.BallMarks
+	local radius = ball.Size.X / 2
+	local part = Instance.new("Part")
+	part.Name = ball.Name .. "Edge"
+	part.Size = Vector3.new(marks.EdgeDiameter * radius, marks.EdgeDiameter * radius, 0.001)
+	part.Transparency = 1
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanTouch = false
+	part.CanQuery = false
+	part.CastShadow = false
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = marks.GuiPixels / radius
+	gui.LightInfluence = marks.EdgeLightInfluence
+	local ring = Instance.new("Frame")
+	ring.Size = UDim2.fromScale(1, 1)
+	ring.BackgroundTransparency = 1
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = ring
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Theme.Colors.BallInk
+	stroke.Thickness = marks.EdgeThickness * marks.GuiPixels
+	-- Inside the circle, so the edge doesn't make the ball look bigger
+	stroke.BorderStrokePosition = Enum.BorderStrokePosition.Inner
+	stroke.Parent = ring
+	ring.Parent = gui
+	gui.Parent = part
+	part.Parent = folder
+	local edge = { part = part, gui = gui }
+	edges[ball] = edge
+	ball.Destroying:Connect(function()
+		edges[ball] = nil
+		part:Destroy()
+	end)
+	return edge
+end
+
+-- Puts an edge in front of its ball's center, toward the camera
+local function placeEdge(ball: BasePart, edge: Edge)
+	local camera = workspace.CurrentCamera
+	local eye = camera.CFrame.Position
+	local center = ball.Position + (eye - ball.Position).Unit * (Theme.BallMarks.EdgeRaise * ball.Size.X / 2)
+	-- A part's front is the way it looks, which is where the gui is
+	edge.part.CFrame = CFrame.lookAt(center, eye, camera.CFrame.UpVector)
+end
+
+-- Every frame, for the camera's moves: turns each edge to the camera
+local function drawEdges()
+	for ball, edge in edges do
+		if edge.gui.Enabled then
+			placeEdge(ball, edge)
+		end
+	end
+end
+
+-- A soft shadow on the felt under a ball part, following it wherever it's moved: by a replay here or by the server.
+-- It also moves the ball's ink edge with it, and hides it whenever the ball is hidden or sinking.
+local function addShadow(felt: BasePart, ball: BasePart, folder: Folder, edge: Edge)
 	local radius = ball.Size.X / 2
 	local shadow = Instance.new("Part")
 	shadow.Name = ball.Name
@@ -290,8 +356,12 @@ local function addShadow(felt: BasePart, ball: BasePart, folder: Folder)
 		-- Gone as soon as the ball starts sinking into a pocket, since it's no longer on the felt
 		local height = felt.CFrame:PointToObjectSpace(ball.Position).Y - felt.Size.Y / 2
 		local sinking = height < radius * SINKING
-		local hidden = not shadowsShown or ball.Transparency == 1 or sinking
-		shadow.Transparency = if hidden then 1 else Theme.BallShadow.Transparency
+		local gone = ball.Transparency == 1 or sinking
+		edge.gui.Enabled = not gone
+		if not gone then
+			placeEdge(ball, edge)
+		end
+		shadow.Transparency = if gone or not shadowsShown then 1 else Theme.BallShadow.Transparency
 	end
 	shadowUpdates[shadow] = follow
 	follow()
@@ -304,7 +374,7 @@ local function addShadow(felt: BasePart, ball: BasePart, folder: Folder)
 	shadow.Parent = folder
 end
 
--- Shadows for every table's balls, as each table's Balls folder and ball parts arrive
+-- Shadows and ink edges for every table's balls, as each table's Balls folder and ball parts arrive
 local function watchShadows(tableModel: Instance)
 	local felt = tableModel:WaitForChild("Felt") :: BasePart
 	local folder = Instance.new("Folder")
@@ -316,12 +386,12 @@ local function watchShadows(tableModel: Instance)
 		end
 		for _, ball in balls:GetChildren() do
 			if ball:IsA("BasePart") then
-				addShadow(felt, ball, folder)
+				addShadow(felt, ball, folder, addEdge(ball, folder))
 			end
 		end
 		balls.ChildAdded:Connect(function(ball: Instance)
 			if ball:IsA("BasePart") then
-				addShadow(felt, ball, folder)
+				addShadow(felt, ball, folder, addEdge(ball, folder))
 			end
 		end)
 	end
@@ -337,6 +407,7 @@ function TableView.start()
 			task.spawn(watchShadows, tableModel)
 		end
 	end)
+	RunService.RenderStepped:Connect(drawEdges)
 	Remotes.ShotStarted.OnClientEvent:Connect(
 		function(
 			tableModel: Model?,

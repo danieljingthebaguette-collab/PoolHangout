@@ -63,7 +63,7 @@ function PhysicsTest.start()
 		local balls = EightBall.rack(Geometry.build(PhysicsTestAccess.params().Table), function(n: number): number
 			return random:NextInteger(1, n)
 		end)
-		Balls.place(tableModel, balls)
+		Balls.rack(tableModel, balls)
 		racked = balls
 		tableModel:SetAttribute("BreakNext", true)
 		if Config.Debug.LogShots and RunService:IsStudio() then

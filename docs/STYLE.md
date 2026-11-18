@@ -70,7 +70,14 @@ One cozy lodge room: timber beams, plank floors, plants, and lanterns that throw
 
 ## Balls
 
-Stylized balls with icons on them (details coming). Until then, the placeholder balls: a solid color or a white ball with a colored band, with a dot to show them roll.
+Flat, matte and numbered, built in step 2a. Each ball is one sphere with its paint in one texture, like a real pool ball: its color, the band on stripes, its numbers and the cue ball's dots. The textures are made in code by `tools/BallTextures.py` from `Theme.BallColors`, `Theme.Colors` and `Theme.BallMarks` (sizes in ball radii, so the look scales with `Config.Table.BallRadius`), then uploaded; `docs/MODELS.md` says how. The sphere is SmoothPlastic.
+
+- **Solids 1–7:** one full color: yellow, blue, red, violet, orange, green, brick brown. The violet (`#8C50C8`) is clearly lighter than the 8, the green (`#58B83A`) light and yellow enough to stand out on the felt, and the brick brown (`#7A2E1C`) differs from red by hue, not just darkness.
+- **The 8:** ink `#15130F`.
+- **Stripes 9–15:** a cream `#FEFAEA` ball with one band of its solid's color, 70% of the ball's width: the width where its cream ends seen from the side and its colored ring seen end-on come out about the same, so a stripe passes neither for a solid nor for the cue ball.
+- **Cue ball:** plain cream with two dark tan `#A8735C` roll dots on opposite sides, so one is always in view while it rolls.
+- **Numbers:** every numbered ball has two cream number circles on opposite sides, on the middle of the band for stripes, painted on so they roll with the ball: sometimes facing you, sometimes sideways or away. Each circle is half the ball's width, with a thin ink ring (about half a pixel on a ball 30 px wide) and the number in plain ink, in Roboto Condensed Bold (`Theme.Font`'s face), so the circle still reads as cream when small. The number is as big as fits inside the ring: a single digit about 70% of the circle tall, two digits about 55%. They show at every size and distance. A fresh rack turns each numbered ball so one number faces straight up, at a random spin around the vertical, so the rack shows its numbers before the break.
+- **Ink edge:** an ink line 0.15 of a ball radius thick (about 2.2 px on a ball 30 px wide, the top-down view at 1080p) just inside every ball's outline, drawn by each screen and always facing the camera, so balls read against the felt and against each other without looking bigger. Unlit, at every size and distance, and hidden while a ball sinks into a pocket.
 
 ## Characters
 

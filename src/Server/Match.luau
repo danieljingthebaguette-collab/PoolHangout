@@ -640,7 +640,7 @@ function Match.new(
 	onEnd: (rematch: boolean) -> ()
 ): Match
 	local params = PhysicsTestAccess.params()
-	Balls.place(tableModel, EightBall.rack(Geometry.build(params.Table), pick))
+	Balls.rack(tableModel, EightBall.rack(Geometry.build(params.Table), pick))
 	local breaker = pick(#seats)
 	local match: Match = {
 		tableModel = tableModel,

@@ -4,10 +4,12 @@
 local YELLOW = Color3.fromRGB(245, 196, 30)
 local BLUE = Color3.fromRGB(30, 70, 190)
 local RED = Color3.fromRGB(200, 35, 35)
-local PURPLE = Color3.fromRGB(100, 40, 150)
+local PURPLE = Color3.fromRGB(140, 80, 200) -- a light violet, so 4 and 12 never pass for the 8
 local ORANGE = Color3.fromRGB(240, 120, 30)
-local GREEN = Color3.fromRGB(20, 120, 60)
-local MAROON = Color3.fromRGB(120, 25, 35)
+local GREEN = Color3.fromRGB(88, 184, 58) -- light and yellow enough that 6 and 14 stand out on the felt
+local MAROON = Color3.fromRGB(122, 46, 28) -- brick brown, so 7 and 15 differ from red by hue, not just darkness
+local BALL_CREAM = Color3.fromRGB(254, 250, 234) -- the palette's cream
+local BALL_INK = Color3.fromRGB(21, 19, 15) -- the palette's ink
 
 local CREAM = Color3.fromRGB(246, 239, 224)
 local INK = Color3.fromRGB(36, 28, 22)
@@ -46,8 +48,9 @@ local Theme = {
 		CalledPocket = ACCENT, -- the ring round the pocket called for the 8
 		TurnGlow = ACCENT, -- the glow round the top bar card whose turn it is, and the ring round its shooter's avatar
 		SunkBall = Color3.fromRGB(176, 166, 152), -- a sunk ball on a top bar card, greyed out on the cream
-		BallMark = Color3.fromRGB(245, 242, 230), -- the white on the placeholder balls: stripes and number dots
-		CueBallMark = Color3.fromRGB(200, 35, 35),
+		BallMark = BALL_CREAM, -- the cream of the cue ball, a stripe round its band, and the number circles
+		CueBallMark = Color3.fromRGB(168, 115, 92), -- dark tan, the cue ball's two roll dots
+		BallInk = BALL_INK, -- each ball's edge, and its number disc's ring and numeral
 		BallShadow = Color3.fromRGB(10, 20, 40),
 		ItemPicking = ACCENT, -- the outline round your ability's square while you pick its target
 		ItemLine = Color3.fromRGB(98, 82, 70), -- an ability's line, on its row and in the Abilities panel: softer ink
@@ -291,15 +294,55 @@ local Theme = {
 		},
 	},
 
-	-- The placeholder balls' markings, so you can see them roll, in ball radii. Solids, the 8 and the cue ball
-	-- get a dot on top and bottom, stripes a band of color around a white ball.
+	-- How the balls look, in ball radii unless it says otherwise. Each ball is one sphere with its paint in one texture
+	-- (BallTextures), made from these values by tools/BallTextures.py: solids their color, stripes cream with one band
+	-- of color, the cue ball cream with two tan roll dots, and every numbered ball two number circles. Each screen
+	-- draws an ink edge on every ball's outline (TableView.luau), always facing the camera.
 	BallMarks = {
-		DotDiameter = 0.8,
-		DotThickness = 0.1, -- thick enough that the dot's edge sinks into the ball while its face sits just above it
-		DotRaise = 0.01, -- how far the dot's face sits above the ball's surface
-		BandWidth = 1,
-		BandDiameter = 1.96, -- a little under the ball's 2, so the band and the ball don't flicker where they meet
+		-- A stripe's band round its Z axis: 70% of the ball's width, where its cream ends seen from the side and its
+		-- colored ring seen end-on come out about the same width
+		BandWidth = 1.4,
+		DotDiameter = 0.8, -- the cue ball's two roll dots, on its Y axis, so one faces up in the rack
+		-- Each numbered ball's two number circles, on its X axis (the middle of the band, for stripes), which the rack
+		-- turns up: cream, half the ball's width...
+		CircleDiameter = 1,
+		CircleRing = 0.035, -- ...with a thin ink ring, about half a pixel on a ball 30 px wide...
+		-- ...and the number in plain ink, at most this share of the circle tall and shrunk so its corners stay this
+		-- share of the circle clear of the ring: a single digit stands about 70% of the circle tall, two digits about 55%
+		NumeralSize = 0.8,
+		NumeralGap = 0.1,
+		TextureWidth = 512, -- each texture's pixels round the ball; it's half as tall
+		-- Each screen's ink edge, a ring on the ball's outline turned to the camera
+		EdgeDiameter = 2, -- drawn just inside this circle, so the edge doesn't make the ball look bigger
+		EdgeThickness = 0.15, -- about 2.2 px on a ball 30 px wide, the top-down view at 1080p
+		EdgeRaise = 1.1, -- the edge sits this far in front of the ball's center, so nothing on the ball covers it
+		EdgeLightInfluence = 0, -- unlit, so it stays ink
+		GuiPixels = 50, -- the edge gui's pixels per ball radius
 	},
+
+	-- The balls' sphere mesh: tools/BallTextures.py's sphere.obj, brought in with Studio's Import 3D (2026-11-17)
+	BallMesh = "rbxassetid://107668230577285",
+
+	-- Each ball's texture, by ball id: made by tools/BallTextures.py and uploaded. Under it the part keeps the ball's
+	-- main color (a stripe's band color), which shows while the texture loads.
+	BallTextures = {
+		[0] = "rbxassetid://136054050341755",
+		[1] = "rbxassetid://134016018448551",
+		[2] = "rbxassetid://131831439184726",
+		[3] = "rbxassetid://82793906620633",
+		[4] = "rbxassetid://84424263278079",
+		[5] = "rbxassetid://126433662353388",
+		[6] = "rbxassetid://89259511104589",
+		[7] = "rbxassetid://113307315786554",
+		[8] = "rbxassetid://134314994832824",
+		[9] = "rbxassetid://125333795117379",
+		[10] = "rbxassetid://111809289540274",
+		[11] = "rbxassetid://85266821352872",
+		[12] = "rbxassetid://138385008123540",
+		[13] = "rbxassetid://126664362021836",
+		[14] = "rbxassetid://89011075174483",
+		[15] = "rbxassetid://132587007303048",
+	} :: { [number]: string },
 
 	-- The soft shadow under each ball, in ball radii: a little down and right of the ball, as if lit from above left
 	BallShadow = {
@@ -384,7 +427,7 @@ local Theme = {
 
 	-- By ball id. Each stripe shares its solid's color.
 	BallColors = {
-		[0] = Color3.fromRGB(245, 242, 230),
+		[0] = BALL_CREAM,
 		[1] = YELLOW,
 		[2] = BLUE,
 		[3] = RED,
@@ -392,7 +435,7 @@ local Theme = {
 		[5] = ORANGE,
 		[6] = GREEN,
 		[7] = MAROON,
-		[8] = Color3.fromRGB(20, 20, 20),
+		[8] = BALL_INK,
 		[9] = YELLOW,
 		[10] = BLUE,
 		[11] = RED,

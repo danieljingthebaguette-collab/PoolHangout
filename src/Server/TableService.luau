@@ -99,7 +99,7 @@ local function pick(n: number): number
 end
 
 local function rack(tableModel: Model)
-	Balls.place(tableModel, EightBall.rack(Geometry.build(PhysicsTestAccess.params().Table), pick))
+	Balls.rack(tableModel, EightBall.rack(Geometry.build(PhysicsTestAccess.params().Table), pick))
 end
 
 -- The prompt's words: how many have joined. It hides while nobody can join, during the countdown and the game. The

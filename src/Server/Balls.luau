@@ -4,6 +4,7 @@
 -- replay, and returns once they've all had time to play it. Games (Match) and the physics test mode both shoot
 -- through here, so a table only ever has one shot rolling.
 
+local AssetService = game:GetService("AssetService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -21,63 +22,60 @@ local resting: { [Model]: { Simulate.Ball } } = {}
 -- Tables with a shot from its start until its balls are placed at rest again
 local rolling: { [Model]: boolean } = {}
 
--- Placeholder markings, welded on, so you can see a ball roll. Phase 4's final balls replace them.
-local function addMarks(ball: Part, id: number)
-	local radius = ball.Size.X / 2
-	local marks = Theme.BallMarks
-	local function mark(color: Color3, size: Vector3, offset: CFrame)
-		local part = Instance.new("Part")
-		part.Name = "Mark"
-		part.Shape = Enum.PartType.Cylinder
-		part.Size = size
-		part.Color = color
-		part.CFrame = ball.CFrame * offset
-		part.CanCollide = false
-		part.CanTouch = false
-		part.CanQuery = false
-		part.CastShadow = false
-		part.Massless = true
-		local weld = Instance.new("WeldConstraint")
-		weld.Part0 = ball
-		weld.Part1 = part
-		weld.Parent = part
-		part.Parent = ball
+-- The balls' sphere mesh (Theme.BallMesh), made by the first Balls.create; each ball is a copy. False once it has
+-- failed to load, so balls are plain sphere parts instead.
+local sphere: MeshPart | false | nil = nil
+local random = Random.new()
+
+local function loadSphere(): MeshPart | false
+	local ok, result = pcall(function(): MeshPart
+		return AssetService:CreateMeshPartAsync(Content.fromUri(Theme.BallMesh), {
+			CollisionFidelity = Enum.CollisionFidelity.Box,
+			RenderFidelity = Enum.RenderFidelity.Automatic,
+		})
+	end)
+	if not ok then
+		warn(`[Balls] the ball mesh didn't load, so balls are plain spheres: {result}`)
+		return false
 	end
-	if id >= 9 then
-		-- A white ball with a band of color around it
-		ball.Color = Theme.Colors.BallMark
-		local width, across = marks.BandWidth * radius, marks.BandDiameter * radius
-		mark(Theme.BallColors[id], Vector3.new(width, across, across), CFrame.Angles(0, math.rad(90), 0))
-	else
-		ball.Color = Theme.BallColors[id]
-		local color = if id == 0 then Theme.Colors.CueBallMark else Theme.Colors.BallMark
-		local thickness, diameter = marks.DotThickness * radius, marks.DotDiameter * radius
-		for _, side in { 1, -1 } do
-			-- A flat dot on the top or bottom of the ball, its face just above the surface and its edge sunk in.
-			-- Cylinders run along their X axis.
-			local out = radius * (1 + marks.DotRaise) - thickness / 2
-			local offset = CFrame.new(0, side * out, 0) * CFrame.Angles(0, 0, math.rad(90))
-			mark(color, Vector3.new(thickness, diameter, diameter), offset)
-		end
-	end
+	return result
 end
 
--- Makes the table's 16 ball parts, in a Balls folder. Place them before anyone shoots.
+-- One ball: a copy of the sphere mesh wearing the ball's texture, its paint, numbers and dots in one picture. Under
+-- the texture it keeps the ball's main color (a stripe's band color), which shows while the texture loads.
+local function newBall(id: number): BasePart
+	if sphere == nil then
+		sphere = loadSphere()
+	end
+	local part: BasePart
+	if sphere then
+		local copy = sphere:Clone()
+		copy.TextureID = Theme.BallTextures[id]
+		part = copy
+	else
+		local plain = Instance.new("Part")
+		plain.Shape = Enum.PartType.Ball
+		part = plain
+	end
+	part.Name = `Ball{id}`
+	part.Size = Vector3.one * 2 * Config.Table.BallRadius
+	part.Color = Theme.BallColors[id]
+	part.Material = Enum.Material.SmoothPlastic
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanTouch = false
+	part.CanQuery = false
+	return part
+end
+
+-- Makes the table's 16 ball parts, in a Balls folder. Place them before anyone shoots. The first call yields while
+-- the ball mesh loads.
 function Balls.create(tableModel: Model)
-	local radius = Config.Table.BallRadius
 	local folder = Instance.new("Folder")
 	folder.Name = "Balls"
 	parts[tableModel] = {}
 	for id = 0, 15 do
-		local part = Instance.new("Part")
-		part.Name = `Ball{id}`
-		part.Shape = Enum.PartType.Ball
-		part.Size = Vector3.one * 2 * radius
-		part.Anchored = true
-		part.CanCollide = false
-		part.CanTouch = false
-		part.CanQuery = false
-		addMarks(part, id)
+		local part = newBall(id)
 		part.Parent = folder
 		parts[tableModel][id] = part
 	end
@@ -102,6 +100,20 @@ function Balls.place(tableModel: Model, balls: { Simulate.Ball })
 		local part = parts[tableModel][ball.id]
 		part.CFrame = TableSpace.toWorld(felt, ball.x, ball.y, Config.Table.BallRadius)
 		TableSpace.setShown(part, not ball.pocket)
+	end
+end
+
+-- Puts a fresh rack on the table, like Balls.place, with each numbered ball turned so one of its numbers faces
+-- straight up, spun at random around the vertical, so the rack shows its numbers before the break. Only the parts
+-- turn: the physics never sees a ball's turn.
+function Balls.rack(tableModel: Model, balls: { Simulate.Ball })
+	Balls.place(tableModel, balls)
+	for _, ball in balls do
+		if ball.id ~= 0 then
+			local part = parts[tableModel][ball.id]
+			-- The number circles sit on the ball's X axis, which a quarter turn round Z points up
+			part.CFrame *= CFrame.Angles(0, random:NextNumber(0, 2 * math.pi), 0) * CFrame.Angles(0, 0, math.pi / 2)
+		end
 	end
 end
 
