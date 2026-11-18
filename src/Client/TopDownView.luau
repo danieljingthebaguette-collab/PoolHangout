@@ -19,6 +19,10 @@ local UiScale = require(script.Parent.UiScale)
 
 local TopDownView = {}
 
+-- Views made so far, so each binds its camera update under its own name: a view made as another goes never unbinds the
+-- new one's
+local views = 0
+
 export type View = {
 	-- Eases into the view, close in or (with `far`) farther out, turned for `seat` (in turn order) if this player has one
 	enter: (far: boolean, seat: number?) -> (),
@@ -45,6 +49,10 @@ function TopDownView.setGlide(on: boolean)
 end
 
 function TopDownView.new(tableModel: Model, felt: BasePart): View
+	views += 1
+	-- Moves the camera each frame just after Roblox's camera, before anything that places itself from the camera
+	-- (the aim indicator, the balls' ink edges), so they all use this frame's camera
+	local bindName = `TopDownViewCamera{views}`
 	-- Set while the view is on, and while it eases back out to it
 	local saved: Normal? = nil
 	local leaving: Normal? = nil
@@ -54,7 +62,7 @@ function TopDownView.new(tableModel: Model, felt: BasePart): View
 	-- An ease under way: where it started, where it's headed (worked out each frame, since the character or the screen
 	-- can move meanwhile), how far through, and what to do when it ends
 	local easing: { from: CFrame, fromFov: number, target: () -> (CFrame, number), t: number, done: (() -> ())? }? = nil
-	local connection: RBXScriptConnection? = nil
+	local bound = false
 
 	-- Screen space, in pixels, the view keeps clear around the table for the HUD: the meter (and on phones the Lock
 	-- button) on the left, the sunk-ball tray on the right, the top bar's cards and their item strips above, and the
@@ -144,17 +152,18 @@ function TopDownView.new(tableModel: Model, felt: BasePart): View
 		if (easing or saved) and camera.CameraType ~= Enum.CameraType.Scriptable then
 			camera.CameraType = Enum.CameraType.Scriptable
 		end
-		if not (easing or saved) and connection then
-			connection:Disconnect()
-			connection = nil
+		if not (easing or saved) and bound then
+			RunService:UnbindFromRenderStep(bindName)
+			bound = false
 		end
 	end
 
 	local function easeTo(target: () -> (CFrame, number), done: (() -> ())?)
 		local camera = workspace.CurrentCamera
 		easing = { from = camera.CFrame, fromFov = camera.FieldOfView, target = target, t = 0, done = done }
-		if not connection then
-			connection = RunService.RenderStepped:Connect(update)
+		if not bound then
+			RunService:BindToRenderStep(bindName, Enum.RenderPriority.Camera.Value + 1, update)
+			bound = true
 		end
 	end
 

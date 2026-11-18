@@ -407,7 +407,8 @@ function TableView.start()
 			task.spawn(watchShadows, tableModel)
 		end
 	end)
-	RunService.RenderStepped:Connect(drawEdges)
+	-- After the top-down camera's update (Camera + 1), so the edges turn to this frame's camera
+	RunService:BindToRenderStep("TableViewEdges", Enum.RenderPriority.Camera.Value + 2, drawEdges)
 	Remotes.ShotStarted.OnClientEvent:Connect(
 		function(
 			tableModel: Model?,

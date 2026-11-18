@@ -88,6 +88,10 @@ end
 
 local ShotController = {}
 
+-- Controllers made so far, so each binds its per-frame draw under its own name: one made as another goes never unbinds
+-- the new one's
+local controllers = 0
+
 -- One table's shot controls, until the screen follows another table (ActiveTable)
 export type Controller = { destroy: () -> () }
 
@@ -119,6 +123,10 @@ end
 -- The shot controls for one table, until `destroy`. `testMode` lets this player shoot while no game is on the table.
 -- `onView` hears when the top-down view turns on and off, for the HUD and anything else that only shows there.
 function ShotController.start(tableModel: Model, testMode: boolean, onView: (boolean) -> ()): Controller
+	controllers += 1
+	-- The view's per-frame draw (the cue, the aim indicator, the shooter's relayed aim), run after the camera moves each
+	-- frame, so the indicator, drawn on the screen from the camera, stays on the cue ball while the view eases in
+	local renderName = `ShotControllerRender{controllers}`
 	local felt = tableModel:WaitForChild("Felt") :: BasePart
 	local ballFolder = tableModel:WaitForChild("Balls")
 	local ballParts: { [number]: BasePart } = {}
@@ -685,6 +693,7 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 			connection:Disconnect()
 		end
 		connections = {}
+		RunService:UnbindFromRenderStep(renderName)
 		ContextActionService:UnbindAction(LOCK_ACTION)
 		ContextActionService:UnbindAction(ITEM_ACTION)
 		picking, refusal = nil, nil
@@ -712,8 +721,9 @@ function ShotController.start(tableModel: Model, testMode: boolean, onView: (boo
 	local function enterView()
 		view.enter(not (turn and turn.mine), if turn then turn.seat else nil)
 		TableView.turnShadows(view.isTurned())
+		-- After the top-down camera's update (Camera + 1)
+		RunService:BindToRenderStep(renderName, Enum.RenderPriority.Camera.Value + 2, render)
 		connections = {
-			RunService.RenderStepped:Connect(render),
 			UserInputService.InputBegan:Connect(pointerBegan),
 			UserInputService.InputChanged:Connect(pointerMoved),
 			UserInputService.InputEnded:Connect(pointerEnded),
